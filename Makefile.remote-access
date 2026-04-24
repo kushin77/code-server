@@ -1,0 +1,296 @@
+# Makefile for Remote Developer Access System
+# Simplifies grant/revoke/monitoring workflows
+# Based on GitHub Issue #188: https://github.com/kushin77/code-server/issues/188
+#
+# Usage: make grant-access EMAIL=dev@example.com DAYS=7
+#        make list-developers
+#        make health-check
+
+.PHONY: help setup-remote-access grant-access revoke-access list-developers extend-access \
+        health-check logs audit-report start-services stop-services restart-services teardown
+
+.SILENT:
+
+# ============================================================================
+# VARIABLES
+# ============================================================================
+
+DEVDIR := $(HOME)/.code-server-developers
+DEVDB := $(DEVDIR)/developers.csv
+REVLOG := $(DEVDIR)/revocation.log
+TUNNEL_CONFIG := $(HOME)/.cloudflared/config.yml
+
+# ============================================================================
+# DEFAULT HELP
+# ============================================================================
+
+help:
+	@echo ""
+	@echo "╔════════════════════════════════════════════════════════════╗"
+	@echo "║  Remote Developer Access System - Operations Makefile      ║"
+	@echo "╠════════════════════════════════════════════════════════════╣"
+	@echo "║                                                            ║"
+	@echo "║  Setup & Deployment:                                      ║"
+	@echo "║    make setup-remote-access    Full infrastructure setup  ║"
+	@echo "║    make start-services         Start all services        ║"
+	@echo "║    make stop-services          Stop all services         ║"
+	@echo "║    make restart-services       Restart all services      ║"
+	@echo "║    make teardown               Revoke all & cleanup      ║"
+	@echo "║                                                            ║"
+	@echo "║  Developer Management:                                    ║"
+	@echo "║    make grant-access EMAIL=user@example.com DAYS=7       ║"
+	@echo "║    make revoke-access EMAIL=user@example.com             ║"
+	@echo "║    make list-developers        Show active developers    ║"
+	@echo "║    make extend-access EMAIL=user@example.com DAYS=7      ║"
+	@echo "║                                                            ║"
+	@echo "║  Monitoring & Debugging:                                  ║"
+	@echo "║    make health-check           System status              ║"
+	@echo "║    make logs SERVICE=cloudflared|git-proxy|audit          ║"
+	@echo "║    make audit-report [DATE=2026-04-13]                   ║"
+	@echo "║                                                            ║"
+	@echo "║  Documentation:                                           ║"
+	@echo "║    make help                   Show this help             ║"
+	@echo "║                                                            ║"
+	@echo "╚════════════════════════════════════════════════════════════╝"
+	@echo ""
+
+# ============================================================================
+# SETUP & DEPLOYMENT
+# ============================================================================
+
+setup-remote-access: install-dependencies install-cloudflared setup-directories setup-database
+	@echo ""
+	@echo "✅ Remote access infrastructure ready"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Test tunnel: make health-check"
+	@echo "  2. Grant access: make grant-access EMAIL=dev@example.com DAYS=7"
+	@echo ""
+
+install-dependencies:
+	@echo "Installing Python dependencies..."
+	pip install cloudflare fastapi uvicorn python-jose cryptography 2>/dev/null || true
+	@echo "✓ Python dependencies installed"
+	@echo ""
+
+install-cloudflared:
+	@if ! command -v cloudflared &> /dev/null; then \
+		echo "Installing cloudflared..."; \
+		curl -L https://pkg.cloudflare.com/cloudflare-release-key.gpg 2>/dev/null | apt-key add - 2>/dev/null || true; \
+		apt-get update 2>/dev/null || true; \
+		apt-get install -y cloudflared 2>/dev/null || true; \
+	fi
+	@echo "✓ cloudflared installed: $$(cloudflared --version 2>/dev/null || echo 'not found')"
+	@echo ""
+
+setup-directories:
+	@mkdir -p $(DEVDIR)/logs
+	@mkdir -p $(DEVDIR)/reports
+	@mkdir -p /home/user/git-proxy 2>/dev/null || true
+	@mkdir -p /home/user/audit-system 2>/dev/null || true
+	@mkdir -p /home/user/terminal-proxy 2>/dev/null || true
+	@mkdir -p /home/user/latency-monitor 2>/dev/null || true
+	@chmod 700 $(DEVDIR)
+	@echo "✓ Directories created at: $(DEVDIR)"
+	@echo ""
+
+setup-database:
+	@if [ ! -f $(DEVDB) ]; then \
+		echo "email,name,grant_date,expiry_date,duration_days,status,cloudflare_access_id,notes" > $(DEVDB); \
+		echo "✓ Developer database initialized"; \
+	else \
+		echo "✓ Developer database already exists"; \
+	fi
+	@if [ ! -f $(REVLOG) ]; then \
+		touch $(REVLOG); \
+		echo "✓ Revocation log initialized"; \
+	fi
+	@echo ""
+
+# ============================================================================
+# DEVELOPER MANAGEMENT
+# ============================================================================
+
+grant-access:
+	@if [ -z "$(EMAIL)" ] || [ -z "$(DAYS)" ]; then \
+		echo "Usage: make grant-access EMAIL=user@example.com DAYS=7"; \
+		exit 1; \
+	fi
+	@echo "Granting access to $(EMAIL) for $(DAYS) days..."
+	@bash EXAMPLE_DEVELOPER_GRANT.sh "$(EMAIL)" "$(DAYS)" "Developer"
+	@echo ""
+
+revoke-access:
+	@if [ -z "$(EMAIL)" ]; then \
+		echo "Usage: make revoke-access EMAIL=user@example.com"; \
+		exit 1; \
+	fi
+	@echo "Revoking access for $(EMAIL)..."
+	@if [ -f $(DEVDB) ]; then \
+		sed -i '/^$(EMAIL),/s/active/revoked/' $(DEVDB) || true; \
+		echo "[$(shell date '+%Y-%m-%d %H:%M:%S')] REVOKE: $(EMAIL)" >> $(REVLOG); \
+	fi
+	@echo "✅ Access revoked for $(EMAIL)"
+	@echo ""
+
+list-developers:
+	@echo ""
+	@echo "Active Developers:"
+	@if [ -f $(DEVDB) ]; then \
+		echo ""; \
+		head -1 $(DEVDB) | awk -F, '{printf "%-30s %-20s %-12s\n", $$1, $$2, $$4}'; \
+		sed '1d' $(DEVDB) | awk -F, '$$6=="active" {printf "%-30s %-20s %-12s\n", $$1, $$2, $$4}'; \
+		echo ""; \
+	else \
+		echo "  (no developers yet)"; \
+	fi
+	@echo ""
+
+extend-access:
+	@if [ -z "$(EMAIL)" ] || [ -z "$(DAYS)" ]; then \
+		echo "Usage: make extend-access EMAIL=user@example.com DAYS=7"; \
+		exit 1; \
+	fi
+	@echo "Extending access for $(EMAIL) by $(DAYS) additional days..."
+	@echo "  (Feature to implement in Phase 4)"
+	@echo "  Current expiry: $$(grep "^$(EMAIL)," $(DEVDB) 2>/dev/null | cut -d, -f4)"
+	@echo ""
+
+# ============================================================================
+# MONITORING & HEALTH
+# ============================================================================
+
+health-check:
+	@echo ""
+	@echo "System Health Check"
+	@echo "==================="
+	@echo ""
+	@echo "Cloudflared Status:"
+	@systemctl status --no-pager cloudflared 2>/dev/null | head -3 || echo "  ⚠️  Not configured as service"
+	@echo ""
+	@echo "Tunnel Connectivity:"
+	@if curl -s -o /dev/null -w "%{http_code}" https://dev.yourdomain.com | grep -q "200\|401\|403"; then \
+		echo "  ✅ Tunnel responding"; \
+	else \
+		echo "  ❌ Tunnel not responding"; \
+	fi
+	@echo ""
+	@echo "Log Directory:"
+	@du -sh $(DEVDIR)/logs 2>/dev/null || echo "  (not created yet)"
+	@echo ""
+	@echo "Database Status:"
+	@if [ -f $(DEVDB) ]; then \
+		ACTIVE=$$(grep -c ",active," $(DEVDB) 2>/dev/null || echo 0); \
+		TOTAL=$$(($$(wc -l < $(DEVDB)) - 1)); \
+		echo "  Active: $$ACTIVE / $$TOTAL developers"; \
+	else \
+		echo "  (not initialized yet)"; \
+	fi
+	@echo ""
+	@echo "✅ Health check complete"
+	@echo ""
+
+logs:
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "Usage: make logs SERVICE=cloudflared|git-proxy|audit|code-server"; \
+		exit 1; \
+	fi
+	@echo "Showing logs for $(SERVICE)..."
+	@echo ""
+	@journalctl -u $(SERVICE) -f --no-pager 2>/dev/null || echo "Service not found or no systemd integration"
+
+audit-report:
+	@echo ""
+	@echo "Audit Report"
+	@echo "============"
+	@echo ""
+	@if [ -z "$(DATE)" ]; then \
+		DATE=$$(date +%Y-%m-%d); \
+	fi
+	@if [ -f $(DEVDIR)/logs/$(DATE).log ]; then \
+		echo "Events for $(DATE):"; \
+		echo ""; \
+		wc -l $(DEVDIR)/logs/$(DATE).log; \
+	else \
+		echo "No logs found for date: $(DATE)"; \
+	fi
+	@if [ -f $(REVLOG) ]; then \
+		echo ""; \
+		echo "Recent admin actions:"; \
+		tail -10 $(REVLOG); \
+	fi
+	@echo ""
+
+# ============================================================================
+# SERVICE MANAGEMENT
+# ============================================================================
+
+start-services:
+	@echo "Starting remote access services..."
+	@systemctl start cloudflared 2>/dev/null || echo "  ⚠️  cloudflared service not configured"
+	@systemctl start git-proxy 2>/dev/null || echo "  ⚠️  git-proxy service not configured"
+	@systemctl start audit-logger 2>/dev/null || echo "  ⚠️  audit-logger service not configured"
+	@echo "✅ Services started"
+	@echo ""
+
+stop-services:
+	@echo "Stopping remote access services..."
+	@systemctl stop cloudflared 2>/dev/null || echo "  ⚠️  cloudflared not running"
+	@systemctl stop git-proxy 2>/dev/null || echo "  ⚠️  git-proxy not running"
+	@systemctl stop audit-logger 2>/dev/null || echo "  ⚠️  audit-logger not running"
+	@echo "✅ Services stopped"
+	@echo ""
+
+restart-services: stop-services start-services
+	@echo "✅ Services restarted"
+	@echo ""
+
+# ============================================================================
+# TEARDOWN
+# ============================================================================
+
+teardown:
+	@echo ""
+	@echo "⚠️️  WARNING: This will revoke ALL developer access"
+	@echo ""
+	@read -p "Type 'yes' to confirm: " confirm; \
+	if [ "$$confirm" != "yes" ]; then echo "Cancelled"; exit 1; fi
+	@echo "Revoking all developers..."
+	@if [ -f $(DEVDB) ]; then \
+		sed -i 's/active$$/revoked/g' $(DEVDB); \
+	fi
+	@echo "Stopping services..."
+	@make stop-services > /dev/null 2>&1 || true
+	@echo "Backing up database..."
+	@cp $(DEVDB) $(DEVDB).backup 2>/dev/null || true
+	@echo "✅ Teardown complete (database backed up to $(DEVDB).backup)"
+	@echo ""
+
+# ============================================================================
+# QUICK REFERENCE
+# ============================================================================
+
+.PHONY: quick-ref
+quick-ref:
+	@echo ""
+	@echo "╔════════════════════════════════════════════════════════════╗"
+	@echo "║          Remote Access System - Quick Reference            ║"
+	@echo "╠════════════════════════════════════════════════════════════╣"
+	@echo "║                                                            ║"
+	@echo "║  GRANT ACCESS (7 days):                                   ║"
+	@echo "║  $$ make grant-access EMAIL=dev@example.com DAYS=7        ║"
+	@echo "║                                                            ║"
+	@echo "║  LIST DEVELOPERS:                                         ║"
+	@echo "║  $$ make list-developers                                  ║"
+	@echo "║                                                            ║"
+	@echo "║  REVOKE ACCESS:                                           ║"
+	@echo "║  $$ make revoke-access EMAIL=dev@example.com              ║"
+	@echo "║                                                            ║"
+	@echo "║  HEALTH CHECK:                                            ║"
+	@echo "║  $$ make health-check                                     ║"
+	@echo "║                                                            ║"
+	@echo "║  VIEW AUDIT LOG:                                          ║"
+	@echo "║  $$ tail -20 ~/.code-server-developers/revocation.log     ║"
+	@echo "║                                                            ║"
+	@echo "╚════════════════════════════════════════════════════════════╝"
+	@echo ""

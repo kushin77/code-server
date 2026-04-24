@@ -1,0 +1,149 @@
+name: Cloudflare Edge Security Controls
+
+on:
+  schedule:
+    # Run weekly on Mondays at 3 AM UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL to probe (default: https://kushnir.cloud)'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - 'Caddyfile'
+      - 'Caddyfile.*'
+      - 'terraform/modules/cloudflare-access/**'
+      - 'scripts/ci/check-edge-security-controls.sh'
+
+concurrency:
+  group: edge-security-controls-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  edge-security-controls:
+    name: Validate edge security controls
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run edge security controls check
+        id: check
+        env:
+          EDGE_BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || format('https://{0}', vars.APEX_DOMAIN || 'kushnir.cloud') }}
+          APEX_DOMAIN: ${{ vars.APEX_DOMAIN || 'kushnir.cloud' }}
+          IDE_DOMAIN: ${{ vars.IDE_DOMAIN || 'ide.kushnir.cloud' }}
+        run: |
+          bash scripts/ci/check-edge-security-controls.sh
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Check Caddyfile static analysis
+        run: |
+          required_headers=(
+            "Strict-Transport-Security"
+            "X-Content-Type-Options"
+            "X-Frame-Options"
+            "Referrer-Policy"
+            "Permissions-Policy"
+          )
+          fail=0
+          for hdr in "${required_headers[@]}"; do
+            if grep -q "$hdr" Caddyfile; then
+              echo "PASS: Caddyfile has ${hdr}"
+            else
+              echo "FAIL: Caddyfile missing ${hdr}"
+              fail=1
+            fi
+          done
+          if grep -q '\-Server' Caddyfile; then
+            echo "PASS: Caddyfile suppresses Server header"
+          else
+            echo "WARN: Caddyfile does not suppress Server header"
+          fi
+          exit $fail
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.1
+        with:
+          name: edge-security-controls-report
+          path: artifacts/triage/edge-security-controls-report.*
+          retention-days: 90
+
+      - name: Open issue on failure
+        if: steps.check.outputs.exit_code != '0'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- edge-security-controls-failure -->';
+            const title = '[AUTO-TRIAGE] Cloudflare edge security controls failure';
+
+            let report = '';
+            if (fs.existsSync('artifacts/triage/edge-security-controls-report.md')) {
+              report = fs.readFileSync('artifacts/triage/edge-security-controls-report.md', 'utf8').slice(0, 6000);
+            }
+
+            const body = `${marker}
+            ## Cloudflare Edge Security Controls Failure
+
+            **Workflow run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Timestamp**: ${new Date().toISOString()}
+            **Triggered by**: ${{ github.event_name }}
+
+            ## Report
+
+            ${report}
+
+            ## Escalation Paths
+
+            | Severity | Check | Action |
+            |---|---|---|
+            | P0 | HSTS missing | Immediate Caddy fix + \`docker compose up -d caddy\` |
+            | P1 | Admin endpoints unprotected | Re-apply \`terraform apply\` cloudflare-access module |
+            | P1 | CF-Ray absent | Enable Cloudflare proxy (orange cloud) in DNS settings |
+            | P2 | Missing security headers | Add to Caddyfile header blocks |
+
+            ## Remediation
+
+            1. Run \`bash scripts/ci/check-edge-security-controls.sh\` locally to reproduce.
+            2. Fix the failing check (see table above).
+            3. Commit fix and verify CI passes.
+            4. Update \`#858\` with closure evidence.
+
+            Relates to #858 (edge hardening baseline)`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['P1'],
+            });
+
+            const existing = issues.find(i => i.body && i.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `Re-triggered on ${new Date().toISOString()}\n\nLatest run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+              });
+              core.info(`Updated existing edge security issue #${existing.number}`);
+            } else {
+              const { data: created } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['P1', 'security'],
+              });
+              core.info(`Created edge security issue #${created.number}`);
+            }

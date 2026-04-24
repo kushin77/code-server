@@ -1,0 +1,22 @@
+# Falco runtime security rules configuration
+# Production rules are loaded from the cloud provider at runtime
+- rule: Unexpected outbound connection from container
+  desc: Detect unexpected outbound connections from containers
+  condition: >
+    outbound and
+    container and
+    not container.image.repository in (trusted_images)
+  output: Unexpected outbound connection (command=%proc.cmdline connection=%fd.name)
+  priority: WARNING
+
+- macro: trusted_images
+  condition: container.image.repository in (prometheus, grafana, caddy)
+
+- rule: Write below etc in container
+  desc: Detect writes below /etc in a container
+  condition: >
+    open_write and
+    container and
+    fd.name startswith /etc
+  output: File below /etc opened for writing (command=%proc.cmdline file=%fd.name)
+  priority: WARNING

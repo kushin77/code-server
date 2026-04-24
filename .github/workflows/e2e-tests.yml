@@ -1,0 +1,341 @@
+name: E2E Tests (VPN-Gated)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'tests/e2e/**'
+      - 'config/grafana/dashboards/qa-metrics.json'
+      - 'scripts/ci/export-e2e-metrics.sh'
+      - '.github/workflows/e2e-tests.yml'
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'tests/e2e/**'
+      - 'config/grafana/dashboards/qa-metrics.json'
+      - 'scripts/ci/export-e2e-metrics.sh'
+  schedule:
+    # Run daily at 2 AM UTC on primary host only
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      require_vpn:
+        description: 'Require VPN connection for tests'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  issues: write
+
+env:
+  PLAYWRIGHT_BROWSERS_PATH: /tmp/pw-browsers
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0'
+  # VPN gating configuration
+  REQUIRE_VPN: '1'
+  VPN_CHECK_HOST: '192.168.168.31'
+  VPN_CHECK_TIMEOUT: '5'
+  VPN_CHECK_URL: 'https://ide.kushnir.cloud'
+
+jobs:
+  vpn-preflight:
+    name: VPN Connectivity Check
+    runs-on: [self-hosted, vpn-connected]
+    outputs:
+      vpn_ready: ${{ steps.check.outputs.VPN_READY }}
+      vpn_ping: ${{ steps.check.outputs.VPN_PING_SUCCESS }}
+      vpn_http: ${{ steps.check.outputs.VPN_HTTP_SUCCESS }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Check VPN connectivity
+        id: check
+        run: bash scripts/ci/check-vpn-connectivity.sh
+        env:
+          REQUIRE_VPN: ${{ inputs.require_vpn == 'false' && '0' || '1' }}
+
+  oauth-login-tests:
+    name: OAuth Login Flow Tests (20+ tests)
+    needs: vpn-preflight
+    if: needs.vpn-preflight.outputs.vpn_ready == 'true'
+    runs-on: [self-hosted, vpn-connected]
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@1e60f620b9541d910d4cec63d3ae33e271e2e78e
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium
+
+      - name: Run OAuth login tests
+        run: |
+          pnpm exec playwright test \
+            tests/e2e/specs/oauth-login.spec.ts \
+            --shard=${{ matrix.shard }}/2
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'qa@kushnir.cloud' }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          BASE_URL: https://kushnir.cloud
+          REQUIRE_VPN: '1'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: oauth-login-tests-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+  appsmith-portal-tests:
+    name: Appsmith Portal Tests (30+ tests)
+    needs: [vpn-preflight, oauth-login-tests]
+    if: needs.vpn-preflight.outputs.vpn_ready == 'true'
+    runs-on: [self-hosted, vpn-connected]
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@1e60f620b9541d910d4cec63d3ae33e271e2e78e
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium
+
+      - name: Run Appsmith portal tests
+        run: |
+          pnpm exec playwright test \
+            tests/e2e/specs/appsmith-portal.spec.ts \
+            --shard=${{ matrix.shard }}/3
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'qa@kushnir.cloud' }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          BASE_URL: https://kushnir.cloud
+          REQUIRE_VPN: '1'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: appsmith-portal-tests-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+  ide-launch-tests:
+    name: IDE Launch & Workspace Tests (25+ tests)
+    needs: [vpn-preflight, appsmith-portal-tests]
+    if: needs.vpn-preflight.outputs.vpn_ready == 'true'
+    runs-on: [self-hosted, vpn-connected]
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@1e60f620b9541d910d4cec63d3ae33e271e2e78e
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium
+
+      - name: Run IDE launch tests
+        run: |
+          pnpm exec playwright test \
+            tests/e2e/specs/ide-launch.spec.ts \
+            --shard=${{ matrix.shard }}/2
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'qa@kushnir.cloud' }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          IDE_BASE_URL: https://ide.kushnir.cloud
+          REQUIRE_VPN: '1'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ide-launch-tests-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+  e2e-test-summary:
+    name: E2E Test Summary
+    needs: [vpn-preflight, oauth-login-tests, appsmith-portal-tests, ide-launch-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Download all test results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+
+      - name: Aggregate QA metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/export-e2e-metrics.sh .
+        env:
+          E2E_METRICS_JSON_PATH: e2e-metrics.json
+          E2E_METRICS_MD_PATH: e2e-metrics.md
+          E2E_METRICS_PROM_PATH: e2e-metrics.prom
+
+      - name: Publish QA metrics summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat e2e-metrics.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment QA metrics on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('e2e-metrics.md', 'utf8');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - name: Upload QA metrics artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: e2e-qa-metrics
+          path: |
+            e2e-metrics.json
+            e2e-metrics.md
+            e2e-metrics.prom
+          retention-days: 30
+
+      - name: Enforce QA metrics gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed_tests=$(jq -r '.failed' e2e-metrics.json)
+          pass_rate=$(jq -r '.passRate' e2e-metrics.json)
+
+          if [[ "${failed_tests}" -gt 0 ]]; then
+            echo "QA gate blocked: ${failed_tests} failed test(s) detected."
+            exit 1
+          fi
+
+          if (( $(printf '%.0f' "${pass_rate}") < 95 )); then
+            echo "QA gate blocked: pass rate ${pass_rate}% is below the 95% threshold."
+            exit 1
+          fi
+
+          echo "QA gate passed: ${pass_rate}% pass rate with zero failures."
+
+      - name: Consolidate test results
+        run: |
+          mkdir -p consolidated-results
+          
+          # Count test results
+          total_passed=0
+          total_failed=0
+          total_skipped=0
+          
+          for dir in */; do
+            if [[ -f "$dir/index.json" ]]; then
+              passed=$(jq '.stats.expected // 0' "$dir/index.json" 2>/dev/null || echo 0)
+              failed=$(jq '.stats.unexpected // 0' "$dir/index.json" 2>/dev/null || echo 0)
+              skipped=$(jq '.stats.skipped // 0' "$dir/index.json" 2>/dev/null || echo 0)
+              
+              total_passed=$((total_passed + passed))
+              total_failed=$((total_failed + failed))
+              total_skipped=$((total_skipped + skipped))
+            fi
+          done
+          
+          echo "## E2E Test Results Summary" > test-summary.md
+          echo "" >> test-summary.md
+          echo "| Metric | Count |" >> test-summary.md
+          echo "|--------|-------|" >> test-summary.md
+          echo "| Passed | $total_passed |" >> test-summary.md
+          echo "| Failed | $total_failed |" >> test-summary.md
+          echo "| Skipped | $total_skipped |" >> test-summary.md
+          echo "| **Total** | $((total_passed + total_failed + total_skipped)) |" >> test-summary.md
+          
+          cat test-summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: VPN Status
+        run: |
+          echo "## VPN Connectivity Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- VPN Ready: ${{ needs.vpn-preflight.outputs.vpn_ready }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ICMP Ping: ${{ needs.vpn-preflight.outputs.vpn_ping }}" >> $GITHUB_STEP_SUMMARY
+          echo "- HTTP Check: ${{ needs.vpn-preflight.outputs.vpn_http }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if tests failed
+        if: failure()
+        run: |
+          echo "E2E tests failed. Review artifact results above."
+          exit 1
+
+  e2e-gate:
+    name: E2E Gate
+    needs: [e2e-test-summary]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check summary result
+        run: |
+          if [ "${{ needs.e2e-test-summary.result }}" != "success" ]; then
+            echo "E2E summary failed - blocking merge"
+            exit 1
+          fi
+          echo "E2E summary passed - merge allowed"

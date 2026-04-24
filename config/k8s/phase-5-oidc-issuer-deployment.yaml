@@ -1,0 +1,351 @@
+# Phase 5: Kubernetes OIDC Issuer Deployment
+# Enables JWT token generation for service-to-service authentication in Kubernetes
+# Workloads can request tokens via projected volumes with OIDC token mounts
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: oidc-system
+  labels:
+    app.kubernetes.io/name: oidc-issuer
+    app.kubernetes.io/part-of: code-server
+---
+
+# ConfigMap: OIDC Issuer Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oidc-issuer-config
+  namespace: oidc-system
+data:
+  # OIDC Issuer URL (exposed publicly)
+  issuer-url: "https://oidc.kushnir.cloud"
+  
+  # Token configuration
+  token-ttl: "3600"  # 1 hour
+  token-refresh-leeway: "300"  # 5 minutes before expiry
+  
+  # Allowed audiences for token requests
+  audiences: "code-server,api,kubernetes,github-actions"
+  
+  # JWT claims to include in tokens
+  jwt-claims: |
+    {
+      "sub": "subject",
+      "aud": "audience",
+      "iss": "issuer",
+      "iat": "issued_at",
+      "exp": "expiration",
+      "email": "email",
+      "groups": "groups",
+      "kubernetes.io/namespace": "namespace",
+      "kubernetes.io/service-account": "service_account"
+    }
+---
+
+# Secret: OIDC Issuer Signing Keys (RS256)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oidc-issuer-keys
+  namespace: oidc-system
+type: kubernetes.io/tls
+data:
+  # These should be populated from environment variables at deployment time
+  # tls.crt: <base64-encoded RSA public key>
+  # tls.key: <base64-encoded RSA private key>
+---
+
+# ServiceAccount: OIDC Issuer
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: oidc-issuer
+  namespace: oidc-system
+  labels:
+    app: oidc-issuer
+---
+
+# ClusterRole: OIDC Issuer permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oidc-issuer
+  labels:
+    app: oidc-issuer
+rules:
+# Allow reading service accounts from all namespaces
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list", "watch"]
+# Allow reading namespaces
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+# Allow reading pods (for workload identity)
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+# Allow reading configmaps
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+# Allow reading secrets (for signing keys)
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+  resourceNames: ["oidc-issuer-keys"]
+---
+
+# ClusterRoleBinding: Bind OIDC Issuer ServiceAccount to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-issuer
+  labels:
+    app: oidc-issuer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oidc-issuer
+subjects:
+- kind: ServiceAccount
+  name: oidc-issuer
+  namespace: oidc-system
+---
+
+# Deployment: OIDC Issuer Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oidc-issuer
+  namespace: oidc-system
+  labels:
+    app: oidc-issuer
+    app.kubernetes.io/name: oidc-issuer
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: oidc-issuer
+  template:
+    metadata:
+      labels:
+        app: oidc-issuer
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: oidc-issuer
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: oidc-issuer
+        image: node:20-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 8081
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: ISSUER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: oidc-issuer-config
+              key: issuer-url
+        - name: TOKEN_TTL
+          valueFrom:
+            configMapKeyRef:
+              name: oidc-issuer-config
+              key: token-ttl
+        - name: AUDIENCES
+          valueFrom:
+            configMapKeyRef:
+              name: oidc-issuer-config
+              key: audiences
+        - name: JWT_PRIVATE_KEY_PATH
+          value: "/etc/oidc/keys/tls.key"
+        - name: JWT_PUBLIC_KEY_PATH
+          value: "/etc/oidc/keys/tls.crt"
+        - name: LOG_LEVEL
+          value: "info"
+        volumeMounts:
+        - name: oidc-keys
+          mountPath: /etc/oidc/keys
+          readOnly: true
+        - name: config
+          mountPath: /etc/oidc/config
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: oidc-keys
+        secret:
+          secretName: oidc-issuer-keys
+          defaultMode: 0400
+      - name: config
+        configMap:
+          name: oidc-issuer-config
+          defaultMode: 0444
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - oidc-issuer
+              topologyKey: kubernetes.io/hostname
+---
+
+# Service: OIDC Issuer HTTP
+apiVersion: v1
+kind: Service
+metadata:
+  name: oidc-issuer
+  namespace: oidc-system
+  labels:
+    app: oidc-issuer
+spec:
+  type: ClusterIP
+  selector:
+    app: oidc-issuer
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 8081
+    targetPort: metrics
+    protocol: TCP
+---
+
+# Ingress: OIDC Issuer HTTP
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oidc-issuer
+  namespace: oidc-system
+  labels:
+    app: oidc-issuer
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - oidc.kushnir.cloud
+    secretName: oidc-issuer-tls
+  rules:
+  - host: oidc.kushnir.cloud
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: oidc-issuer
+            port:
+              number: 8080
+---
+
+# HorizontalPodAutoscaler: Auto-scale OIDC Issuer based on load
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: oidc-issuer
+  namespace: oidc-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: oidc-issuer
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+---
+
+# PodDisruptionBudget: Ensure high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: oidc-issuer
+  namespace: oidc-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: oidc-issuer

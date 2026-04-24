@@ -1,0 +1,236 @@
+# ════════════════════════════════════════════════════════════════════════════
+# docker-compose.base.yml
+# Base composition with core services (code-server, ollama, oauth2-proxy, caddy)
+# Used by all variants: docker-compose.production.yml, docker-compose-phase-*.yml
+# 
+# USAGE: docker-compose -f docker-compose.base.yml -f <variant>.yml up -d
+# ════════════════════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# YAML Anchors for Common Patterns (DRY - Don't Repeat Yourself)
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-healthcheck-standard: &healthcheck-standard
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 20s
+
+x-logging-standard: &logging-standard
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-logging-compact: &logging-compact
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "3"
+
+x-network-enterprise: &network-enterprise
+  - enterprise
+
+x-deploy-standard: &deploy-standard
+  resources:
+    limits:
+      memory: 512m
+      cpus: '0.5'
+    reservations:
+      memory: 256m
+      cpus: '0.25'
+
+x-deploy-code-server: &deploy-code-server
+  resources:
+    limits:
+      memory: 4g
+      cpus: '2.0'
+    reservations:
+      memory: 512m
+      cpus: '0.25'
+
+x-deploy-ollama: &deploy-ollama
+  resources:
+    limits:
+      memory: 32g
+    reservations:
+      memory: 8g
+
+x-restart-unless-stopped: &restart-unless-stopped
+  unless-stopped
+
+x-restart-always: &restart-always
+  always
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SERVICES
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ─── code-server ────────────────────────────────────────────────────────────
+  # VS Code running in the browser with Copilot Chat support
+  code-server:
+    image: codercom/code-server:4.115.0
+    container_name: code-server
+    restart: *restart-always
+    networks: *network-enterprise
+    expose:
+      - "8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - OLLAMA_ENDPOINT=http://ollama:11434
+    command:
+      - "--bind-addr=127.0.0.1:8080"
+      - "--disable-telemetry"
+      - "--cert=false"
+      - "--auth=password"
+    volumes:
+      - code-server-enterprise-data:/home/coder
+    healthcheck:
+      <<: *healthcheck-standard
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+    deploy: *deploy-code-server
+    logging: *logging-standard
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── ollama ─────────────────────────────────────────────────────────────────
+  # Local LLM server (pinned to stable release)
+  ollama:
+    image: ollama/ollama:0.1.27
+    container_name: ollama
+    restart: *restart-unless-stopped
+    networks: *network-enterprise
+    ports:
+      - "0.0.0.0:11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      <<: *healthcheck-standard
+      timeout: 10s
+      start_period: 30s
+      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/11434"]
+    deploy: *deploy-ollama
+    logging: *logging-standard
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── ollama-init ────────────────────────────────────────────────────────────
+  # One-time service that pulls models on startup
+  ollama-init:
+    image: ollama/ollama:0.1.27
+    container_name: ollama-init
+    networks: *network-enterprise
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    volumes:
+      - ollama-data:/root/.ollama
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo "🚀 Pulling elite LLM models..."
+        echo "⏳ Pulling llama2:70b-chat..."
+        ollama pull llama2:70b-chat || true
+        echo "⏳ Pulling codegemma..."
+        ollama pull codegemma || true
+        echo "⏳ Pulling neural-chat..."
+        ollama pull neural-chat || true
+        echo "⏳ Pulling mistral..."
+        ollama pull mistral || true
+        echo "✅ All models ready"
+        sleep infinity
+    depends_on:
+      - ollama
+    restart: on-failure
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── oauth2-proxy ───────────────────────────────────────────────────────────
+  # Authentication sidecar (v7.5.1) - config from .env.oauth2-proxy
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    container_name: oauth2-proxy
+    restart: *restart-unless-stopped
+    networks: *network-enterprise
+    expose:
+      - "4180"
+    env_file:
+      - .env.oauth2-proxy
+    environment:
+      - OAUTH2_PROXY_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - OAUTH2_PROXY_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+      - OAUTH2_PROXY_REDIRECT_URL=https://${DOMAIN}/oauth2/callback
+    volumes:
+      - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
+    healthcheck:
+      <<: *healthcheck-standard
+      test: ["CMD", "curl", "-f", "http://localhost:4180/ping"]
+    depends_on:
+      - code-server
+    deploy: *deploy-standard
+    logging: *logging-compact
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── caddy ──────────────────────────────────────────────────────────────────
+  # Reverse proxy + TLS termination (v2-alpine)
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: *restart-always
+    networks: *network-enterprise
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-config:/config
+      - caddy-data:/data
+    environment:
+      - ACME_AGREE=true
+    healthcheck:
+      <<: *healthcheck-standard
+      test: ["CMD", "curl", "-f", "http://localhost:80/ || exit 1"]
+    depends_on:
+      - code-server
+    deploy: *deploy-standard
+    logging: *logging-compact
+    security_opt:
+      - no-new-privileges:true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NETWORKS
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  enterprise:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VOLUMES
+# ─────────────────────────────────────────────────────────────────────────────
+
+volumes:
+  code-server-enterprise-data:
+    driver: local
+  ollama-data:
+    driver: local
+  caddy-config:
+    driver: local
+  caddy-data:
+    driver: local

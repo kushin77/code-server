@@ -1,0 +1,140 @@
+# RBAC Policy Matrix - Phase 3
+# 
+# Defines fine-grained access control per endpoint + method + role
+# 
+# Format:
+#   endpoint:
+#     method:
+#       allow_roles: [list of roles that can access]
+#       allow_identity_types: [human|workload|automation]
+#       audit_required: true|false
+#       rate_limit: requests/minute (0 = unlimited)
+
+policies:
+  # Code-Server IDE Portal
+  /code-server:
+    GET:
+      allow_roles: [admin, operator, viewer]
+      allow_identity_types: [human, workload]
+      audit_required: false
+      rate_limit: 0
+    POST:
+      allow_roles: [admin]
+      allow_identity_types: [human]
+      audit_required: true
+      rate_limit: 10
+    DELETE:
+      allow_roles: [admin]
+      allow_identity_types: [human]
+      audit_required: true
+      rate_limit: 5
+
+  # Prometheus Query API
+  /prometheus/api/v1/query:
+    GET:
+      allow_roles: [admin, operator, viewer]
+      allow_identity_types: [human, workload]
+      audit_required: false
+      rate_limit: 100
+    POST:
+      allow_roles: [admin, operator]
+      allow_identity_types: [human, workload]
+      audit_required: true
+      rate_limit: 50
+
+  # Grafana Dashboards
+  /grafana/api/dashboards:
+    GET:
+      allow_roles: [admin, operator, viewer]
+      allow_identity_types: [human, workload]
+      audit_required: false
+      rate_limit: 0
+    POST:
+      allow_roles: [admin]
+      allow_identity_types: [human]
+      audit_required: true
+      rate_limit: 10
+
+  # Admin: System Restart
+  /admin/restart:
+    POST:
+      allow_roles: [admin]
+      allow_identity_types: [human]
+      audit_required: true
+      rate_limit: 3
+
+  # Admin: Deploy
+  /admin/deploy:
+    POST:
+      allow_roles: [admin]
+      allow_identity_types: [human]
+      audit_required: true
+      rate_limit: 5
+
+  # Admin: System Status
+  /admin/status:
+    GET:
+      allow_roles: [admin, operator]
+      allow_identity_types: [human, workload]
+      audit_required: false
+      rate_limit: 0
+
+  # OAuth2 Proxy Endpoints
+  /oauth2/auth:
+    GET:
+      allow_roles: []  # Public, no auth required
+      allow_identity_types: []
+      audit_required: false
+      rate_limit: 1000
+
+  /oauth2/callback:
+    GET:
+      allow_roles: []  # Public, handled by oauth2-proxy
+      allow_identity_types: []
+      audit_required: true
+      rate_limit: 100
+
+  # Loki Log Aggregation
+  /loki/api/v1/query:
+    GET:
+      allow_roles: [admin, operator]
+      allow_identity_types: [human, workload]
+      audit_required: false
+      rate_limit: 100
+
+  # Default: Deny all unlisted endpoints
+  /:
+    "*":
+      allow_roles: []
+      allow_identity_types: []
+      audit_required: true
+      rate_limit: 0
+
+# Role Hierarchy (for decision-making)
+role_hierarchy:
+  admin:
+    - operator
+    - viewer
+  operator:
+    - viewer
+  viewer: []
+
+# Identity Type Permissions (additional restrictions)
+identity_restrictions:
+  automation:
+    - allow_api_token_auth_only: true
+    - deny_interactive_endpoints: [/code-server, /grafana]
+  workload:
+    - allow_jwt_auth_only: true
+    - deny_admin_endpoints: [/admin/restart, /admin/deploy]
+  human:
+    - allow_all_auth_methods: true
+
+# Audit Logging Configuration
+audit:
+  log_all_requests: false
+  log_denied_requests: true
+  log_admin_actions: true
+  log_high_privilege_actions: true
+  retention_days: 365
+  immutable: true

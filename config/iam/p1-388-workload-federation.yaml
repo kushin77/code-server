@@ -1,0 +1,496 @@
+---
+# P1 #388: Service-to-Service Authentication (Workload Identity Federation)
+# Phase 3: JWT tokens and workload federation configuration
+
+################################################################################
+# 1. SERVICE-TO-SERVICE JWT TOKEN ISSUANCE
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workload-identity-config
+  namespace: default
+spec:
+  data:
+    jwt_issuer: "https://kushnir.cloud/oidc"
+    token_audience: "kushnir77/code-server"
+    token_expiry_seconds: "3600"  # 1 hour
+    refresh_before_expiry_seconds: "300"  # Refresh 5 min before expiry
+    
+    # Service-to-service token endpoints
+    token_endpoint: "https://kushnir.cloud/api/auth/token"
+    introspection_endpoint: "https://kushnir.cloud/api/auth/introspect"
+    jwks_uri: "https://kushnir.cloud/.well-known/jwks.json"
+
+---
+################################################################################
+# 2. WORKLOAD IDENTITY FEDERATION SETUP
+################################################################################
+
+# ServiceAccount for each service with OIDC identity
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-server-workload
+  namespace: default
+  annotations:
+    iam.gke.io/gcp-service-account: code-server@code-server-enterprise.iam.gserviceaccount.com
+
+---
+# Workload identity binding (K8s ServiceAccount → GCP Service Account)
+apiVersion: iam.cnpg.io/v1
+kind: ServiceAccountBinding
+metadata:
+  name: code-server-binding
+  namespace: default
+spec:
+  serviceAccount: code-server-workload
+  gcpServiceAccount: code-server@code-server-enterprise.iam.gserviceaccount.com
+  roles:
+  - roles/iam.workloadIdentityUser
+
+---
+################################################################################
+# 3. JWT CLAIMS DEFINITION
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jwt-claims-schema
+  namespace: default
+spec:
+  data:
+    jwt_claims: |
+      {
+        "standard_claims": {
+          "iss": "https://kushnir.cloud/oidc",
+          "sub": "service:<service-name>",
+          "aud": "kushnir77/code-server",
+          "iat": "<issued-at>",
+          "exp": "<expiration>",
+          "nbf": "<not-before>"
+        },
+        "custom_claims": {
+          "service": "string - service identifier (code-server, backstage, appsmith, ai-gateway, etc.)",
+          "rbac_role": "enum - admin | operator | viewer",
+          "team": "string - team name from GitHub teams / Google groups",
+          "permissions": "array - list of explicit permissions (e.g., 'read:repo', 'deploy:prod')",
+          "tier": "enum - frontend | platform | backend | data | observability",
+          "owner_email": "string - service owner email for notifications",
+          "correlation_id": "uuid - for request tracing across services",
+          "issued_by": "string - identity of token issuer (human/service)",
+          "intended_use": "enum - workload-federation | api-gateway | webhook | internal-call"
+        },
+        "example_token": {
+          "iss": "https://kushnir.cloud/oidc",
+          "sub": "service:ai-gateway",
+          "aud": "kushnir77/code-server",
+          "service": "ai-gateway",
+          "rbac_role": "operator",
+          "team": "ai-team",
+          "permissions": ["read:models", "write:cache", "read:vector-store"],
+          "tier": "backend",
+          "owner_email": "ai-team@kushnir.cloud",
+          "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+          "issued_by": "workload-identity-issuer",
+          "intended_use": "workload-federation",
+          "iat": 1671234567,
+          "exp": 1671238167,
+          "nbf": 1671234567
+        }
+      }
+
+---
+################################################################################
+# 4. SERVICE-TO-SERVICE AUTHENTICATION MATRIX
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-auth-matrix
+  namespace: default
+spec:
+  data:
+    # Define which services can call which services
+    authentication_rules: |
+      code-server:
+        can_call:
+          - backstage (for deployment info)
+          - appsmith (for low-code apps)
+          - ai-gateway (for AI features)
+          - postgresql (via connection pool)
+        authentication: workload-identity JWT
+        token_required: true
+        refresh_strategy: automatic
+      
+      backstage:
+        can_call:
+          - code-server (for workspace management)
+          - postgresql (full access for deployments)
+          - ai-gateway (for intelligence)
+          - github (webhooks, API calls)
+        authentication: workload-identity JWT + GitHub token
+        token_required: true
+        refresh_strategy: automatic
+      
+      appsmith:
+        can_call:
+          - postgresql (via ORM connection string)
+          - code-server (for IDE integration)
+          - ai-gateway (for smart features)
+        authentication: workload-identity JWT
+        token_required: true
+        refresh_strategy: automatic
+      
+      ai-gateway:
+        can_call:
+          - postgresql (read models, vector embeddings)
+          - redis (cache vectors, sessions)
+          - ollama (LLM inference)
+        authentication: workload-identity JWT (internal only)
+        token_required: true
+        refresh_strategy: automatic
+      
+      postgresql:
+        can_call:
+          - redis (replication, caching)
+          - backup-service (storage)
+        authentication: mTLS + credentials
+        token_required: false
+        refresh_strategy: manual
+      
+      prometheus:
+        can_call:
+          - all services (metrics scraping)
+        authentication: bearer token (read-only)
+        token_required: true
+        token_scope: metrics:read
+      
+      github-webhook:
+        can_call:
+          - backstage (deployments)
+          - code-server (repo sync)
+        authentication: GitHub webhook signature + bearer token
+        token_required: true
+        refresh_strategy: github-managed
+
+---
+################################################################################
+# 5. TOKEN VALIDATION MIDDLEWARE
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: token-validation-rules
+  namespace: default
+spec:
+  data:
+    validation_rules: |
+      {
+        "token_validation": {
+          "required_checks": [
+            "signature_valid - JWT signature must be signed by trusted issuer",
+            "not_expired - exp claim must be in future",
+            "not_before_passed - nbf claim must be in past",
+            "audience_match - aud claim must match expected audience",
+            "service_identity - sub claim must be valid service identifier",
+            "tier_consistency - rbac_role must match service tier"
+          ],
+          "validation_order": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "failure_behavior": "return 401 Unauthorized with reason code",
+          "max_validation_latency_ms": 50,
+          "cache_validated_tokens": {
+            "enabled": true,
+            "ttl_seconds": 300,
+            "keyed_by": "token_signature_hash"
+          }
+        },
+        "error_codes": {
+          "INVALID_SIGNATURE": {"http_status": 401, "message": "Token signature invalid"},
+          "EXPIRED_TOKEN": {"http_status": 401, "message": "Token expired"},
+          "INVALID_AUDIENCE": {"http_status": 403, "message": "Invalid token audience"},
+          "MISSING_REQUIRED_CLAIM": {"http_status": 401, "message": "Missing required JWT claim"},
+          "UNTRUSTED_ISSUER": {"http_status": 403, "message": "Untrusted token issuer"},
+          "VALIDATION_TIMEOUT": {"http_status": 503, "message": "Token validation timeout"}
+        }
+      }
+
+---
+################################################################################
+# 6. ROLE MAPPING FROM IDENTITY SOURCES
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: role-mapping-config
+  namespace: default
+spec:
+  data:
+    # Map GitHub teams/Google groups to RBAC roles
+    role_mappings: |
+      github_teams:
+        - team: "kushin77/admins"
+          maps_to_role: "admin"
+          services: ["*"]
+        
+        - team: "kushin77/platform-engineering"
+          maps_to_role: "operator"
+          services: ["*"]
+        
+        - team: "kushin77/ai-team"
+          maps_to_role: "operator"
+          services: ["ai-gateway", "code-server", "backstage"]
+        
+        - team: "kushin77/developers"
+          maps_to_role: "operator"
+          services: ["code-server", "appsmith"]
+        
+        - team: "kushin77/observers"
+          maps_to_role: "viewer"
+          services: ["*"]
+      
+      google_groups:
+        - group: "admins@kushnir.cloud"
+          maps_to_role: "admin"
+          services: ["*"]
+        
+        - group: "platform@kushnir.cloud"
+          maps_to_role: "operator"
+          services: ["*"]
+        
+        - group: "developers@kushnir.cloud"
+          maps_to_role: "operator"
+          services: ["code-server", "appsmith", "backstage"]
+        
+        - group: "viewers@kushnir.cloud"
+          maps_to_role: "viewer"
+          services: ["*"]
+      
+      # Default: no role (deny by default)
+      default_role: "none"
+      default_action: "DENY"
+
+---
+################################################################################
+# 7. API TOKEN STRATEGY (Webhook integrations)
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-token-strategy
+  namespace: default
+spec:
+  data:
+    api_tokens: |
+      {
+        "token_types": {
+          "webhook_token": {
+            "format": "whk_<base64_random_32bytes>",
+            "usage": "GitHub webhooks, Slack integrations",
+            "validation": "HMAC-SHA256 signature in header",
+            "ttl_days": 90,
+            "rotation_required": true
+          },
+          "service_token": {
+            "format": "svc_<base64_random_32bytes>",
+            "usage": "External service integrations (not workload-federation)",
+            "validation": "Bearer token in Authorization header",
+            "ttl_days": 365,
+            "rotation_required": true
+          },
+          "personal_token": {
+            "format": "ghp_<base64_random_32bytes>",
+            "usage": "User personal access tokens (GitHub API)",
+            "validation": "Bearer token in Authorization header",
+            "ttl_days": 365,
+            "rotation_required": true,
+            "scopes": ["repo", "admin:org_hook", "gist"]
+          }
+        },
+        "token_storage": {
+          "location": "GitHub Secrets + GCP Secret Manager",
+          "rotation_trigger": "manual via GitHub Actions",
+          "audit_trail": "Immutable audit log with user/timestamp/action"
+        }
+      }
+
+---
+################################################################################
+# 8. PRIVILEGED OPERATION APPROVAL FLOW
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: privileged-operation-approval
+  namespace: default
+spec:
+  data:
+    approval_workflow: |
+      {
+        "privileged_operations": [
+          {
+            "operation": "deploy-production",
+            "description": "Deploy code changes to production environment",
+            "required_role": "admin",
+            "approval_required": true,
+            "approvers": ["platform-team@kushnir.cloud"],
+            "approval_timeout_minutes": 60,
+            "requires_mfa": true,
+            "audit_event": "privileged_operation_approved"
+          },
+          {
+            "operation": "delete-database",
+            "description": "Delete database or namespace",
+            "required_role": "admin",
+            "approval_required": true,
+            "approvers": ["cto@kushnir.cloud"],
+            "approval_timeout_minutes": 120,
+            "requires_mfa": true,
+            "confirmation_required": 2,
+            "audit_event": "privileged_operation_approved"
+          },
+          {
+            "operation": "rotate-secrets",
+            "description": "Rotate service credentials and tokens",
+            "required_role": "operator",
+            "approval_required": false,
+            "requires_mfa": true,
+            "audit_event": "secret_rotation_initiated"
+          },
+          {
+            "operation": "create-service-account",
+            "description": "Create new service account",
+            "required_role": "operator",
+            "approval_required": true,
+            "approvers": ["platform-team@kushnir.cloud"],
+            "approval_timeout_minutes": 30,
+            "audit_event": "service_account_created"
+          }
+        ],
+        "approval_notification": {
+          "channel": "slack",
+          "mentions": ["@platform-team"],
+          "includes_context": true
+        }
+      }
+
+---
+################################################################################
+# 9. AUDIT LOG IMMUTABILITY & RETENTION
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-log-config
+  namespace: default
+spec:
+  data:
+    audit_logging: |
+      {
+        "log_destinations": [
+          {
+            "type": "loki",
+            "endpoint": "http://loki:3100",
+            "labels": ["service", "rbac_role", "action"],
+            "retention_days": 30
+          },
+          {
+            "type": "gcp-cloud-logging",
+            "project": "code-server-enterprise",
+            "retention_days": 365,
+            "immutable": true
+          }
+        ],
+        "log_events": {
+          "authentication": {
+            "when": "User/service attempts authentication",
+            "fields": ["timestamp", "user_id", "service", "auth_method", "success", "reason", "correlation_id"],
+            "sampling": "log all",
+            "retention": "1 year"
+          },
+          "authorization": {
+            "when": "RBAC decision made (ALLOW/DENY)",
+            "fields": ["timestamp", "user_id", "action", "resource", "rbac_role", "decision", "reason", "correlation_id"],
+            "sampling": "log all",
+            "retention": "1 year"
+          },
+          "privileged_operation": {
+            "when": "Admin-level operation attempted",
+            "fields": ["timestamp", "user_id", "operation", "resource_affected", "approval_required", "approved_by", "result", "correlation_id"],
+            "sampling": "log all",
+            "retention": "3 years (compliance)"
+          },
+          "secret_access": {
+            "when": "Secret read or modified",
+            "fields": ["timestamp", "user_id", "secret_name", "action", "source_ip", "correlation_id"],
+            "sampling": "log all",
+            "retention": "1 year"
+          }
+        },
+        "immutability": {
+          "enabled": true,
+          "mechanism": "append-only logs + object lock on GCS",
+          "deletion_protection": "cannot delete or modify past 30 days of logs",
+          "emergency_access": "requires CTO + VP approval + audit trail"
+        },
+        "compliance": {
+          "soc2": "audit logs retained for 1 year minimum",
+          "hipaa": "audit logs retained for 6 years",
+          "gdpr": "user data logs deleted per right-to-be-forgotten"
+        }
+      }
+
+---
+################################################################################
+# 10. BREAK-GLASS EMERGENCY PROCEDURES
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: break-glass-procedures
+  namespace: default
+spec:
+  data:
+    break_glass_policy: |
+      {
+        "when_to_use": "Only when authentication/authorization system is unavailable and critical systems need manual override",
+        "access_requirements": {
+          "roles_required": ["CTO", "VP-Engineering"],
+          "minimum_approvers": 2,
+          "approval_timeout_minutes": 15,
+          "requires_mfa": true
+        },
+        "access_method": {
+          "token": "break-glass-admin token (stored in sealed vault)",
+          "location": "/etc/secrets/break-glass-token",
+          "access_log": "logged to immutable audit trail",
+          "expiry": "1 hour maximum",
+          "auto_revoke": true
+        },
+        "audit_trail": {
+          "who_accessed": "recorded",
+          "what_actions": "all actions recorded",
+          "when": "precise timestamp",
+          "why": "required reason field",
+          "approval_chain": "recorded",
+          "notification": "sent to security team immediately"
+        },
+        "restrictions": "Break-glass access is read-only by default (prevent accidental damage)",
+        "recovery": "After using break-glass, must rotate all service credentials within 24 hours"
+      }

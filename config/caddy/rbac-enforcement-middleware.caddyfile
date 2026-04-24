@@ -1,0 +1,346 @@
+---
+# Phase 3: Service Authorization Middleware for JWT Token Validation & RBAC Enforcement
+# Caddy middleware for validating JWT tokens and enforcing service-to-service authorization
+
+(jwt_validation) {
+  # Global JWT validation snippet for reuse in all protected services
+  header X-JWT-Claim-Iss "https://oidc.kushnir.cloud"
+  header X-JWT-Claim-Aud "{args.0}"  # Audience must match service name
+  header X-JWT-Validation-Strictness "strict"
+  
+  # Extract and validate JWT from Authorization header
+  @jwt_bearer {
+    header Authorization "Bearer *"
+  }
+  
+  # Log all token validations
+  log {
+    output stdout
+    format json {
+      time_format iso8601
+      request_headers {
+        Authorization
+        X-Request-ID
+        X-Service-Account
+      }
+    }
+  }
+}
+
+# ============================================================================
+# Code-Server IDE Authorization Middleware
+# ============================================================================
+code-server.{$APEX_DOMAIN} {
+  # Apply JWT validation for code-server
+  import jwt_validation "code-server"
+  
+  # Security headers
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    X-XSS-Protection "1; mode=block"
+    Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+    X-Service-ID "code-server"
+    X-Service-Version "4.115.0"
+  }
+  
+  # RBAC enforcement: Only allow requests with valid code-server audience
+  @invalid_audience {
+    header X-JWT-Claim-Aud "!code-server"
+  }
+  
+  handle @invalid_audience {
+    respond 403 "Forbidden: Invalid service audience"
+  }
+  
+  # Rate limiting per service account
+  @code_server_requests {
+    path /*
+  }
+  rate_limit @code_server_requests {
+    rate 1000/m       # 1000 requests per minute
+    burst 100
+    key {http.request.header.X-Service-Account}
+    status 429
+  }
+  
+  # Reverse proxy to code-server pod
+  reverse_proxy localhost:8080 {
+    header_up X-Forwarded-For {http.request.remote.host}
+    header_up X-Forwarded-Proto https
+    header_up X-Real-IP {http.request.remote.host}
+    header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+    header_up X-Service-Account {http.request.header.X-Service-Account}
+    
+    # Healthcheck
+    uri strip_prefix /healthz
+    health /healthz
+  }
+}
+
+# ============================================================================
+# PostgreSQL Database Service Authorization
+# ============================================================================
+postgres.{$APEX_DOMAIN}:5432 {
+  # Database connection requires strict JWT validation
+  import jwt_validation "postgresql"
+  
+  # Only allow token refresh + query operations
+  @db_write {
+    method "INSERT|UPDATE|DELETE"
+  }
+  
+  handle @db_write {
+    # Validate write permissions
+    @has_write_perm {
+      header X-RBAC-Permission "database:write"
+    }
+    handle @has_write_perm {
+      # Permission granted - proxy to database
+      reverse_proxy localhost:5432 {
+        header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+      }
+    }
+    handle {
+      respond 403 "Forbidden: Insufficient permissions for write operation"
+    }
+  }
+  
+  handle {
+    # Read-only operations allowed for all authenticated services
+    reverse_proxy localhost:5432 {
+      header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+    }
+  }
+}
+
+# ============================================================================
+# Redis Cache Service Authorization
+# ============================================================================
+redis.{$APEX_DOMAIN}:6379 {
+  # Redis connections require valid JWT
+  import jwt_validation "redis"
+  
+  # Enforce audience = redis
+  @invalid_redis_aud {
+    header X-JWT-Claim-Aud "!redis"
+  }
+  handle @invalid_redis_aud {
+    respond 403 "Forbidden: Invalid Redis service audience"
+  }
+  
+  # Rate limit per service
+  rate_limit {
+    rate 5000/s         # 5000 ops/sec per service
+    burst 500
+    key {http.request.header.X-Service-Account}
+  }
+  
+  reverse_proxy localhost:6379 {
+    header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+    header_up X-Service-Account {http.request.header.X-Service-Account}
+  }
+}
+
+# ============================================================================
+# Prometheus Metrics Service
+# ============================================================================
+prometheus.{$APEX_DOMAIN} {
+  # Prometheus doesn't require JWT for metrics scraping
+  # But track all requests for audit
+  
+  @metrics_path {
+    path /metrics
+    path /graph
+  }
+  
+  handle @metrics_path {
+    # Allow read-only metrics access from all authenticated sources
+    header {
+      X-Service-ID "prometheus"
+      Cache-Control "no-cache, no-store"
+    }
+    reverse_proxy localhost:9090 {
+      header_up X-Request-ID {uuid}
+      header_up X-Scrape-Time {http.request.header.date}
+    }
+  }
+  
+  # Deny all other paths (admin, config, etc.)
+  handle {
+    respond 403 "Forbidden: Access denied"
+  }
+}
+
+# ============================================================================
+# Grafana Dashboard Service Authorization
+# ============================================================================
+grafana.{$APEX_DOMAIN} {
+  # JWT validation for Grafana
+  import jwt_validation "grafana"
+  
+  # Public dashboards (no auth required)
+  @public_dash {
+    path /public/*
+  }
+  handle @public_dash {
+    reverse_proxy localhost:3000 {
+      header_up X-Service-ID "grafana-public"
+    }
+  }
+  
+  # Private dashboards (JWT required, audience = grafana)
+  @private_dash {
+    path /d/*
+    path /api/*
+  }
+  handle @private_dash {
+    @valid_grafana_aud {
+      header X-JWT-Claim-Aud "grafana"
+    }
+    handle @valid_grafana_aud {
+      reverse_proxy localhost:3000 {
+        header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+        header_up X-Grafana-Auth {http.request.header.Authorization}
+      }
+    }
+    handle {
+      respond 403 "Forbidden: Invalid Grafana service audience"
+    }
+  }
+}
+
+# ============================================================================
+# Ollama GPU Inference Service Authorization
+# ============================================================================
+ollama.{$APEX_DOMAIN} {
+  # Ollama requires strict JWT validation (GPU resource is expensive)
+  import jwt_validation "ollama"
+  
+  # Enforce audience = ollama
+  @invalid_ollama_aud {
+    header X-JWT-Claim-Aud "!ollama"
+  }
+  handle @invalid_ollama_aud {
+    respond 403 "Forbidden: Invalid Ollama service audience"
+  }
+  
+  # Rate limit inference requests (GPU resource limits)
+  rate_limit {
+    rate 100/m          # 100 inference requests per minute per service
+    burst 10
+    key {http.request.header.X-Service-Account}
+    status 429
+  }
+  
+  reverse_proxy localhost:11434 {
+    header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+    header_up X-Request-ID {uuid}
+  }
+}
+
+# ============================================================================
+# AlertManager Alerting Service
+# ============================================================================
+alertmanager.{$APEX_DOMAIN} {
+  # AlertManager routes are public (but log all access)
+  
+  @alert_webhook {
+    method POST
+    path /api/v1/alerts
+  }
+  
+  handle @alert_webhook {
+    # Log all incoming alerts for audit
+    log {
+      output stdout
+      format json {
+        time_format iso8601
+        request_headers {
+          Authorization
+          X-Webhook-Source
+        }
+      }
+    }
+    reverse_proxy localhost:9093 {
+      header_up X-Request-ID {uuid}
+    }
+  }
+  
+  # UI access (read-only)
+  handle {
+    reverse_proxy localhost:9093 {
+      header_up X-Service-ID "alertmanager"
+    }
+  }
+}
+
+# ============================================================================
+# Jaeger Distributed Tracing Service Authorization
+# ============================================================================
+jaeger.{$APEX_DOMAIN} {
+  # Jaeger requires JWT for trace submission
+  import jwt_validation "jaeger"
+  
+  @spans_write {
+    method POST
+    path /api/traces
+  }
+  
+  handle @spans_write {
+    # Validate audience = jaeger
+    @valid_jaeger_aud {
+      header X-JWT-Claim-Aud "jaeger"
+    }
+    handle @valid_jaeger_aud {
+      reverse_proxy localhost:16686 {
+        header_up X-JWT-Subject {http.request.header.X-JWT-Subject}
+      }
+    }
+    handle {
+      respond 403 "Forbidden: Invalid Jaeger service audience"
+    }
+  }
+  
+  # UI + queries (public read-only)
+  handle {
+    reverse_proxy localhost:16686 {
+      header_up X-Service-ID "jaeger-ui"
+    }
+  }
+}
+
+# ============================================================================
+# RBAC Audit Logging Global Middleware
+# ============================================================================
+(rbac_audit) {
+  # Global RBAC audit logging snippet
+  log {
+    output stdout
+    format json {
+      time_format iso8601
+      request_headers {
+        Authorization
+        X-JWT-Subject
+        X-JWT-Claim-Aud
+        X-Service-Account
+        X-Request-ID
+      }
+      response_headers {
+        Status
+      }
+      fields {
+        common_log {
+          status_code: "{http.response.header.Status}"
+          rbac_decision: "{http.response.header.X-RBAC-Decision}"
+          trace_id: "{http.request.header.X-Trace-ID}"
+        }
+      }
+    }
+  }
+}
+
+# Apply global RBAC audit to all services
+import rbac_audit
+

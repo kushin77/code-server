@@ -1,0 +1,15 @@
+[Unit]
+Description=mTLS Certificate Daily Rotation
+Documentation=file:///root/code-server-enterprise/docs/ZERO-TRUST-NETWORK-ARCHITECTURE.md
+After=network.target docker.service
+
+[Timer]
+# Run daily at 02:00 UTC
+OnCalendar=*-*-* 02:00:00
+# If the timer was missed, run immediately upon boot
+Persistent=true
+# Randomize start time by up to 60 seconds to avoid thundering herd
+RandomizedDelaySec=60s
+
+[Install]
+WantedBy=timers.target

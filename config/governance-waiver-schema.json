@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kushnir.cloud/schemas/governance-waiver-schema.json",
+  "title": "Governance Waiver Registry",
+  "type": "object",
+  "required": ["version", "waivers"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "policy_id",
+          "owner",
+          "approver",
+          "scope",
+          "rationale",
+          "expires_at",
+          "status",
+          "approval"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^WVR-[0-9]{4}-[0-9]{3}$"
+          },
+          "issue_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "policy_id": {
+            "type": "string",
+            "minLength": 3
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^@[A-Za-z0-9-]+$"
+          },
+          "approver": {
+            "type": "string",
+            "pattern": "^@[A-Za-z0-9-]+$"
+          },
+          "scope": {
+            "type": "object",
+            "required": ["repositories", "paths"],
+            "properties": {
+              "repositories": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "paths": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 10
+          },
+          "expires_at": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "revoked", "expired"]
+          },
+          "approval": {
+            "type": "object",
+            "required": ["approved_at", "signature"],
+            "properties": {
+              "approved_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "signature": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

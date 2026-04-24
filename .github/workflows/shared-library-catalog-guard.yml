@@ -1,0 +1,47 @@
+name: Shared Library Catalog Guard
+
+on:
+  pull_request:
+    paths:
+      - "docs/SHARED-LIBRARIES.md"
+      - "docs/structure/README.md"
+      - "scripts/_common/**"
+      - "scripts/lib/**"
+      - "src/services/**"
+      - "scripts/ci/check-shared-library-catalog.sh"
+      - ".github/workflows/shared-library-catalog-guard.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/SHARED-LIBRARIES.md"
+      - "docs/structure/README.md"
+      - "scripts/_common/**"
+      - "scripts/lib/**"
+      - "src/services/**"
+      - "scripts/ci/check-shared-library-catalog.sh"
+      - ".github/workflows/shared-library-catalog-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-catalog:
+    name: Validate shared library catalog coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate shared library catalog
+        run: bash scripts/ci/check-shared-library-catalog.sh
+
+      - name: Upload gap artifacts
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: shared-library-catalog-report
+          path: |
+            artifacts/triage/shared-library-doc-gaps.machine.json
+            artifacts/triage/shared-library-doc-gaps.md
+          if-no-files-found: warn

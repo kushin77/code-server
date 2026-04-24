@@ -1,0 +1,27 @@
+{
+  "suiteName": "failover-continuity",
+  "command": "/mnt/c/Program\\ Files/nodejs/npx playwright test specs/failover-session-continuity.spec.ts",
+  "signaturesFile": "/mnt/c/code-server-enterprise/scripts/ci/../../config/test-flake-signatures.json",
+  "rerunPolicy": {
+    "enabled": true,
+    "rerunLimit": 1,
+    "rerunOn": [
+      "flake"
+    ]
+  },
+  "finalStatus": "passed",
+  "finalClassification": "passed",
+  "finalExitCode": 0,
+  "attempts": [
+    {
+      "attempt": 1,
+      "exitCode": 0,
+      "logFile": "artifacts/triage/failover-continuity-attempt-1.log",
+      "classificationFile": "artifacts/triage/failover-continuity-attempt-1.classification.json",
+      "classification": "passed",
+      "matchedSignatures": [],
+      "recommendRerun": false
+    }
+  ],
+  "generatedAt": "2026-04-20T00:13:13+00:00"
+}

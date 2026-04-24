@@ -1,0 +1,113 @@
+# ═══════════════════════════════════════════════════════════════
+# Model Registry — SSOT for AI provider routing
+# Implements #323: Hybrid Ollama + HuggingFace routing
+#
+# Privacy Classes:
+#   local   — data never leaves on-prem host
+#   egress  — data sent to external provider (requires explicit allowlist)
+#
+# Routing Policy:
+#   local_first  — prefer on-prem Ollama, fallback to HuggingFace on failure
+#   local_only   — block egress for high-sensitivity tasks
+#   hf_only      — always route to HuggingFace (use for large-context tasks)
+# ═══════════════════════════════════════════════════════════════
+
+version: "1"
+
+providers:
+  ollama:
+    base_url: "http://ollama:11434"
+    health_url: "http://ollama:11434/api/tags"
+    type: local
+    privacy_class: local
+    timeout_s: 120
+
+  huggingface:
+    base_url: "https://api-inference.huggingface.co"
+    api_key_env: "HF_API_TOKEN"          # Must be set in .env; never hardcoded
+    type: external
+    privacy_class: egress
+    timeout_s: 60
+    # Explicit egress allowlist — only these HF model IDs may be called externally
+    egress_allowlist:
+      - "mistralai/Mixtral-8x7B-Instruct-v0.1"
+      - "codellama/CodeLlama-34b-Instruct-hf"
+      - "HuggingFaceH4/zephyr-7b-beta"
+
+models:
+  # ─── Local Ollama Models ─────────────────────────────────────
+  - id: llama2-70b-chat
+    provider: ollama
+    ollama_model: "llama2:70b-chat"
+    capabilities: [chat, code]
+    privacy_class: local
+    routing_policy: local_only
+    latency_class: medium         # ~3-8s typical
+    context_window: 4096
+
+  - id: codegemma
+    provider: ollama
+    ollama_model: "codegemma"
+    capabilities: [code]
+    privacy_class: local
+    routing_policy: local_only
+    latency_class: fast           # ~1-3s typical
+    context_window: 8192
+
+  - id: mistral
+    provider: ollama
+    ollama_model: "mistral"
+    capabilities: [chat, code, summarize]
+    privacy_class: local
+    routing_policy: local_first
+    latency_class: fast
+    context_window: 8192
+
+  # ─── HuggingFace External Models ─────────────────────────────
+  # Only available when HF_API_TOKEN is set and model is in egress_allowlist
+  - id: mixtral-hf
+    provider: huggingface
+    hf_model: "mistralai/Mixtral-8x7B-Instruct-v0.1"
+    capabilities: [chat, code, summarize]
+    privacy_class: egress
+    routing_policy: hf_only
+    latency_class: medium
+    context_window: 32768
+
+  - id: codellama-34b-hf
+    provider: huggingface
+    hf_model: "codellama/CodeLlama-34b-Instruct-hf"
+    capabilities: [code]
+    privacy_class: egress
+    routing_policy: hf_only
+    latency_class: medium
+    context_window: 16384
+
+# ─── Routing Policy Definitions ──────────────────────────────
+routing:
+  default_policy: local_first
+  fallback_enabled: true
+  fallback_timeout_ms: 5000        # Trigger fallback if Ollama takes >5s to respond
+  egress_enabled_env: "AI_EGRESS_ENABLED"  # Set to "true" to enable HF egress
+
+  # Task → model preference mapping
+  task_routing:
+    code_completion:
+      primary: codegemma
+      fallback: codellama-34b-hf
+    chat:
+      primary: mistral
+      fallback: mixtral-hf
+    long_context:
+      primary: mixtral-hf          # Always HF for long-context (Ollama 4k limit)
+      fallback: null
+
+# ─── Observability ───────────────────────────────────────────
+observability:
+  # Prometheus metric names emitted by routing layer
+  metrics:
+    - ai_request_total{provider, model, task, status}
+    - ai_request_latency_seconds{provider, model, task}
+    - ai_token_usage_total{provider, model, direction}
+    - ai_fallback_total{from_provider, to_provider, reason}
+    - ai_egress_blocked_total{model, reason}

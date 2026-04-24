@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: token-validation-service
+  namespace: code-server-iam
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: token-validation-service
+  template:
+    metadata:
+      labels:
+        app: token-validation-service
+    spec:
+      serviceAccountName: token-validation-service
+      containers:
+        - name: token-validator
+          image: code-server/token-validation-service:v1.0.0
+          ports:
+            - containerPort: 9000
+          env:
+            - name: OIDC_ISSUER_URL
+              value: https://accounts.google.com
+            - name: OIDC_JWKS_URL
+              value: https://www.googleapis.com/oauth2/v3/certs
+            - name: CACHE_TTL_SECONDS
+              value: "300"
+            - name: LOG_LEVEL
+              value: info
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: token-validation-service
+  namespace: code-server-iam
+spec:
+  selector:
+    app: token-validation-service
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: token-validation-service
+  namespace: code-server-iam

@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server
+
+bases:
+  - ../../base
+
+replicas:
+  - name: code-server
+    count: 1
+  - name: agent-api
+    count: 1
+  - name: embeddings
+    count: 1
+
+namePrefix: dev-
+
+commonLabels:
+  environment: dev
+  managed-by: kustomize
+
+commonAnnotations:
+  environment: "development"

@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# @file        scripts/code-server-auth
+# @module      operations/auth
+# @description Diagnostics and guardrails for code-server auth environment canonicalization.
+#
+
+set -euo pipefail
+
+CANONICAL_GSM_PROJECT="gcp-eiq"
+CANONICAL_GSM_SECRET_NAME="github-token"
+
+command="${1:-doctor}"
+
+print_usage() {
+    echo "Usage: code-server-auth doctor"
+}
+
+emit_ok() {
+    local msg="$1"
+    echo "[auth:ok] ${msg}"
+}
+
+emit_warn() {
+    local msg="$1"
+    echo "[auth:warn] ${msg}"
+}
+
+emit_error() {
+    local msg="$1"
+    echo "[auth:error] ${msg}"
+}
+
+auth_doctor() {
+    local drift=0
+
+    local gsm_project="${GSM_PROJECT:-${CANONICAL_GSM_PROJECT}}"
+    local gsm_secret_name="${GSM_SECRET_NAME:-${CANONICAL_GSM_SECRET_NAME}}"
+    local canonical_override="${GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME:-${CANONICAL_GSM_SECRET_NAME}}"
+    local legacy_override="${GSM_GITHUB_TOKEN_SECRET:-}"
+
+    echo "code-server-auth doctor"
+    echo "  expected.GSM_PROJECT=${CANONICAL_GSM_PROJECT}"
+    echo "  expected.GSM_SECRET_NAME=${CANONICAL_GSM_SECRET_NAME}"
+    echo "  observed.GSM_PROJECT=${gsm_project}"
+    echo "  observed.GSM_SECRET_NAME=${gsm_secret_name}"
+    echo "  observed.GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=${canonical_override}"
+    echo "  observed.GSM_GITHUB_TOKEN_SECRET=${legacy_override:-<unset>}"
+
+    if [[ "${gsm_project}" != "${CANONICAL_GSM_PROJECT}" ]]; then
+        emit_error "GSM_PROJECT drift detected: '${gsm_project}' (expected '${CANONICAL_GSM_PROJECT}')"
+        drift=1
+    else
+        emit_ok "GSM_PROJECT is canonical"
+    fi
+
+    if [[ "${gsm_secret_name}" != "${CANONICAL_GSM_SECRET_NAME}" ]]; then
+        emit_error "GSM_SECRET_NAME drift detected: '${gsm_secret_name}' (expected '${CANONICAL_GSM_SECRET_NAME}')"
+        drift=1
+    else
+        emit_ok "GSM_SECRET_NAME is canonical"
+    fi
+
+    if [[ "${canonical_override}" != "${CANONICAL_GSM_SECRET_NAME}" ]]; then
+        emit_error "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME drift detected: '${canonical_override}'"
+        drift=1
+    else
+        emit_ok "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME is canonical"
+    fi
+
+    if [[ -n "${legacy_override}" ]]; then
+        emit_warn "Legacy GSM_GITHUB_TOKEN_SECRET is set; remove it to avoid env drift"
+        drift=1
+    else
+        emit_ok "Legacy GSM_GITHUB_TOKEN_SECRET is unset"
+    fi
+
+    if [[ "${drift}" -ne 0 ]]; then
+        echo ""
+        echo "Remediation:"
+        echo "  export GSM_PROJECT=${CANONICAL_GSM_PROJECT}"
+        echo "  export GSM_SECRET_NAME=${CANONICAL_GSM_SECRET_NAME}"
+        echo "  export GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=${CANONICAL_GSM_SECRET_NAME}"
+        echo "  unset GSM_GITHUB_TOKEN_SECRET"
+        return 2
+    fi
+
+    emit_ok "Auth environment is canonical and drift-free"
+    return 0
+}
+
+case "${command}" in
+    doctor)
+        auth_doctor
+        ;;
+    *)
+        print_usage
+        exit 64
+        ;;
+esac

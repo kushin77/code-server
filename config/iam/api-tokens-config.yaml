@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-tokens-config
+  namespace: code-server-iam
+data:
+  token-policy.yaml: |
+    token_management:
+      generation:
+        algorithm: HMAC-SHA256
+        length_bytes: 32
+        encoding: base64url
+      storage:
+        backend: kubernetes-secret
+        encryption: AES-256-GCM
+        access_control: RBAC
+      rotation:
+        enabled: true
+        schedule: monthly
+        notification_days_before: 7
+        old_token_grace_period: 24

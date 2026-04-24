@@ -1,0 +1,36 @@
+{
+  "source": "docs/governance/CONFIG-SSOT.md",
+  "count": 6,
+  "entries": [
+    {
+      "config_class": "Domains and host topology",
+      "canonical_owner": "[docs/ops/OPERATIONS-INDEX.md](../ops/OPERATIONS-INDEX.md), [docs/NAS-ARCHITECTURE.md](../NAS-ARCHITECTURE.md)",
+      "consuming_surfaces": "Compose, Terraform, ingress, runbooks; NAS contract is host `192.168.168.56`, export `/export`, mount `/mnt/nas`, protocol `nfs4`"
+    },
+    {
+      "config_class": "OAuth and endpoint auth",
+      "canonical_owner": "[docs/ops/ENDPOINT-CONTRACT-INDEX.md](../ops/ENDPOINT-CONTRACT-INDEX.md), [docs/adr/002-oauth2-authentication.md](../adr/002-oauth2-authentication.md)",
+      "consuming_surfaces": "oauth2-proxy, Caddy, E2E tests"
+    },
+    {
+      "config_class": "NAS host and export values",
+      "canonical_owner": "[docs/NAS-ARCHITECTURE.md](../NAS-ARCHITECTURE.md)",
+      "consuming_surfaces": "Scripts, Terraform, deployment preflight; canonical values are host `192.168.168.56`, export `/export`, mount `/mnt/nas`, protocol `nfs4`"
+    },
+    {
+      "config_class": "Secrets and rotation",
+      "canonical_owner": "[docs/SECURITY-HARDENING-GUIDE.md](../SECURITY-HARDENING-GUIDE.md), [docs/ops/SECRETS-ROTATION-SCHEDULE.md](../ops/SECRETS-ROTATION-SCHEDULE.md)",
+      "consuming_surfaces": "GSM, Vault, bootstrap scripts"
+    },
+    {
+      "config_class": "Schema and required env vars",
+      "canonical_owner": "[.env.schema.json](../../.env.schema.json)",
+      "consuming_surfaces": "Validation scripts, docs generators"
+    },
+    {
+      "config_class": "Drift detection",
+      "canonical_owner": "[scripts/ci/detect-config-drift.sh](../../scripts/ci/detect-config-drift.sh), [scripts/dev/check-config-drift.sh](../../scripts/dev/check-config-drift.sh)",
+      "consuming_surfaces": "CI, local validation"
+    }
+  ]
+}

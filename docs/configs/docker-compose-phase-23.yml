@@ -1,0 +1,138 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 23: Advanced Observability Stack
+# OTel Collector + Jaeger Backend (distributed tracing)
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage (on production host):
+#   docker compose -f docker-compose.yml -f docker-compose-phase-23.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+networks:
+  enterprise:
+    external: true
+    name: code-server-enterprise_enterprise
+
+volumes:
+  jaeger-data:
+    driver: local
+
+services:
+
+  # ─── OpenTelemetry Collector ─────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: otel-collector
+    restart: unless-stopped
+    networks:
+      - enterprise
+    ports:
+      - "0.0.0.0:4317:4317"   # OTLP gRPC (apps → collector)
+      - "0.0.0.0:4318:4318"   # OTLP HTTP (apps → collector)
+      - "0.0.0.0:6831:6831/udp" # Jaeger compact thrift
+      - "0.0.0.0:14250:14250" # Jaeger gRPC
+      - "127.0.0.1:8889:8889" # Prometheus metrics exporter (internal)
+      - "127.0.0.1:13133:13133" # Health check (internal)
+    volumes:
+      - ./otel-config.yml:/etc/otel/config.yml:ro
+    command: ["--config=/etc/otel/config.yml"]
+    environment:
+      - GOMEMLIMIT=450MiB
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider",
+             "http://localhost:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+
+  # ─── Jaeger All-in-One Backend ────────────────────────────────────────────
+  # Storage: badger (embedded) for single-node; swap for Elasticsearch at scale
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: jaeger
+    restart: unless-stopped
+    networks:
+      - enterprise
+    ports:
+      - "0.0.0.0:16686:16686"  # Jaeger UI
+      - "127.0.0.1:14268:14268" # Jaeger collector HTTP (internal)
+      - "127.0.0.1:9411:9411"   # Zipkin compatible (internal)
+    volumes:
+      - jaeger-data:/badger
+    environment:
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - QUERY_BASE_PATH=/jaeger
+      - JAEGER_DISABLED=false
+      - LOG_LEVEL=warn
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:14269/metrics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+
+  # ─── Anomaly Detector Sidecar ─────────────────────────────────────────────
+  # Queries Prometheus, computes z-score anomaly scores, pushes back as metrics
+  anomaly-detector:
+    image: python:3.11-slim
+    container_name: anomaly-detector
+    restart: unless-stopped
+    networks:
+      - enterprise
+    volumes:
+      - ./scripts/observability/anomaly-detector.py:/app/anomaly-detector.py:ro
+      - ./scripts/observability/requirements.txt:/app/requirements.txt:ro
+    working_dir: /app
+    command: >
+      sh -c "pip install -q -r requirements.txt &&
+             python anomaly-detector.py"
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - PUSHGATEWAY_URL=http://prometheus:9091
+      - ANOMALY_CHECK_INTERVAL=300
+      - ANOMALY_WINDOW_MINUTES=30
+      - ANOMALY_ZSCORE_THRESHOLD=3.0
+      - LOG_LEVEL=INFO
+    depends_on:
+      - jaeger
+      - otel-collector
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"

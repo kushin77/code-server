@@ -1,0 +1,1 @@
+{"timestamp":"2026-04-19T20:00:00Z","event_type":"SHELL_VIOLATION","developer_id":"dev1","ip_address":"127.0.0.1","session_id":"s1","component":"Terminal","status":"denied","details":{"attempted_command":"rm -rf /","reason":"permission denied"},"hostname":"demo"}

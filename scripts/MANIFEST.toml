@@ -1,0 +1,849 @@
+# scripts/MANIFEST.toml — Script Registry
+# Every script in scripts/ MUST have an entry here.
+# Status: active | deprecated | historical | experimental
+
+[[script]]
+file     = "_template.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "admin-dev-tools-add.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "apply-governance.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "audit-logging.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "automated-certificate-management.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "automated-deployment-orchestration.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "automated-env-generator.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "automated-iac-validation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "automated-oauth-configuration.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "backup.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "bootstrap-node.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "cleanup-container-overlap.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "cleanup-egress-filtering.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "cleanup-falco.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "code-server-entrypoint.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "common-functions.sh"
+category = "uncategorized"
+  status   = "archived"
+  purpose  = "Deprecated shim - use scripts/_common/init.sh instead"
+file     = "configure-audit-logging-phase1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-audit-logging-phase4.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-google-oauth-uris.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-oidc-phase1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-oidc-providers-phase1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-rbac-enforcement-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-workload-federation-phase1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-workload-federation-phase2.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-code-server-image.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-container-hardening.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-egress-filtering.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-zero-trust-network.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy mTLS rotation, egress policy, and audit visibility for zero-trust networking"
+
+[[script]]
+file     = "deploy-falco.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-kushnir-cloud.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-oidc-issuer-phase2-1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-oidc-issuer-phase2-v2.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-qa-credentials-iac.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-qa-credentials-to-gcp.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-qa-service-account-cli.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-rbac-enforcement-docker-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-rbac-enforcement-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deployment-validation-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deployment-validation-suite.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "developer-lifecycle.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "disaster-recovery-p3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "docker-health-monitor.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "e2e-test-suite.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "enforce-governance.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "error-triage-engine.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "fetch-gsm-secrets.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "fix-infrastructure-issues.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "fix-metadata-headers.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "generate-env-docs.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "gpu-deploy-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "ide-access-restrictions.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "incident-simulation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "infrastructure-assessment-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "init-repo-governance.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-automated-qa-setup.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-complete-dod.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-execute.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-fix-ssl-certificates.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-interactive-deployment.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-setup-qa-oauth.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "keepalived-notify.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "logging.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "manage-users.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "mandatory-redeploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "memory-budget-guard.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "memory-monitor.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "monitor-disk-space.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "nas-mount-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "nas-workspace-health.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "ollama-init.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "operations-runbook.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "p0-monitoring-bootstrap.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "p0-operations-deployment-validation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "p0-p3-operations-master.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-2-sanity-check.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-22-batch-4-5-automation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-23-deploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-7c-disaster-recovery-test.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-7e-chaos-testing.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "post-deployment-validation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "postgresql-replication-setup.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "pre-flight-checklist.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "priority-enforcer.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "priority-issue-cli.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "production-operations-setup-p0.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "provision-new-user.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "provision-workload-identity.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "qa-iac-quickstart.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "redeploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "register-google-workspace-domain.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "render-nas-ingress.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "run-e2e-tests-with-gsm.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "security-audit.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "security-hardening-p2.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-cloudflare-access.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-cloudflare-tunnel.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-git-credentials.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-qa-service-account.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-vault-secrets.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "task-completion-example.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "test-latency-optimization.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "test-task-completion-framework.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "tier-2-master-orchestrator.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-config-ssot.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-copilot.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-env.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-host-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-oauth-config.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-oidc-issuer-phase2-1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-qa-iac.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-rbac-enforcement-docker-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-rbac-enforcement-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-topology.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "verify-iac-deployment-ready.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "verify-iac-readiness.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vpn-endpoint-testing.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vpn-enterprise-endpoint-scan-fallback.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vpn-enterprise-endpoint-scan.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vscode-crash-diagnostics.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vscode-handle-monitor.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vscode-memory-dashboard.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+
+[[script]]
+file     = "create-100-collab-issues.sh"
+category = "ops"
+status   = "active"
+purpose  = "Create 100 collaborative GitHub issues for bulk workflow testing"
+
+[[script]]
+file     = "deploy-enterprise-customer.sh"
+category = "ops"
+status   = "active"
+purpose  = "Deploy enterprise customer configuration and provisioning"
+
+[[script]]
+file     = "deploy-gvisor-isolation.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy gVisor container isolation for enhanced security"
+
+[[script]]
+file     = "deploy-logging-pipeline-iac.sh"
+category = "observability"
+status   = "active"
+purpose  = "Deploy logging pipeline via IaC (immutable, idempotent)"
+
+[[script]]
+file     = "deploy-passwordless-sudo.sh"
+category = "ops"
+status   = "active"
+purpose  = "Configure passwordless sudo for deployment service accounts"
+
+[[script]]
+file     = "deploy-terminal-dlp.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy terminal DLP (Data Loss Prevention) scanning"
+
+[[script]]
+file     = "error-triage-engine-fixed.sh"
+category = "ops"
+status   = "active"
+purpose  = "Fixed error triage engine deployment script"
+
+[[script]]
+file     = "fix-collab-9-issues.sh"
+category = "ops"
+status   = "active"
+purpose  = "Apply fixes for collaborative editing phase 9 issues"
+
+[[script]]
+file     = "fix-p0-1181-redis-security.sh"
+category = "security"
+status   = "active"
+purpose  = "Fix P0-1181 Redis security misconfiguration"
+
+[[script]]
+file     = "mtls-certificate-management.sh"
+category = "security"
+status   = "active"
+purpose  = "Manage mTLS certificate lifecycle (issue, rotate, revoke)"
+
+[[script]]
+file     = "network-security-management.sh"
+category = "security"
+status   = "active"
+purpose  = "Manage network security rules and firewall policies"
+
+[[script]]
+file     = "p0-rotate-credentials.sh"
+category = "security"
+status   = "active"
+purpose  = "Rotate all P0-critical credentials and secrets"
+
+[[script]]
+file     = "runtime-proof-iac-immutable-idempotent.sh"
+category = "ops"
+status   = "active"
+purpose  = "Runtime proof of IaC immutability and idempotency"
+
+[[script]]
+file     = "test-iac-immutable-idempotent-live.sh"
+category = "ops"
+status   = "active"
+purpose  = "Live test of IaC immutability and idempotency guarantees"
+
+[[script]]
+file     = "update-dast-config.sh"
+category = "security"
+status   = "active"
+purpose  = "Update DAST (Dynamic Application Security Testing) configuration"
+
+[[script]]
+file     = "validate-logging-pipeline-iac.sh"
+category = "observability"
+status   = "active"
+purpose  = "Validate logging pipeline IaC correctness"
+
+[[script]]
+file     = "verify-iac-immutable-idempotent-deployment.sh"
+category = "ops"
+status   = "active"
+purpose  = "Verify IaC deployment is immutable and idempotent"
+
+[[script]]
+file     = "verify-p0-completion.sh"
+category = "ops"
+status   = "active"
+purpose  = "Verify all P0 critical issue fixes are complete"
+

@@ -1,0 +1,5 @@
+# RETIRED: Archived pointer-only stub.
+# Canonical references:
+# - Canonical file: /docker-compose.yml
+# - Compose hardening guard: scripts/ci/check-compose-hardening-guard.sh
+# - Issue tracking SSOT: GitHub Issues (repo issue tracker)

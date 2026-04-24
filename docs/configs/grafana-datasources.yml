@@ -1,0 +1,154 @@
+apiVersion: 1
+
+# Phase 20-A1: Grafana Datasources
+# ✅ Immutable datasource configuration
+
+datasources:
+  # ========================================
+  # Prometheus Datasource (Primary)
+  # ========================================
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus-uid-001
+    url: http://prometheus:9090
+    access: proxy
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      timeInterval: 30s
+      queryTimeout: 60s
+      customHeaders:
+        X-Client: Grafana
+        X-Phase: phase-20-a1
+    secureJsonData:
+      # ✅ Leave empty for internal Docker communication
+      httpHeaderValue1: ""
+    
+    # ✅ Immutable settings
+    basicAuth: false
+    withCredentials: false
+    tlsAuth: false
+    tlsAuthWithCACert: false
+    tlsSkipVerify: false
+    httpMethod: POST
+    
+    # ✅ Custom headers for tracing
+    customMetadata:
+      component: global-orchestration-framework
+      environment: staging
+      phase: phase-20-a1
+
+  # ========================================
+  # Loki Datasource (Logs) - Optional
+  # ========================================
+  - name: Loki
+    type: loki
+    uid: loki-uid-002
+    url: http://loki:3100
+    access: proxy
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      maxDataPoints: 43200
+      maxLines: 5000
+      derivedFields:
+        - name: TraceID
+          datasourceUid: jaeger-uid-003
+          matcherRegex: '"traceID":"([^"]+)'
+          url: '$${value}'
+          urlDisplayLabel: View Trace
+    
+    basicAuth: false
+    withCredentials: false
+    tlsAuth: false
+    tlsSkipVerify: true  # Internal service
+    httpMethod: GET
+
+  # ========================================
+  # Jaeger Datasource (Traces) - Optional
+  # ========================================
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger-uid-003
+    url: http://jaeger:16686
+    access: proxy
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki-uid-002
+    
+    basicAuth: false
+    withCredentials: false
+    tlsAuth: false
+    tlsSkipVerify: true
+
+  # ========================================
+  # CloudWatch Datasource (AWS) - Optional
+  # ========================================
+  # - name: CloudWatch
+  #   type: cloudwatch
+  #   uid: cloudwatch-uid-004
+  #   access: proxy
+  #   isDefault: false
+  #   version: 1
+  #   jsonData:
+  #     authType: assume-role
+  #     defaultRegion: us-east-1
+  #     customMetricsNamespaces: phase-20-a1,global-orchestration
+
+  # ========================================
+  # Azure Monitor Datasource (Azure) - Optional
+  # ========================================
+  # - name: Azure Monitor
+  #   type: azuremonitor
+  #   uid: azure-uid-005
+  #   access: proxy
+  #   isDefault: false
+  #   version: 1
+  #   jsonData:
+  #     tenantId: ${AZURE_TENANT_ID}
+  #     cloudEnvironment: AzurePublicCloud
+
+# ========================================
+# Dashboard Provisioning
+# ========================================
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'Phase 20-A1 Dashboards'
+        orgId: 1
+        folder: 'Phase 20 - Global Operations'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /etc/grafana/provisioning/dashboards
+
+# ========================================
+# Alert Notification Channels (optional)
+# ========================================
+notificationChannels: []
+  # Example email notification:
+  # - name: Email
+  #   type: email
+  #   uid: email-uid-001
+  #   sendReminder: true
+  #   disableResolveMessage: false
+  #   settings:
+  #     addresses: ops-team@example.com
+  
+  # Example Slack notification:
+  # - name: Slack
+  #   type: slack
+  #   uid: slack-uid-002
+  #   sendReminder: true
+  #   settings:
+  #     url: ${SLACK_WEBHOOK_URL}
+  #     channel: "#alerts"

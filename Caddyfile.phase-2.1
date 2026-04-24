@@ -1,0 +1,51 @@
+# Caddyfile with OIDC Issuer Routing (Phase 2.1)
+# On-prem HTTP proxy behind Cloudflare TLS termination
+# Generated April 21, 2026 for Phase 2.1 OIDC Issuer Deployment
+
+{
+    auto_https off
+}
+
+# IDE domain - proxy to code-server via oauth2-proxy with OIDC issuer
+:80 {
+    encode gzip
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # OIDC Discovery Endpoints (public, no auth)
+    # ────────────────────────────────────────────────────────────────────────────
+    @oidc_discovery path /.well-known/openid-configuration /.well-known/jwks.json
+    reverse_proxy @oidc_discovery oauth2-oidc-issuer:4182 {
+        header_up Host ide.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # Token Issuance Endpoint (public, requires credentials)
+    # ────────────────────────────────────────────────────────────────────────────
+    @token_endpoint path /oauth2/token
+    reverse_proxy @token_endpoint oauth2-oidc-issuer:4182 {
+        header_up Host ide.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # Health Check Endpoints (always respond)
+    # ────────────────────────────────────────────────────────────────────────────
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # OAuth2-Proxy Authentication Gate (default)
+    # All other traffic goes through oauth2-proxy for Google OAuth
+    # ────────────────────────────────────────────────────────────────────────────
+    reverse_proxy 172.28.1.2:4180 {
+        header_up Host ide.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+}

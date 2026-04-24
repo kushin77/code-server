@@ -1,0 +1,69 @@
+# ════════════════════════════════════════════════════════════════════════════
+# docker-compose.dev.yml — Development Override
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Overrides for local development. Merge with the base compose file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# What this override does:
+#   - Bypasses oauth2-proxy authentication (allows direct access to code-server)
+#   - Exposes postgres and redis ports for local DB tools
+#   - Reduces resource limits for developer laptops
+#   - Sets CODE_SERVER_ENV=development
+#
+# What this does NOT do:
+#   - This is NOT a supported deployment platform for production
+#   - This is for running services locally on Linux developer machines only
+#   - Windows: use WSL2 or a Linux VM — never run docker directly on Windows
+#
+# Related: GitHub issue #432
+# ════════════════════════════════════════════════════════════════════════════
+
+services:
+  code-server:
+    environment:
+      - CODE_SERVER_ENV=development
+      # In dev, skip oauth2-proxy — access code-server directly on port 8080
+      - DISABLE_PROXY=true
+    ports:
+      - "127.0.0.1:8080:8080"    # Local access only; no auth in dev
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: '1.0'
+        reservations:
+          memory: 256m
+          cpus: '0.1'
+
+  # In dev, skip oauth2-proxy auth entirely
+  oauth2-proxy:
+    # Allow all requests through — no Google OAuth required in development
+    command:
+      - --skip-auth-regex=.*
+      - --upstream=http://code-server:8080/
+      - --http-address=0.0.0.0:4180
+      - --provider=google
+      - --client-id=dev-client-id
+      - --client-secret=dev-client-secret
+      - --cookie-secret=dev-cookie-secret-16b
+      - --email-domain=*
+      - --skip-provider-button=true
+
+  # Expose postgres for local DB tools (DBeaver, psql, etc.)
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  # Expose redis for local inspection (redis-cli, RedisInsight, etc.)
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # Reduce caddy to HTTP-only in dev (no TLS)
+  caddy:
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      - ACME_AGREE=false

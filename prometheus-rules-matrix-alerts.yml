@@ -1,0 +1,143 @@
+groups:
+  - name: matrix_collaboration
+    interval: 30s
+    rules:
+      # ────────────────────────────────────────────────────────────────────────
+      # Critical Alerts - Immediate action required
+      # ────────────────────────────────────────────────────────────────────────
+
+      - alert: SynapseDown
+        expr: up{job="synapse"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: matrix-homeserver
+        annotations:
+          summary: "Synapse Homeserver is down"
+          description: "Synapse homeserver has been unavailable for 2 minutes. Users cannot access the Matrix service."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#synapse-down"
+
+      - alert: PresenceSidecarDown
+        expr: up{job="presence-sidecar"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: matrix-presence
+        annotations:
+          summary: "Presence Sidecar is down"
+          description: "Real-time presence sync is unavailable. Users will not see real-time \"same file\" awareness."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#presence-down"
+
+      - alert: AllBridgesDown
+        expr: count(up{job=~"slack-bridge|teams-bridge|google-chat-bridge"} == 0) == 3
+        for: 3m
+        labels:
+          severity: critical
+          service: matrix-bridges
+        annotations:
+          summary: "All Matrix bridges are down"
+          description: "All configured bridges (Slack, Teams, Google Chat) are offline. Cross-platform messaging is unavailable."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#bridges-down"
+
+      - alert: SynapseHighErrorRate
+        expr: rate(synapse_http_requests_total{job="synapse", code=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: matrix-homeserver
+        annotations:
+          summary: "Synapse has high error rate (>10%)"
+          description: "Synapse is returning HTTP 5xx errors at a rate > 10%. Current rate: {{ $value | humanizePercentage }}"
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#high-error-rate"
+
+      - alert: SynapseOutOfMemory
+        expr: synapse_memory_usage_bytes{job="synapse"} > (0.95 * node_memory_MemTotal_bytes)
+        for: 2m
+        labels:
+          severity: critical
+          service: matrix-homeserver
+        annotations:
+          summary: "Synapse memory usage exceeds 95%"
+          description: "Synapse process is using {{ $value | humanize }}B out of available memory. Risk of OOM kill."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#memory-pressure"
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Warning Alerts - Should be addressed within 1 hour
+      # ────────────────────────────────────────────────────────────────────────
+
+      - alert: SynapseHighLatency
+        expr: histogram_quantile(0.95, synapse_http_request_duration_seconds_bucket{job="synapse"}) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: matrix-homeserver
+        annotations:
+          summary: "Synapse p95 latency is high (>500ms)"
+          description: "HTTP request p95 latency is {{ $value | humanizeDuration }}. Performance may impact user experience."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#high-latency"
+
+      - alert: PresenceUpdateLatencyHigh
+        expr: histogram_quantile(0.99, presence_update_latency_bucket{job="presence-sidecar"}) > 0.25
+        for: 5m
+        labels:
+          severity: warning
+          service: matrix-presence
+        annotations:
+          summary: "Presence update latency is high (>250ms)"
+          description: "Real-time presence updates have p99 latency of {{ $value | humanizeDuration }}. Same-file awareness may feel laggy."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#presence-latency"
+
+      - alert: DatabaseConnectionPoolLow
+        expr: synapse_storage_db_pool_utilization{job="synapse"} > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: matrix-homeserver
+        annotations:
+          summary: "Synapse DB connection pool is {{ $value | humanizePercentage }} utilized"
+          description: "Database connection pool utilization is high. May indicate connection leaks or high load."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#db-connections"
+
+      - alert: BridgeDown
+        expr: up{job=~"slack-bridge|teams-bridge|google-chat-bridge"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: "matrix-bridge-{{ $labels.job }}"
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Bridge service {{ $labels.job }} has been unavailable for 5 minutes. Cross-platform messaging for this platform is offline."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#bridge-recovery"
+
+      - alert: BridgeQueueBacklog
+        expr: matrix_bridge_queue_depth{job=~"slack-bridge|teams-bridge|google-chat-bridge"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: "matrix-bridge-{{ $labels.job }}"
+        annotations:
+          summary: "{{ $labels.job }} has {{ $value | humanize }} messages in queue"
+          description: "Message queue depth is {{ $value | humanize }}. Bridge may be slow to sync messages."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#bridge-backlog"
+
+      - alert: FederationQueueBacklog
+        expr: synapse_federation_queue_depth{job="synapse"} > 5000
+        for: 15m
+        labels:
+          severity: warning
+          service: matrix-homeserver
+        annotations:
+          summary: "Federation queue has {{ $value | humanize }} events pending"
+          description: "Federation event queue depth is {{ $value | humanize }}. May indicate slow federation or network issues."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#federation"
+
+      - alert: SynapseHighCPU
+        expr: rate(synapse_cpu_seconds_total{job="synapse"}[5m]) > 0.75
+        for: 15m
+        labels:
+          severity: warning
+          service: matrix-homeserver
+        annotations:
+          summary: "Synapse CPU usage is high (>75%)"
+          description: "CPU usage is {{ $value | humanizePercentage }}. Consider scaling or investigating expensive operations."
+          runbook_url: "https://github.com/kushin77/code-server/wiki/Matrix-Incident-Runbook#cpu-pressure"

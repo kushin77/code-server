@@ -1,0 +1,70 @@
+# @file        config/code-server/ai/repo-rag-pipeline.yml
+# @module      ai/rag
+# @description Repo-aware knowledge corpus, retrieval guardrails, and evaluation policy.
+#
+
+version: "1"
+sync:
+  daily_incremental_cron: "0 3 * * *"
+  on_demand_refresh_paths:
+    - "docs/**"
+    - ".github/**"
+    - "scripts/**"
+    - "config/**"
+
+corpus:
+  include_globs:
+    - "docs/**"
+    - ".github/**"
+    - "scripts/**"
+    - "config/**"
+    - "README.md"
+  exclude_globs:
+    - "**/.env*"
+    - "**/*.pem"
+    - "**/*.key"
+    - "**/node_modules/**"
+    - "**/.git/**"
+  retention_days: 30
+
+scrubbing:
+  block_patterns:
+    - "BEGIN PRIVATE KEY"
+    - "ghp_"
+    - "GITHUB_TOKEN"
+    - "GOOGLE_CLIENT_SECRET"
+  redact_env_files: true
+  redact_secret_values: true
+
+freshness:
+  score_inputs:
+    - git_commit_age_days
+    - linked_issue_state
+    - path_priority
+  stale_after_days: 30
+
+metadata_schema:
+  required_fields:
+    - source_path
+    - commit_sha
+    - linked_issue
+    - indexed_at
+    - confidence_tag
+    - freshness_tag
+
+retrieval:
+  require_citations: true
+  insufficient_context_behavior: "respond-unknown"
+  permission_source: "repo-visibility-and-team-policy"
+
+evaluation:
+  gold_sets:
+    - deployments
+    - rollback
+    - secretsless-auth
+    - branch-pr-governance
+  metrics:
+    - grounded_answer_rate
+    - citation_coverage
+    - stale_citation_rate
+    - hallucination_incidents

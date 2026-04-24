@@ -1,0 +1,63 @@
+# Pod Security Admission (PSA) enforcement labels
+# Implements: https://github.com/kushin77/code-server/issues/873
+#
+# Applied PSS level: restricted (most workloads) / baseline (legacy services with justification)
+# https://kubernetes.io/docs/concepts/security/pod-security-standards/
+#
+# Apply: kubectl apply -f kubernetes/security/namespace-psa.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agents
+  labels:
+    # Enforce restricted PSS — no host namespaces, no privileged containers, seccomp required
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.28
+    # Warn on violations before they are blocked (informational)
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.28
+    # Audit log violations even if below the enforce level
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.28
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: phase-12
+  labels:
+    # baseline: allows host network if required by phase-12 routing components
+    # EXCEPTION: geo-routing pods require host network for BGP peering
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.28
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.28
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.28
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # restricted for observability workloads (Prometheus, Grafana in K8s future state)
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.28
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.28
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.28
+---
+# Falco itself requires privileged access to syscall monitoring
+# It must live in a dedicated namespace with a targeted baseline exception
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco
+  labels:
+    # EXCEPTION: Falco requires privileged access for syscall monitoring
+    # Justification: DaemonSet with eBPF/syscall driver requires CAP_SYS_ADMIN
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: v1.28
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/warn-version: v1.28

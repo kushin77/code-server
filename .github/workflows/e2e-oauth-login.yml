@@ -1,0 +1,145 @@
+name: E2E Tests - OAuth Login Flow (Issue #986)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/e2e/specs/oauth-login.spec.ts'
+      - 'tests/e2e/fixtures.ts'
+      - 'tests/e2e/playwright.config.ts'
+      - '.github/workflows/e2e-oauth-login.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  TEST_BASE_URL: ${{ secrets.TEST_BASE_URL || 'https://kushnir.cloud' }}
+  E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || '' }}
+  E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || '' }}
+  PLAYWRIGHT_WORKERS: 1
+  REQUIRE_VPN: 1
+
+jobs:
+  oauth-login-tests:
+    name: OAuth Login Flow Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      id-token: write
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: 'access_token'
+          access_token_lifetime: '600s'
+
+      - name: Fetch E2E credentials from GSM
+        uses: google-github-actions/get-secretmanager-secrets@2b5f97c5a4b9c105e64646762ad4fc3f5128e6f5 # v2
+        with:
+          secrets_manifest:
+            - name: 'qa_email'
+              key: 'qa-user-email'
+            - name: 'qa_password'
+              key: 'qa-user-password'
+
+      - name: Set environment variables from secrets
+        env:
+          QA_EMAIL: ${{ steps.secrets.outputs.qa_email }}
+          QA_PASSWORD: ${{ steps.secrets.outputs.qa_password }}
+        run: |
+          echo "E2E_USER_EMAIL=$QA_EMAIL" >> $GITHUB_ENV
+          echo "E2E_USER_PASSWORD=$QA_PASSWORD" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run pre-flight checks
+        run: bash scripts/ci/pre-flight-e2e-checks.sh --quiet
+
+      - name: Run OAuth login tests
+        run: |
+          npm test -- tests/e2e/specs/oauth-login.spec.ts \
+            --reporter=json \
+            --reporter=html \
+            --reporter=junit
+
+      - name: Generate test report
+        if: always()
+        run: |
+          bash scripts/ci/e2e-test-reporter.sh --format=markdown
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
+        with:
+          name: oauth-login-test-results
+          path: |
+            artifacts/
+            !artifacts/playwright-report/.cache
+          retention-days: 30
+
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@d61b558e8df85cb60d09ca3e5b09653b4477cea7 # v1
+        with:
+          name: OAuth Login Test Results
+          path: 'artifacts/playwright-junit.xml'
+          reporter: 'java-junit'
+          fail-on-error: false
+
+      - name: Comment PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'artifacts/e2e-test-report.md';
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+            }
+
+      - name: Set job status
+        if: always()
+        run: |
+          if [ -f "artifacts/playwright-results.json" ]; then
+            FAILED=$(jq '.stats.unexpected // 0' artifacts/playwright-results.json)
+            if [ "$FAILED" -gt 0 ]; then
+              echo "## ❌ Tests Failed" >> $GITHUB_STEP_SUMMARY
+              echo "Failed tests: $FAILED" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            else
+              echo "## ✅ OAuth Login Tests Passed" >> $GITHUB_STEP_SUMMARY
+              echo "All OAuth flow validations successful" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi

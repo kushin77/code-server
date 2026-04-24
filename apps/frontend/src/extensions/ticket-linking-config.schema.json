@@ -1,0 +1,103 @@
+{
+  "ticketLinking": {
+    "title": "Ticket Linking - Linear/Jira Integration",
+    "type": "object",
+    "description": "Configuration for detecting and displaying ticket references with auto-context injection",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable ticket linking integration"
+      },
+      "linearApiKey": {
+        "type": "string",
+        "default": "",
+        "description": "Linear API key for ticket resolution (from env: LINEAR_API_KEY)",
+        "markdownDescription": "Linear GraphQL API key. Get from https://linear.app/settings/api. Also check `LINEAR_API_KEY` env var."
+      },
+      "linearWorkspace": {
+        "type": "string",
+        "default": "",
+        "description": "Linear workspace identifier"
+      },
+      "jiraApiKey": {
+        "type": "string",
+        "default": "",
+        "description": "Jira API key for ticket resolution (from env: JIRA_API_KEY)",
+        "markdownDescription": "Jira Cloud API token. Get from https://id.atlassian.com/manage-profile/security/api-tokens. Also check `JIRA_API_KEY` env var."
+      },
+      "jiraInstance": {
+        "type": "string",
+        "default": "",
+        "description": "Jira instance URL (e.g., https://company.atlassian.net)",
+        "markdownDescription": "Jira Cloud instance URL. From env: `JIRA_INSTANCE`"
+      },
+      "githubToken": {
+        "type": "string",
+        "default": "",
+        "description": "GitHub personal access token for ticket resolution (from env: GITHUB_TOKEN)",
+        "markdownDescription": "GitHub PAT with `repo` scope. Get from https://github.com/settings/tokens. Also check `GITHUB_TOKEN` env var."
+      },
+      "githubRepo": {
+        "type": "string",
+        "default": "",
+        "description": "GitHub repository (owner/repo) for issue linking",
+        "markdownDescription": "Repository in format `owner/repo` (e.g., `kushin77/code-server`)"
+      },
+      "enabledPatterns": {
+        "type": "array",
+        "default": ["linear", "jira", "github"],
+        "description": "Which ticket systems to detect",
+        "items": {
+          "type": "string",
+          "enum": ["linear", "jira", "github"]
+        }
+      },
+      "cacheExpiry": {
+        "type": "number",
+        "default": 3600,
+        "description": "Ticket metadata cache expiry in seconds",
+        "minimum": 60,
+        "maximum": 86400
+      },
+      "autoShowPanel": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically show ticket panel when tickets are detected"
+      },
+      "debounceMs": {
+        "type": "number",
+        "default": 500,
+        "description": "Debounce interval for ticket detection on document change (milliseconds)",
+        "minimum": 100,
+        "maximum": 5000
+      },
+      "contextWindowLines": {
+        "type": "number",
+        "default": 3,
+        "description": "Number of lines before/after to capture for context",
+        "minimum": 1,
+        "maximum": 10
+      },
+      "excludePatterns": {
+        "type": "array",
+        "default": ["**/*.node_modules/**", "**/.git/**", "**/dist/**"],
+        "description": "File patterns to exclude from scanning",
+        "items": {
+          "type": "string"
+        }
+      },
+      "inlineDecorations": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show inline decorations (links) for detected tickets"
+      },
+      "hoverInformation": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show ticket metadata on hover"
+      }
+    },
+    "additionalProperties": false
+  }
+}

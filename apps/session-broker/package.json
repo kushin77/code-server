@@ -1,0 +1,40 @@
+{
+  "name": "session-broker",
+  "version": "1.0.0",
+  "description": "Session broker for per-user/per-session code-server runtime isolation",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "build": "tsc",
+    "test": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "axios": "catalog:",
+    "cookie-parser": "^1.4.7",
+    "dockerode": "^4.0.9",
+    "express": "catalog:",
+    "joi": "^17.11.0",
+    "jose": "catalog:",
+    "pg": "catalog:",
+    "redis": "^4.6.12",
+    "uuid": "catalog:",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/dockerode": "^3.3.40",
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/uuid": "^10.0.0",
+    "ts-node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

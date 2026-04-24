@@ -1,0 +1,46 @@
+# docker-compose.replica.yml
+# Replica host (.42) configuration override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.replica.yml up -d
+#
+# This file extends the primary docker-compose.yml with replica-specific services:
+# - session-broker replica (for active/active session-broker HA)
+# - Optional: Overrides for services with host-specific configuration
+#
+# Environment Variables (set before running):
+#   REPLICA_HOST=192.168.168.42 (must match this host's IP)
+#   PRIMARY_HOST=192.168.168.31 (primary host IP)
+
+version: '3.8'
+
+services:
+  # ────────────────────────────────────────────────────────────────────────────
+  # session-broker — Replica instance for active/active horizontal scaling
+  # Configured with Redis-backed session state (shared with primary)
+  # ────────────────────────────────────────────────────────────────────────────
+  session-broker:
+    # Override container_name to distinguish replica from primary
+    container_name: session-broker-replica
+    environment:
+      # Redis Sentinel configuration for shared session state
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
+      - REDIS_SENTINEL_DB=1
+      - SESSION_REDIS_TTL_SECONDS=86400
+      
+      # Host-specific configuration
+      - DEPLOY_HOST=${REPLICA_HOST:-192.168.168.42}
+      
+      # Inherit environment from primary compose (inherited via override merge)
+      # The following are set in primary docker-compose.yml:
+      # - LOG_LEVEL, DATABASE_URL, DOCKER_SOCKET, CODE_SERVER_IMAGE_ID, CODE_SERVER_PASSWORD
+      # - SESSIONS_ROOT, DEV_SESSION_DOMAIN, SESSION_PUBLIC_BASE_URL
+      # - SESSION_CPU_LIMIT, SESSION_MEMORY_LIMIT, SESSION_STORAGE_LIMIT
+      # - SESSION_MAX_* limits
+      # - SESSION_DELETION_QUARANTINE_HOURS
+      # - SESSION_PROVENANCE_* attestation config
+
+networks:
+  # Reuse networks from primary docker-compose.yml
+  net-app:
+    external: true
+  net-data:
+    external: true

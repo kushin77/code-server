@@ -1,0 +1,15 @@
+#!/bin/bash
+NODE=/usr/lib/code-server/lib/node
+PKG="/home/coder/.local/share/code-server/extensions/github.copilot-chat-0.43.2026040705/package.json"
+echo "=== engines.vscode ==="
+$NODE -e "const d=require('$PKG'); console.log(d.engines && d.engines.vscode);"
+echo "=== extensionKind ==="
+$NODE -e "const d=require('$PKG'); console.log(JSON.stringify(d.extensionKind));"
+echo "=== browser entry ==="
+$NODE -e "const d=require('$PKG'); console.log(d.browser || 'NONE');"
+echo "=== main entry ==="
+$NODE -e "const d=require('$PKG'); console.log(d.main || 'NONE');"
+echo "=== enabledApiProposals (first 15) ==="
+$NODE -e "const d=require('$PKG'); console.log((d.enabledApiProposals||[]).slice(0,15).join('\n'));"
+echo "=== activationEvents (first 5) ==="
+$NODE -e "const d=require('$PKG'); console.log((d.activationEvents||[]).slice(0,5).join('\n'));"

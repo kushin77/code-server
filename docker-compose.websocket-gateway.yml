@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  # HAProxy - Load balancer frontend
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: websocket-haproxy
+    ports:
+      - "8080:8080"  # WebSocket HTTP
+      - "8443:8443"  # WebSocket HTTPS
+      - "8404:8404"  # Stats page
+    volumes:
+      - ./config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./certs:/etc/haproxy/certs:ro
+    networks:
+      - websocket-cluster
+    depends_on:
+      - ws-relay-1
+      - ws-relay-2
+      - ws-relay-3
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8404/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=haproxy"
+
+  # WebSocket Relay Node 1
+  ws-relay-1:
+    image: node:18-alpine
+    container_name: websocket-relay-1
+    working_dir: /app
+    volumes:
+      - ./websocket-relay.js:/app/websocket-relay.js:ro
+      - ./node_modules:/app/node_modules
+    networks:
+      - websocket-cluster
+    environment:
+      - NODE_ID=ws-relay-1
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    command: node websocket-relay.js
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=relay"
+      - "com.kushnir.node=1"
+
+  # WebSocket Relay Node 2
+  ws-relay-2:
+    image: node:18-alpine
+    container_name: websocket-relay-2
+    working_dir: /app
+    volumes:
+      - ./websocket-relay.js:/app/websocket-relay.js:ro
+      - ./node_modules:/app/node_modules
+    networks:
+      - websocket-cluster
+    environment:
+      - NODE_ID=ws-relay-2
+      - PORT=3002
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    command: node websocket-relay.js
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=relay"
+      - "com.kushnir.node=2"
+
+  # WebSocket Relay Node 3
+  ws-relay-3:
+    image: node:18-alpine
+    container_name: websocket-relay-3
+    working_dir: /app
+    volumes:
+      - ./websocket-relay.js:/app/websocket-relay.js:ro
+      - ./node_modules:/app/node_modules
+    networks:
+      - websocket-cluster
+    environment:
+      - NODE_ID=ws-relay-3
+      - PORT=3003
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    command: node websocket-relay.js
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=relay"
+      - "com.kushnir.node=3"
+
+  # Redis - Pub/Sub message broker
+  redis:
+    image: redis:7-alpine
+    container_name: websocket-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-pubsub.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-data:/data
+    networks:
+      - websocket-cluster
+    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=redis-pubsub"
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: websocket-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - websocket-cluster
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=prometheus"
+
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: websocket-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - websocket-cluster
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=UTC
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    labels:
+      - "com.kushnir.app=websocket-gateway"
+      - "com.kushnir.component=grafana"
+
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  websocket-cluster:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

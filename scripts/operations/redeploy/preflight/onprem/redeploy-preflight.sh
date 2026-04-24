@@ -269,11 +269,15 @@ check_nas_export_paths() {
   local -a ssh_args
   local missing_count=0
 
+  normalize_value() {
+    printf '%s' "$1" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+  }
+
   env_nas_host="$(remote "cd ${TARGET_REPO} && if [[ -f .env ]]; then sed -n 's/^NAS_HOST=//p' .env | tail -n1; fi" || true)"
   env_export_path="$(remote "cd ${TARGET_REPO} && if [[ -f .env ]]; then sed -n 's/^NAS_EXPORT_PATH=//p' .env | tail -n1; fi" || true)"
 
-  resolved_nas_host="${env_nas_host:-${NAS_HOST_DEFAULT}}"
-  resolved_export_path="${env_export_path:-${NAS_EXPORT_PATH_DEFAULT}}"
+  resolved_nas_host="$(normalize_value "${env_nas_host:-${NAS_HOST_DEFAULT}}")"
+  resolved_export_path="$(normalize_value "${env_export_path:-${NAS_EXPORT_PATH_DEFAULT}}")"
   if [[ -z "${resolved_nas_host}" || -z "${resolved_export_path}" ]]; then
     log_error "NAS topology is not fully configured in env or shared config"
     return 1

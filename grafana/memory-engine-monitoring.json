@@ -1,0 +1,64 @@
+{
+  "dashboard": {
+    "title": "Organizational Memory Engine",
+    "uid": "memory-engine",
+    "tags": ["memory", "agent-learnings", "semantic-search"],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "title": "Semantic Search Queries (5min)",
+        "targets": [
+          {
+            "expr": "rate(memory_search_queries_total[5m])"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Average Search Latency",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, memory_search_latency_seconds)"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Agent Task Success Rate",
+        "targets": [
+          {
+            "expr": "memory_agent_success_rate * 100"
+          }
+        ],
+        "type": "gauge"
+      },
+      {
+        "title": "Documents by Collection",
+        "targets": [
+          {
+            "expr": "memory_collection_document_count"
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "title": "Agent Learning Quality Scores",
+        "targets": [
+          {
+            "expr": "memory_agent_quality_score"
+          }
+        ],
+        "type": "heatmap"
+      },
+      {
+        "title": "Memory Engine Health",
+        "targets": [
+          {
+            "expr": "up{job='memory-engine'}"
+          }
+        ],
+        "type": "gauge"
+      }
+    ]
+  }
+}

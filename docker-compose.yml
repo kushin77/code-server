@@ -544,6 +544,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    user: "999"  # postgres system user (IaC security hardening - P0 #969)
     deploy:
       resources:
         limits:
@@ -1193,7 +1194,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.sentry-integration
-    image: sentry-integration-api:latest
+    image: sentry-integration-api:1.0.0
     container_name: sentry-integration-api
     restart: unless-stopped
     networks:
@@ -1225,12 +1226,13 @@ services:
   slack-slash-commands-api:
     # Profile: integrations — opt-in, requires SLACK_SIGNING_SECRET and package-lock.json
     # Blocked by missing package-lock.json in build context. See #1619.
+    # NOTE: Local build image, pinned to 1.0.0 for immutability (not @sha256 since built locally)
     profiles:
       - integrations
     build:
       context: .
       dockerfile: Dockerfile.slack-integration
-    image: slack-slash-commands-api:latest
+    image: slack-slash-commands-api:1.0.0
     container_name: slack-slash-commands-api
     restart: unless-stopped
     networks:
@@ -1259,7 +1261,7 @@ services:
   # Exposes pg_stat_statements, replication lag, connection counts, cache hit ratio
   # ────────────────────────────────────────────────────────────────────────────
   postgres_exporter:
-    image: prometheuscommunity/postgres-exporter:v0.15.0
+    image: prometheuscommunity/postgres-exporter@sha256:386b12d19eab2a37d7cd8ca8b4c7491cc7a830d9581f49af6c98a393da9605e6
     container_name: postgres_exporter
     restart: unless-stopped
     networks:
@@ -1304,7 +1306,7 @@ services:
     # Blocked by #1617 — image source not yet resolved. Add to COMPOSE_PROFILES to enable.
     profiles:
       - extensions-registry
-    image: open-vsix/open-vsix:0.2.0
+    image: open-vsix/open-vsix:0.2.0@sha256:d12fb764d6a0664ac736279f6eebcd778641566371cbcf109f029b3a378419db
     container_name: open-vsix-registry
     restart: unless-stopped
     networks:

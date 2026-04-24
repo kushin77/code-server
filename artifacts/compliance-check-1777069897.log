@@ -1,0 +1,58 @@
+[2026-04-24 18:31:37] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:37] ║ Infrastructure Compliance Validation                  ║
+[2026-04-24 18:31:37] ║ 2026-04-24 18:31:37                                       ║
+[2026-04-24 18:31:37] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] === IaC Completeness Check ===
+[2026-04-24 18:31:37] ✅ docker-compose.yml found
+[2026-04-24 18:31:37] ✅ terraform/versions.tf found
+[2026-04-24 18:31:37] ✅ Terraform providers declared
+[2026-04-24 18:31:37] ✅ Infrastructure scripts present (36 files)
+[2026-04-24 18:31:37] ✅ Configuration files present (9 files)
+[2026-04-24 18:31:37] ✅ State management infrastructure present
+[2026-04-24 18:31:37] IaC Completeness Score: 100/100
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] === Immutability Check ===
+[2026-04-24 18:31:37] ✅ Read-only configuration mounts verified (11)
+[2026-04-24 18:31:37] ✅ Docker images pinned to content digests
+[2026-04-24 18:31:37] ✅ Remote state backend configured
+[2026-04-24 18:31:37] ✅ TLS backup automation present
+[2026-04-24 18:31:37] ✅ Encryption for sensitive data enabled
+[2026-04-24 18:31:37] Immutability Score: 100/100
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] === Idempotency Check ===
+[2026-04-24 18:31:37] ✅ Idempotent deployment script exists
+[2026-04-24 18:31:37] ✅ Idempotent rollback script exists
+[2026-04-24 18:31:37] ✅ Idempotent backup script exists
+[2026-04-24 18:31:37] ✅ Idempotent health check script exists
+[2026-04-24 18:31:38] ✅ State tracking infrastructure active (3 files)
+[2026-04-24 18:31:38] Idempotency Score: 100/100
+[2026-04-24 18:31:38] 
+[2026-04-24 18:31:38] === Resource Limits Check ===
+[2026-04-24 18:31:38] ✅ Resource limits configuration file present
+[2026-04-24 18:31:38] ✅ Docker Compose deploy sections present (1)
+[2026-04-24 18:31:38] Resource Limits Score: 60/100
+[2026-04-24 18:31:38] 
+[2026-04-24 18:31:38] === Backup & Recovery Check ===
+[2026-04-24 18:31:38] ✅ Backup directory structure present
+[2026-04-24 18:31:38] ✅ TLS backup infrastructure present
+[2026-04-24 18:31:38] ✅ Automated backup script present
+[2026-04-24 18:31:38] Backup & Recovery Score: 60/100
+[2026-04-24 18:31:38] 
+[2026-04-24 18:31:38] === Governance Tags Check ===
+[2026-04-24 18:31:38] ✅ Governance tags present in 86 files
+[2026-04-24 18:31:38] ✅ Module tags present in 91 files
+[2026-04-24 18:31:38] ✅ Idempotency declarations in 18 scripts
+[2026-04-24 18:31:38] Governance Tags Score: 100/100
+[2026-04-24 18:31:38] 
+[2026-04-24 18:31:38] === Monitoring & Observability Check ===
+[2026-04-24 18:31:38] ✅ Prometheus configuration present
+[2026-04-24 18:31:38] ✅ Grafana dashboards present (5)
+[2026-04-24 18:31:38] ✅ Loki logging configured
+[2026-04-24 18:31:38] ✅ Alert rules configured
+[2026-04-24 18:31:39] Monitoring & Observability Score: 80/100
+[2026-04-24 18:31:39] 
+[2026-04-24 18:31:39] === Security Check ===
+[2026-04-24 18:31:39] ✅ Secrets not committed to version control
+[2026-04-24 18:31:39] ✅ TLS certificate management present
+[2026-04-24 18:31:39] ✅ Resource access controls configured

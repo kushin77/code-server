@@ -1,7 +1,6 @@
-timestamp=2026-04-24T22:29:39Z
+timestamp=2026-04-24T22:31:41Z
 compose_file=docker-compose.yml
 status=PASS
 immutable_image_digests=1
-immutable_configuration=1
 restart_policies=1
 health_checks=1

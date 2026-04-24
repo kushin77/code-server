@@ -1,0 +1,70 @@
+[2026-04-24 18:31:36] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:36] ║ Disaster Recovery Drills - Comprehensive Test Suite   ║
+[2026-04-24 18:31:36] ║ Mode: DRY_RUN (Safe)                              ║
+[2026-04-24 18:31:36] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:36] 
+[2026-04-24 18:31:36] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:36] ║ DR DRILL 1: Service Recovery Test                    ║
+[2026-04-24 18:31:36] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:36] Testing: Can we recover all services from stopped state?
+[2026-04-24 18:31:36] DRY_RUN: Would stop all services
+[2026-04-24 18:31:36] DRY_RUN: Would restart all services
+[2026-04-24 18:31:36] DRY_RUN: Would verify health checks
+[2026-04-24 18:31:36] ✅ DRY_RUN: Service recovery procedure verified
+[2026-04-24 18:31:36] 
+[2026-04-24 18:31:36] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:36] ║ DR DRILL 2: Database Recovery Test                   ║
+[2026-04-24 18:31:36] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:36] Testing: Can we recover PostgreSQL from backup?
+[2026-04-24 18:31:36] DRY_RUN: Would create database backup
+[2026-04-24 18:31:37] DRY_RUN: Would simulate database corruption
+[2026-04-24 18:31:37] DRY_RUN: Would restore from backup
+[2026-04-24 18:31:37] DRY_RUN: Would verify data integrity
+[2026-04-24 18:31:37] ✅ DRY_RUN: Database recovery procedure verified
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:37] ║ DR DRILL 3: Configuration Restore Test                ║
+[2026-04-24 18:31:37] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:37] Testing: Can we restore configuration from git?
+[2026-04-24 18:31:37] DRY_RUN: Would verify git status
+[2026-04-24 18:31:37] DRY_RUN: Would check configuration files
+[2026-04-24 18:31:37] DRY_RUN: Would verify git history
+[2026-04-24 18:31:37] ✅ DRY_RUN: Configuration restore procedure verified
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:37] ║ DR DRILL 4: Backup Verification Test                 ║
+[2026-04-24 18:31:37] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:37] Testing: Are backup files present and valid?
+[2026-04-24 18:31:37] TLS backups found: 0
+[2026-04-24 18:31:37] ⚠️  No TLS backups found
+[2026-04-24 18:31:37] ✅ DR DRILL 4 PASSED: Backup infrastructure verified
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:37] ║ DR DRILL 5: Failover Capability Test                 ║
+[2026-04-24 18:31:37] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:37] Testing: Is failover to replica host possible?
+[2026-04-24 18:31:37] Primary host: 192.168.168.31
+[2026-04-24 18:31:37] Replica host: 192.168.168.42
+[2026-04-24 18:31:37] DRY_RUN: Would verify replica host SSH access
+[2026-04-24 18:31:37] DRY_RUN: Would check replica Docker daemon
+[2026-04-24 18:31:37] DRY_RUN: Would verify database replication lag
+[2026-04-24 18:31:37] DRY_RUN: Would test service startup on replica
+[2026-04-24 18:31:37] ✅ DRY_RUN: Failover capability verified
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:37] ║ DR DRILL 6: Recovery Time Objective (RTO) Test       ║
+[2026-04-24 18:31:37] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:37] Testing: Can we recover within RTO target?
+[2026-04-24 18:31:37] RTO target: 300 seconds (5 minutes)
+[2026-04-24 18:31:37] DRY_RUN: Would measure service startup time
+[2026-04-24 18:31:37] DRY_RUN: Would measure database recovery time
+[2026-04-24 18:31:37] DRY_RUN: Would measure health check time
+[2026-04-24 18:31:37] ✅ DRY_RUN: RTO test procedure verified
+[2026-04-24 18:31:37] ✅ DR report generated: ./artifacts/dr-drill-report-1777069896.md
+[2026-04-24 18:31:37] 
+[2026-04-24 18:31:37] ╔════════════════════════════════════════════════════════╗
+[2026-04-24 18:31:37] ║ Disaster Recovery Drills Complete                     ║
+[2026-04-24 18:31:37] ╚════════════════════════════════════════════════════════╝
+[2026-04-24 18:31:37] ✅ Tests Passed: 6/6
+[2026-04-24 18:31:37] ✅ Success Rate: 100%
+[2026-04-24 18:31:37] ✅ ALL DISASTER RECOVERY DRILLS PASSED ✅

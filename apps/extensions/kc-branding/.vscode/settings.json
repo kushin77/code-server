@@ -1,0 +1,88 @@
+{
+  "comment": "KC IDE Workspace Defaults — Applied to all user sessions for file hiding and security",
+
+  "// File Hiding": "Hide infrastructure and secret files from explorer",
+  "files.exclude": {
+    "**/.git": true,
+    "**/.gitmodules": true,
+    "**/.env": true,
+    "**/.env.local": true,
+    "**/.env.*.local": true,
+    "**/.env.example": true,
+    "**/docker-compose.yml": true,
+    "**/docker-compose.dev.yml": true,
+    "**/docker-compose.prod.yml": true,
+    "**/docker-compose*.yml": true,
+    "**/Dockerfile": true,
+    "**/Dockerfile.*": true,
+    "**/docker/": true,
+    "**/terraform/": true,
+    "**/.terraform/": true,
+    "**/*.tfvars": true,
+    "**/terraform.tfvars": true,
+    "**/ansible/": true,
+    "**/*.yml": { "when": "$(basename) === 'site.yml' || $(basename) === 'site-*.yml'" },
+    "**/scripts/": true,
+    "**/.github/": true,
+    "**/.vscode/": true,
+    "**/.vscode-server/": true,
+    "**/.tmp*": true,
+    "**/.cache/": true,
+    "**/node_modules/": true,
+    "**/.DS_Store": true,
+    "**/*.lock": { "when": "$(basename) === 'package-lock.json'" },
+    "**/pnpm-lock.yaml": true,
+    "**/.yarn/": true,
+    "**/dist/": true,
+    "**/build/": true,
+    "**/.next/": true
+  },
+
+  "// Workspace Security": "Enable security features by default",
+  "security.workspace.trust.enabled": true,
+  "security.workspace.trust.untrustedFiles": "prompt",
+
+  "// Breadcrumbs": "Show file path context",
+  "breadcrumbs.enabled": true,
+  "breadcrumbs.filePath": "on",
+  "breadcrumbs.symbolPath": "on",
+
+  "// Editor Defaults": "Consistent editor settings",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  "// Extensions": "Hide irrelevant extension recommendations",
+  "extensions.recommendations": [],
+  "extensions.ignoreRecommendations": false,
+
+  "// Search": "Exclude infrastructure from workspace search",
+  "search.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.terraform": true,
+    "**/terraform": true,
+    "**/.env*": true
+  },
+
+  "// Terminal": "Default to bash for consistency",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.defaultProfile.osx": "bash",
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+  "// Source Control": "Git integration defaults",
+  "scm.defaultViewMode": "list",
+  "scm.alwaysShowRepositories": true,
+
+  "// Telemetry": "Respect user privacy",
+  "telemetry.telemetryLevel": "error",
+
+  "// Window": "Clear window title (no paths)",
+  "window.title": "KC IDE"
+}

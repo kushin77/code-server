@@ -237,6 +237,73 @@ run_gateway_load_test() {
     fi
 }
 
+run_stress_test() {
+    log_info "Running stress test (500+ concurrent users)..."
+    
+    if ! command -v k6 &> /dev/null; then
+        log_error "K6 is not installed"
+        return 1
+    fi
+    
+    cd "$APP_ROOT"
+    
+    k6 run tests/load/stress-test.js \
+        --vus 500 \
+        --duration 10m \
+        --out json=test-results-stress.json
+    
+    if [ $? -eq 0 ]; then
+        log_success "Stress test passed"
+    else
+        log_warning "Stress test encountered issues (expected under extreme load)"
+    fi
+}
+
+run_deployment_verification() {
+    log_info "Running deployment verification tests..."
+    
+    if ! command -v k6 &> /dev/null; then
+        log_error "K6 is not installed"
+        return 1
+    fi
+    
+    cd "$APP_ROOT"
+    
+    k6 run tests/load/deployment-verification.js \
+        --vus 5 \
+        --duration 5m \
+        --out json=test-results-deployment-verification.json
+    
+    if [ $? -eq 0 ]; then
+        log_success "Deployment verification passed"
+    else
+        log_error "Deployment verification failed"
+        return 1
+    fi
+}
+
+run_performance_benchmark() {
+    log_info "Running performance benchmarking..."
+    
+    if ! command -v k6 &> /dev/null; then
+        log_error "K6 is not installed"
+        return 1
+    fi
+    
+    cd "$APP_ROOT"
+    
+    k6 run tests/load/performance-benchmark.js \
+        --vus 50 \
+        --duration 5m \
+        --out json=test-results-performance-benchmark.json
+    
+    if [ $? -eq 0 ]; then
+        log_success "Performance benchmarking completed"
+    else
+        log_warning "Performance benchmarking encountered issues"
+    fi
+}
+
 run_all_load_tests() {
     log_info "Running all load tests..."
     
@@ -318,6 +385,18 @@ main() {
             check_prerequisites "load"
             run_gateway_load_test
             ;;
+        stress)
+            check_prerequisites "load"
+            run_stress_test
+            ;;
+        deployment-verify)
+            check_prerequisites "load"
+            run_deployment_verification
+            ;;
+        benchmark)
+            check_prerequisites "load"
+            run_performance_benchmark
+            ;;
         cleanup)
             cleanup_stack
             ;;
@@ -326,6 +405,9 @@ main() {
             setup_stack
             run_e2e_tests
             run_all_load_tests
+            run_stress_test
+            run_deployment_verification
+            run_performance_benchmark
             generate_report
             cleanup_stack
             ;;
@@ -333,15 +415,18 @@ main() {
             echo "Usage: $0 [command]"
             echo ""
             echo "Commands:"
-            echo "  setup       - Start Docker Compose stack for testing"
-            echo "  e2e         - Run E2E tests"
-            echo "  load        - Run all load tests"
-            echo "  oauth-load  - Run OAuth load test (100 users)"
-            echo "  user-load   - Run user load test (200 users)"
-            echo "  team-load   - Run team load test (150 users)"
-            echo "  gateway-load - Run gateway load test (300 users)"
-            echo "  cleanup     - Stop Docker Compose stack"
-            echo "  all         - Run full suite (setup, e2e, load, cleanup)"
+            echo "  setup              - Start Docker Compose stack for testing"
+            echo "  e2e                - Run E2E tests"
+            echo "  load               - Run all load tests"
+            echo "  oauth-load         - Run OAuth load test (100 users)"
+            echo "  user-load          - Run user load test (200 users)"
+            echo "  team-load          - Run team load test (150 users)"
+            echo "  gateway-load       - Run gateway load test (300 users)"
+            echo "  stress             - Run stress test (500+ users)"
+            echo "  deployment-verify  - Run deployment verification tests"
+            echo "  benchmark          - Run performance benchmarking"
+            echo "  cleanup            - Stop Docker Compose stack"
+            echo "  all                - Run full suite"
             exit 1
             ;;
     esac

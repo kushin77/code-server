@@ -28,13 +28,21 @@ TEST_TIMEOUT = 30
 @pytest.fixture
 def http_client():
     """HTTP client for E2E tests"""
-    return httpx.Client(base_url=API_BASE_URL, timeout=TEST_TIMEOUT)
+    client = httpx.Client(base_url=API_BASE_URL, timeout=TEST_TIMEOUT)
+    try:
+        yield client
+    finally:
+        client.close()
 
 
 @pytest.fixture
 def async_client():
     """Async HTTP client"""
-    return httpx.AsyncClient(base_url=API_BASE_URL, timeout=TEST_TIMEOUT)
+    client = httpx.AsyncClient(base_url=API_BASE_URL, timeout=TEST_TIMEOUT)
+    try:
+        yield client
+    finally:
+        asyncio.run(client.aclose())
 
 
 @pytest.mark.e2e

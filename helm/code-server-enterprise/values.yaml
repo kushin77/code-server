@@ -37,6 +37,11 @@ annotations:
   governance/policy: "GOV-002"
   governance/compliance: "required"
 
+# Service account configuration
+serviceAccount:
+  create: true
+  name: ""
+
 # Service definitions for 20 microservices
 services:
   # Core API & Gateway

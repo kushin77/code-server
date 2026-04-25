@@ -163,12 +163,22 @@ deploy_validate_sync() {
 deploy_restart_services() {
   log INFO "Step 3/5: Restarting services with new file mount configuration..."
   
-  local cmd="cd ~/code-server-enterprise && docker-compose down && sleep 2 && docker-compose up -d"
-  
   if [ "$DRY_RUN" == "true" ]; then
-    log WARN "[DRY-RUN] Would execute: $cmd"
+    log WARN "[DRY-RUN] Would execute: docker-compose down && docker-compose up -d"
     return 0
   fi
+
+  # Check if a k8s ingress controller already owns port 80 on the replica.
+  # In that case, we skip the full stack restart — the daemon install (step 4)
+  # is what's actually needed on a replica k8s node.
+  local port_check
+  port_check=$(ssh "akushnir@${REPLICA_HOST}" "ss -tlnp sport = :80 2>/dev/null | grep -c LISTEN || echo 0")
+  if [ "${port_check:-0}" -gt 0 ]; then
+    log WARN "Port 80 already in use on replica (likely k8s ingress). Skipping docker-compose restart — not required for sync daemon deployment."
+    return 0
+  fi
+  
+  local cmd="cd ~/code-server-enterprise && docker-compose down && sleep 2 && docker-compose up -d"
   
   if ssh "akushnir@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Services restarted successfully"

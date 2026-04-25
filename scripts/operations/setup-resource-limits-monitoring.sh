@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/hosts.sh"
+
 OUTPUT_DIR="${1:-.}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 PROM_DIR="${OUTPUT_DIR}/prometheus-config-${TIMESTAMP}"
@@ -325,10 +328,13 @@ cat > "${PROM_DIR}/deploy-monitoring.sh" <<'EOF'
 
 echo "📊 Deploying Resource Limits Monitoring Configuration..."
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../scripts/_common/hosts.sh"
+
 # 1. Copy Prometheus rules
 echo "1/3: Configuring Prometheus alerting rules..."
-scp resource-limits-rules.yml 192.168.168.31:/etc/prometheus/rules/resource-limits.yml
-ssh 192.168.168.31 "docker exec prometheus prometheus-reload-config"
+scp resource-limits-rules.yml "${SSH_USER}@${PRIMARY_HOST}:/etc/prometheus/rules/resource-limits.yml"
+ssh "${SSH_USER}@${PRIMARY_HOST}" "docker exec prometheus prometheus-reload-config"
 
 # 2. Import Grafana dashboard
 echo "2/3: Importing Grafana dashboard..."

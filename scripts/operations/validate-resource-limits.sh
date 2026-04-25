@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/hosts.sh"
+
 OUTPUT_DIR="${1:-.}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="${OUTPUT_DIR}/resource-limits-validation-${TIMESTAMP}.txt"
@@ -19,7 +22,7 @@ echo ""
     echo "Resource Limits Validation Report"
     echo "=================================="
     echo "Date: $(date)"
-    echo "Environment: Production (Primary Node 192.168.168.31)"
+    echo "Environment: Production (Primary Node ${PRIMARY_HOST})"
     echo ""
 } > "${REPORT_FILE}"
 
@@ -111,7 +114,7 @@ echo ""
 echo "✅ Validation report template created"
 echo ""
 echo "Manual Validation Steps:"
-echo "1. SSH to primary node: ssh -i ~/.ssh/id_rsa_onprem_wsl akushnir@192.168.168.31"
+echo "1. SSH to primary node: ssh -i ~/.ssh/id_rsa_onprem_wsl ${SSH_USER}@${PRIMARY_HOST}"
 echo "2. Check all services: docker compose ps"
 echo "3. Monitor resource usage: docker stats"
 echo "4. Watch logs: docker compose logs -f"

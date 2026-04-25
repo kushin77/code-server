@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Helm Chart Validation & Linting
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Validate all Helm charts for K8s deployment readiness
 # @phase Q3 Phase 4 Preparation (Phase 1)
 # @date $(date '+%Y-%m-%d %H:%M:%S')

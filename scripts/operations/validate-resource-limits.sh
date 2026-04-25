@@ -3,7 +3,7 @@
 # @file        scripts/operations/validate-resource-limits.sh
 # @module      operations/validate-resource-limits
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################

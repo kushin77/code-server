@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ops/deploy-p3-services-orchestrated.sh
 # @description P3 Services Deployment Orchestration (IaC-driven)
-# @governance GOV-002: Deterministic deployment with audit trail
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 Services Deployment

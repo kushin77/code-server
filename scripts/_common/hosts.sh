@@ -2,7 +2,7 @@
 # @file        scripts/_common/hosts.sh
 # @module      infrastructure/networking
 # @description Centralized host resolution library — eliminates hardcoded IPs
-# @governance  GOV-002: IaC, immutable, idempotent — all IPs via env vars only
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — Service Discovery, Eliminate Hardcoded IPs
 #
 # Usage:

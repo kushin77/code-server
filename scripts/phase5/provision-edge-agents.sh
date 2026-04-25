@@ -10,7 +10,7 @@ set -euo pipefail
 # CONFIGURATION
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/edge-provisioning-$(date +%Y%m%d-%H%M%S).log"
 readonly EDGE_IMAGE="kushin77/kushnir-edge-agent:latest"
 readonly INSTANCE_TYPE="${INSTANCE_TYPE:-t3.xlarge}"

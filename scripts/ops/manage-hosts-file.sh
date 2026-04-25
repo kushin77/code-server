@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ops/manage-hosts-file.sh
 # @description /etc/hosts File Management (Idempotent IaC)
-# @governance GOV-002: Deterministic host entry management, versioned in Git
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 #1536 Phase 3 - DNS Architecture

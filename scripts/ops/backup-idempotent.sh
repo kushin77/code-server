@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Idempotent backup — skip if recently backed up to prevent redundancy
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Idempotent backup - skip if already backed up in this period
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

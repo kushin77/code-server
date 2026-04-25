@@ -2,7 +2,7 @@
 # @file        scripts/lib/connection-pool.sh
 # @module      lib/connection-pool
 # @description Connection pooling and SLA enforcement
-# @governance  GOV-002: Immutable, version-controlled infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — Network Tuning
 
 set -euo pipefail

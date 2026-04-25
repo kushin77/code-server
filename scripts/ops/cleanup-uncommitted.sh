@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###
-# @governance: Cleanup uncommitted state — remove transient artifacts before deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Clean up uncommitted changes and generated artifacts
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -34,7 +34,7 @@ log_error() {
 # Configuration (all env-var driven)
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly DRY_RUN="${1:-${DRY_RUN:-false}}"
 readonly CLEANUP_STATE_DIR="${CLEANUP_STATE_DIR:-${PROJECT_ROOT}/state}"

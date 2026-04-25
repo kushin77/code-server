@@ -2,12 +2,12 @@
 # @file implement-network-policies.sh
 # @module security
 # @description Implement network security policies and service isolation
-# @governance GOV-002 - P1 Priority 4: Network segmentation and access control
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly CONFIG_DIR="${CONFIG_DIR:-${REPO_DIR}/config}"
 readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/network-policies.log}"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: NAS mount health checks and retry logic — immutable, env-driven configuration
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Provides health monitoring and exponential backoff retry helpers for NAS operations
 # Author: Infrastructure Team
 # Date: 2026-04-25
@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly NAS_MOUNT_PATH="${NAS_MOUNT_PATH:-/mnt/nas}"
 readonly NAS_LATENCY_THRESHOLD_MS="${NAS_LATENCY_THRESHOLD_MS:-50}"
 readonly NAS_MAX_RETRIES="${NAS_MAX_RETRIES:-5}"

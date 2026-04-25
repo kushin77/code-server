@@ -4,7 +4,7 @@
 # @file scripts/ops/full-redeploy-test.sh
 # @module operations/infrastructure
 # @description P3 #1531 Phase 5: Comprehensive full-redeploy validation with SLA verification
-# @governance GOV-002: All deployments tested, verified, and audited with immutable records
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 ###
 
 set -euo pipefail

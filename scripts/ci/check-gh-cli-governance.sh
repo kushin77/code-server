@@ -2,7 +2,7 @@
 # @file        scripts/ci/check-gh-cli-governance.sh
 # @module      ci/gh-cli-governance
 # @description GOV-002 guard: enforce unified gh CLI usage and block direct calls
-# @governance  GOV-002: GitHub CLI calls must use shared wrappers and repo-scoped execution
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage       check-gh-cli-governance.sh [all|direct|wrappers|endpoints|report]
 set -euo pipefail
 

@@ -2,7 +2,7 @@
 # @file check-gh-repo-flag.sh
 # @module governance/ci
 # @description CI guard to enforce --repo flag on all gh issue/pr CLI calls
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

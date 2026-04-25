@@ -2,7 +2,7 @@
 # @file scripts/ci/integrate-opa-policies.sh
 # @module infrastructure/policy-integration
 # @description P0-1552 Phase 4: Integrate OPA policy checks into CI/CD pipeline
-# @governance GOV-002: All infrastructure changes evaluated against policy engine
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage integrate-opa-policies.sh <terraform|docker-compose|conftest>
 
 set -euo pipefail

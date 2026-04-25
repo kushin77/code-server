@@ -2,13 +2,13 @@
 # @file scripts/ops/setup-opa-service.sh
 # @module infrastructure/opa-integration
 # @description P0-1552 Phase 3: Deploy OPA as Docker Compose service with policy bundle loading
-# @governance GOV-002: All policy decisions logged and audited
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-opa-service.sh [--check] [--deploy]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly OPA_CONFIG="${OPA_CONFIG:-${REPO_ROOT}/config/opa-config.yaml}"
 readonly OPA_BUNDLE_DIR="${OPA_BUNDLE_DIR:-${REPO_ROOT}/policies}"
 readonly OPA_DECISION_LOG="${OPA_DECISION_LOG:-${REPO_ROOT}/artifacts/opa-decision-log.json}"

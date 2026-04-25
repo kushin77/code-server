@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ci/verify-agent-runtime-deployment.sh
 # @description Verify Agent Runtime Phase 2 deployment success
-# @governance GOV-002: Deterministic verification, immutable deployment checks
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-26
 # @related P3 #1557 Phase 2

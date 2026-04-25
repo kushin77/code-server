@@ -2,12 +2,12 @@
 # @file validate-tls-hardening.sh
 # @module security
 # @description Validate SSL/TLS hardening configuration (P1 Priority 2)
-# @governance GOV-002 - TLS 1.2+ enforcement validation
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/tls-validation.log}"
 readonly TLS_MIN_VERSION="${TLS_MIN_VERSION:-1.2}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: GitHub API governance enforcement — audit CLI stability
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: CI guard to enforce GitHub API stability and governance rules
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$SCRIPT_DIR/scripts/_common/init.sh"
 
 # ============================================================================

@@ -3,13 +3,13 @@
 # @file        scripts/k8s/provision-eks-cluster.sh
 # @module      k8s/provision-eks-cluster
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/k8s/provision-eks-cluster.sh
 # @description Provisions AWS EKS cluster with Istio and observability for code-server-enterprise
-# @governance GOV-002: Immutable infrastructure provisioning
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage ./provision-eks-cluster.sh --name code-server-enterprise-prod --region us-east-1 --nodes 3 --instance-type t3.large
 
 set -euo pipefail

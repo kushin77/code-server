@@ -2,7 +2,7 @@
 ################################################################################
 # @file: epic-1536-phase2-kubernetes-network-config.sh
 # @description: Epic #1536 Phase 2 - Kubernetes Network Configuration
-# @governance: GOV-002 (Immutable, Idempotent, Deterministic)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author: GitHub Copilot
 # @date: 2026-04-25
 ################################################################################

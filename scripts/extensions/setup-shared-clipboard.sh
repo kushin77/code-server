@@ -2,7 +2,7 @@
 # @file scripts/extensions/setup-shared-clipboard.sh
 # @module ide/shared-clipboard
 # @description P3-1080 Phase 1: Shared clipboard extension setup
-# @governance GOV-002: All clipboard state immutable and auditable
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

@@ -2,13 +2,13 @@
 # @file scripts/ci/check-docker-compose-idempotency.sh
 # @module infrastructure/validation
 # @description P3-1531: Validate Docker Compose configuration is idempotent (safe to run multiple times)
-# @governance GOV-002: All services must use immutable image digests, no floating tags, pinned versions
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage check-docker-compose-idempotency.sh [--compose-file FILE] [--fix] [--report]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly COMPOSE_FILE="${COMPOSE_FILE:-${REPO_ROOT}/docker-compose.yml}"
 readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/compose-idempotency-report.txt}"
 

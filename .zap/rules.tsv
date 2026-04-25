@@ -1,0 +1,69 @@
+# .zap/rules.tsv
+# OWASP ZAP scan rule configuration for kushnir.cloud / ide.kushnir.cloud
+# Format: rule_id	IGNORE|WARN|FAIL	comment
+# Reference: https://www.zaproxy.org/docs/alerts/
+
+# ── Informational / False-Positive Suppressions ──────────────────────────────
+# These rules trigger on expected platform behaviour and are not actionable.
+
+10015	IGNORE	Incomplete or No Cache-Control and Pragma HTTP Header Set (expected on auth flows)
+10016	IGNORE	Web Browser XSS Protection Not Enabled (obsolete header, not required)
+10017	IGNORE	Cross-Domain JavaScript Source File Inclusion (CDN assets permitted)
+10021	IGNORE	X-Content-Type-Options Header Missing (set by Caddy globally; ZAP misses inherited headers)
+10035	IGNORE	Strict-Transport-Security Header Not Set (applied at Caddy layer before ZAP sees it)
+10036	IGNORE	Server Leaks Version Information via Server HTTP Response Header Field
+10038	IGNORE	Content Security Policy (CSP) Header Not Set (IDE requires permissive CSP for extensions)
+10049	IGNORE	Non-Storable Content (expected for API responses)
+10050	IGNORE	Retrieved from Cache (expected for static assets)
+10054	IGNORE	Cookie Without SameSite Attribute (oauth2-proxy cookies use Lax; ZAP scan order mismatch)
+10055	IGNORE	CSP Scanner (IDE extension marketplace requires unsafe-eval)
+10063	IGNORE	Permissions Policy Header Not Set (not yet implemented, planned)
+10096	IGNORE	Timestamp Disclosure - Unix (expected in JSON API responses)
+10109	IGNORE	Modern Web Application (informational only)
+10110	IGNORE	Dangerous JS Functions (required by VS Code extension host)
+10202	IGNORE	Absence of Anti-CSRF Tokens (SPA uses JWT/OAuth2, not form-based CSRF)
+
+# ── Warnings (report but do not fail CI) ──────────────────────────────────────
+10015	WARN	Incomplete or No Cache-Control on API responses
+10036	WARN	Server version disclosure
+10040	WARN	Secure Pages Include Mixed Content
+10054	WARN	Cookie Without SameSite on secondary endpoints
+10096	WARN	Timestamp Disclosure in response body
+
+# ── Fail-on-Find Rules (block CI on detection) ────────────────────────────────
+# These indicate genuine vulnerabilities that must be fixed before merge.
+
+10045	FAIL	Source Code Disclosure - /WEB-INF folder
+10048	FAIL	Remote Code Execution - Shell Shock
+10049	FAIL	Storable and Cacheable Content — sensitive endpoint
+90019	FAIL	Server Side Code Injection
+90020	FAIL	Remote OS Command Injection
+90021	FAIL	XPath Injection
+90022	FAIL	Application Error Disclosure
+90025	FAIL	Expression Language Injection
+90028	FAIL	Insecure HTTP Method
+90034	FAIL	Cloud Metadata Potentially Exposed (SSRF to 169.254.169.254)
+40012	FAIL	Cross Site Scripting (Reflected)
+40013	FAIL	Session Fixation
+40014	FAIL	Cross Site Scripting (Persistent)
+40016	FAIL	Cross Site Scripting (Persistent) - Prime
+40017	FAIL	Cross Site Scripting (Persistent) - Spider
+40018	FAIL	SQL Injection
+40019	FAIL	SQL Injection - MySQL
+40020	FAIL	SQL Injection - Hypersonic SQL
+40021	FAIL	SQL Injection - Oracle
+40022	FAIL	SQL Injection - PostgreSQL
+40024	FAIL	SQL Injection - SQLite
+40025	FAIL	Proxy Disclosure
+40026	FAIL	Cross Site Scripting (DOM Based)
+40028	FAIL	CSRF Countermeasures Bypassed
+40029	FAIL	Trace.axd Information Leak
+40032	FAIL	CORS Misconfiguration
+40034	FAIL	.htaccess Information Leak
+40035	FAIL	Hidden File Finder
+20019	FAIL	External Redirect
+30001	FAIL	Buffer Overflow
+30002	FAIL	Format String Error
+30003	FAIL	Integer Overflow Error
+6	FAIL	Path Traversal
+7	FAIL	Remote File Inclusion

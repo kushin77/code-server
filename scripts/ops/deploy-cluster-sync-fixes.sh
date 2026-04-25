@@ -66,12 +66,16 @@ validate_prerequisites() {
   log INFO "Validating deployment prerequisites..."
   
   # Check SSH connectivity to replica (ONPREM_SECONDARY_IP)
-  if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@${REPLICA_HOST}" "echo 'SSH OK'" &>/dev/null; then
-    log ERROR "Cannot reach replica at ${REPLICA_HOST} via SSH (configured as ONPREM_SECONDARY_IP)"
-    log ERROR "Set REPLICA_HOST or ensure ONPREM_SECONDARY_IP is configured in _epic-1536-network-config.env"
-    return 1
+  if [ "$DRY_RUN" = "false" ]; then
+    if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "akushnir@${REPLICA_HOST}" "echo 'SSH OK'" &>/dev/null; then
+      log ERROR "Cannot reach replica at ${REPLICA_HOST} via SSH (configured as ONPREM_SECONDARY_IP)"
+      log ERROR "Set REPLICA_HOST or ensure ONPREM_SECONDARY_IP is configured in _epic-1536-network-config.env"
+      return 1
+    fi
+    log SUCCESS "SSH connectivity verified to replica (${REPLICA_HOST})"
+  else
+    log INFO "[DRY-RUN] Would verify SSH connectivity to replica (${REPLICA_HOST})"
   fi
-  log SUCCESS "SSH connectivity verified to replica (${REPLICA_HOST})"
   
   # Check git on primary
   if ! command -v git &>/dev/null; then
@@ -99,15 +103,22 @@ validate_prerequisites() {
 deploy_pull_updates() {
   log INFO "Step 1/5: Pulling latest code on replica (ONPREM_SECONDARY_IP)..."
   
-  # Immutable: Git pull is deterministic - same commit always produces same state
-  local cmd="cd /code-server-enterprise && git fetch origin && git checkout ${BRANCH_NAME} && git pull origin ${BRANCH_NAME}"
+  # Clone if repo doesn't exist, otherwise fetch + checkout + pull
+  local cmd='
+    REPO_PATH=$(cd ~ && pwd)/code-server-enterprise
+    if [ -d "$REPO_PATH/.git" ]; then
+      cd "$REPO_PATH" && git fetch origin && git checkout '"${BRANCH_NAME}"' && git pull origin '"${BRANCH_NAME}"'
+    else
+      git clone --branch '"${BRANCH_NAME}"' https://github.com/kushin77/code-server.git "$REPO_PATH"
+    fi
+  '
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $cmd"
     return 0
   fi
   
-  if ssh "root@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
+  if ssh "akushnir@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Code pulled successfully on replica"
     return 0
   else
@@ -130,11 +141,11 @@ deploy_validate_sync() {
     return 0
   fi
   
-  if ssh "root@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
+  if ssh "akushnir@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Cluster validation passed"
     
     # Retrieve validation report
-    if scp "root@${REPLICA_HOST}:/tmp/pre-deployment-validation.json" "/tmp/pre-deployment-validation.json" &>/dev/null; then
+    if scp "akushnir@${REPLICA_HOST}:/tmp/pre-deployment-validation.json" "/tmp/pre-deployment-validation.json" &>/dev/null; then
       log INFO "Validation report:"
       cat "/tmp/pre-deployment-validation.json" | head -20 | tee -a "$DEPLOYMENT_LOG"
     fi
@@ -159,12 +170,12 @@ deploy_restart_services() {
     return 0
   fi
   
-  if ssh "root@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
+  if ssh "akushnir@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Services restarted successfully"
     sleep 5  # Give services time to stabilize
     
     # Verify services are running
-    if ssh "root@${REPLICA_HOST}" "docker compose ps" &>> "$DEPLOYMENT_LOG"; then
+    if ssh "akushnir@${REPLICA_HOST}" "docker compose ps" &>> "$DEPLOYMENT_LOG"; then
       log SUCCESS "All services are running"
       return 0
     else
@@ -191,11 +202,11 @@ deploy_install_daemon() {
     return 0
   fi
   
-  if ssh "root@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
+  if ssh "akushnir@${REPLICA_HOST}" "$cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Continuous sync daemon installed"
     
     # Verify cron job
-    if ssh "root@${REPLICA_HOST}" "cat /etc/cron.d/cluster-sync" &>> "$DEPLOYMENT_LOG"; then
+      if ssh "akushnir@${REPLICA_HOST}" "cat /etc/cron.d/cluster-sync" &>> "$DEPLOYMENT_LOG"; then
       log SUCCESS "Cron job verified"
       return 0
     else
@@ -222,7 +233,7 @@ deploy_verify() {
     return 0
   fi
   
-  if ssh "root@${REPLICA_HOST}" "$verify_cmd" &>> "$DEPLOYMENT_LOG"; then
+  if ssh "akushnir@${REPLICA_HOST}" "$verify_cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Deployment verified"
     return 0
   else
@@ -243,7 +254,7 @@ rollback_deployment() {
   
   log WARN "Rollback command: $rollback_cmd"
   
-  if ssh "root@${REPLICA_HOST}" "$rollback_cmd" &>> "$DEPLOYMENT_LOG"; then
+  if ssh "akushnir@${REPLICA_HOST}" "$rollback_cmd" &>> "$DEPLOYMENT_LOG"; then
     log SUCCESS "Rollback completed successfully"
     return 0
   else

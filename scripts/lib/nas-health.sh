@@ -2,7 +2,7 @@
 # @file        scripts/lib/nas-health.sh
 # @module      lib/storage
 # @description NAS health monitoring, alerting, and failover logic
-# @governance  GOV-002: Immutable, version-controlled
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — NAS Health
 
 set -euo pipefail

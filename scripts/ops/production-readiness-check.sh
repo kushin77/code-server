@@ -4,7 +4,7 @@
 # @file scripts/ops/production-readiness-check.sh
 # @module operations/readiness
 # @description Comprehensive production readiness verification
-# @governance GOV-002: All deployment gates verified and documented
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 
@@ -35,7 +35,7 @@ log_error() {
 # Configuration
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPORT_DIR="${PROJECT_ROOT}/artifacts"
 readonly READINESS_REPORT_FILE="${READINESS_REPORT_FILE:-${REPORT_DIR}/production-readiness.json}"
@@ -272,7 +272,7 @@ log_info "SECTION 6: Governance & Compliance"
 log_info "===================================="
 
 # GOV-002 headers
-GOV_HEADER_COUNT=$(grep -r "@governance" "${PROJECT_ROOT}/scripts" 2>/dev/null | wc -l || echo 0)
+GOV_HEADER_COUNT=$(grep -r "@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 if (( GOV_HEADER_COUNT > 20 )); then
     check_pass "GOV-002 headers: $GOV_HEADER_COUNT files with governance"
 else

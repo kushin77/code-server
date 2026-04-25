@@ -2,13 +2,13 @@
 ################################################################################
 # @file        scripts/ops/deploy-from-primary.sh
 # @description Execute cluster sync deployment from primary node (no SSH needed)
-# @governance  GOV-002: Immutable, deterministic, idempotent
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # DEPLOYMENT METHOD: Execute directly on replica instead of SSH from primary
 # 
 # USAGE (From Primary Node 192.168.168.31):
 #   # Step 1: SSH to replica
-#   ssh root@192.168.168.42
+#   ssh akushnir@192.168.168.42
 #
 #   # Step 2: Pull deployment code
 #   cd /code-server-enterprise
@@ -17,13 +17,13 @@
 #   bash scripts/ops/deploy-from-primary.sh
 #
 # ALTERNATIVE: Execute via single SSH command line
-#   ssh root@192.168.168.42 << 'EOF'
+#   ssh akushnir@192.168.168.42 << 'EOF'
 #   cd /code-server-enterprise
 #   bash scripts/ops/deploy-from-primary.sh
 #   EOF
 #
 # Or in one line:
-#   ssh root@192.168.168.42 'cd /code-server-enterprise && bash scripts/ops/deploy-from-primary.sh'
+#   ssh akushnir@192.168.168.42 'cd /code-server-enterprise && bash scripts/ops/deploy-from-primary.sh'
 ################################################################################
 
 set -euo pipefail

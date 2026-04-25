@@ -2,7 +2,7 @@
 # @file        scripts/lib/compression.sh
 # @module      lib/compression
 # @description HTTP/2 and compression optimization for performance
-# @governance  GOV-002: Version-controlled, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — Caching Strategy
 
 set -euo pipefail

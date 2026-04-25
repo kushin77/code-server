@@ -2,12 +2,12 @@
 # @file setup-encryption-at-rest.sh
 # @module security
 # @description Set up encryption for data at rest (P1 Priority 7)
-# @governance GOV-002 - P1 Priority 7: Data encryption
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly CONFIG_DIR="${CONFIG_DIR:-${REPO_DIR}/config}"
 readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/encryption-setup.log}"

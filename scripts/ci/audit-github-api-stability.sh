@@ -5,7 +5,7 @@
 # @module github-governance
 # @description Audit GitHub API calls for stability issues: token scopes, 
 #              403 errors, rate limits, and retry logic
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 ################################################################################
 
 set -euo pipefail

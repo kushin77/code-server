@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: Pre-deployment validation — comprehensive system readiness check
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Validates system readiness before deployment execution
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Set environment variables for validation (all overridable)

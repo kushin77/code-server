@@ -2,13 +2,13 @@
 # @file scripts/ops/setup-redpanda-eventbus.sh
 # @module infrastructure/event-bus
 # @description P3-1560 Phase 1: Deploy Redpanda (Kafka-compatible) event bus
-# @governance GOV-002: All engineering events flow through audit-logged event bus
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-redpanda-eventbus.sh [--deploy]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REDPANDA_DATA_PATH="${REDPANDA_DATA_PATH:-${REPO_ROOT}/data/redpanda}"
 readonly KAFKA_CONFIG="${KAFKA_CONFIG:-${REPO_ROOT}/config/kafka-topics.yaml}"
 readonly REDPANDA_PORT="${REDPANDA_PORT:-9092}"

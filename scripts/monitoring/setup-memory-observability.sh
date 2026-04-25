@@ -2,7 +2,7 @@
 # @file scripts/monitoring/setup-memory-observability.sh
 # @module infrastructure/observability
 # @description P3-1562 Phase 5: Grafana dashboards for memory engine metrics
-# @governance GOV-002: All memory engine operations visible and auditable
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-memory-observability.sh
 
 set -euo pipefail

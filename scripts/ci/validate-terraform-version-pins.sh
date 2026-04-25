@@ -2,13 +2,13 @@
 # @file validate-terraform-version-pins.sh
 # @module infrastructure/validation
 # @description P3-1531: Validate all Terraform provider/module versions are pinned (no floating ranges like ~>)
-# @governance GOV-002: All infrastructure version-pinned in terraform/variables.tf - no ~> ranges in production
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage validate-terraform-version-pins.sh [--check] [--fix] [--report]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly TERRAFORM_DIR="${TERRAFORM_DIR:-${REPO_ROOT}/terraform}"
 readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/terraform-version-pins-report.txt}"
 readonly ALLOWED_FLOATING_PATTERNS="${ALLOWED_FLOATING_PATTERNS:-}"  # Empty = no floating allowed

@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: SSL/TLS hardening — enforce modern crypto for all services
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Hardens SSL/TLS configuration for Caddy, OPA, and other services
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Configuration (all env-var driven)
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly CERT_DIR="${CERT_DIR:-${PROJECT_ROOT}/certs/ssl}"
 readonly CA_CERT="${CA_CERT:-${CERT_DIR}/ca.crt}"

@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Phase 2 Load Balancing & Traffic Management Configuration
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Generate load balancing and traffic routing configuration for Phase 2
 # @phase Q3 Phase 4 - Phase 2 (May 13-26, 2026)
 # @date $(date '+%Y-%m-%d %H:%M:%S')

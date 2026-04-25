@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# @governance: Documentation gap analysis — audit completeness of technical docs
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Automated documentation gap analysis - scans required docs and generates issues
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -14,7 +14,7 @@ set -euo pipefail
 # Configuration (all env-var driven)
 ################################################################################
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly DOCS_ROOT="${DOCS_ROOT:-${PROJECT_ROOT}/docs}"
 readonly GAPS_REPORT_DIR="${GAPS_REPORT_DIR:-${PROJECT_ROOT}/artifacts/reports}"

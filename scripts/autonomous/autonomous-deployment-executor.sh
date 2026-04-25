@@ -3,7 +3,7 @@
 # @file        scripts/autonomous/autonomous-deployment-executor.sh
 # @module      autonomous/autonomous-deployment-executor
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
@@ -23,7 +23,7 @@ readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
 # Configuration
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly DEPLOYMENT_ID="autonomous-deploy-$(date +%s)"
 readonly STATE_DIR="${SCRIPT_DIR}/state/deployments"
 readonly LOG_FILE="${SCRIPT_DIR}/artifacts/autonomous-deployment-${DEPLOYMENT_ID}.log"

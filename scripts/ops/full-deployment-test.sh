@@ -2,7 +2,7 @@
 # @file scripts/ops/full-deployment-test.sh
 # @module infrastructure/testing
 # @description P3-1531 Phase 5: Complete deployment workflow test with rollback validation
-# @governance GOV-002: All deployments tested, verified, rolled back before production use
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage full-deployment-test.sh [--dry-run] [--target primary|replica|both]
 
 set -euo pipefail

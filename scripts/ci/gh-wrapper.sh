@@ -2,7 +2,7 @@
 # @file gh-wrapper.sh
 # @module governance/ci
 # @description Unified GitHub CLI wrapper with rate-limit awareness, retry logic, and governance enforcement
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

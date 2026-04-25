@@ -3,13 +3,13 @@
 # @file        scripts/ops/test-rollback-procedures.sh
 # @module      ops/test-rollback-procedures
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/test-rollback-procedures.sh
 # @description Phase 5: Comprehensive Rollback Testing Framework (#1531)
-# @governance GOV-002 - Automated rollback with comprehensive testing
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @automation Tests all three rollback modes: auto, manual, emergency
 # @prerequisite Must source scripts/_common/init.sh, rollback.sh exists
 

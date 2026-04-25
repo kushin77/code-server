@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Air-gap image preflight — pre-pull digest-pinned images for offline deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Pre-pull digest-pinned images for an air-gapped Terraform deployment
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

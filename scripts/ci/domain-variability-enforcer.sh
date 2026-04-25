@@ -2,16 +2,16 @@
 # @file domain-variability-enforcer.sh
 # @module infrastructure/governance
 # @description P3-1531: Enforce domain and config variability - replace hardcoded domains with env vars
-# @governance GOV-002: IaC, Immutable, Idempotent - All domain references must be env-var driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage domain-variability-enforcer.sh [--check] [--fix] [--report]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/domain-variability-report.json}"
-readonly APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
-readonly IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+export REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/domain-variability-report.json}"
+export APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
+export IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
 
 source "${REPO_ROOT}/scripts/_common/init.sh"
 source "${REPO_ROOT}/scripts/_common/hosts.sh"

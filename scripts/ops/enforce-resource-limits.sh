@@ -2,7 +2,7 @@
 # @file enforce-resource-limits.sh
 # @module infrastructure
 # @description Enforce resource limits on all Docker services to prevent runaway consumption
-# @governance GOV-002 - All services must have defined resource limits
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run multiple times
 set -euo pipefail
 

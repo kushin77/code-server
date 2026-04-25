@@ -2,7 +2,7 @@
 # @file idempotency-enforcer.sh
 # @module infrastructure
 # @description Enforce idempotent patterns in all deployment and operational scripts
-# @governance GOV-002 - All scripts must be idempotent (safe to run multiple times)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Core infrastructure stabilization tool
 set -euo pipefail
 

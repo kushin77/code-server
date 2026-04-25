@@ -3,13 +3,13 @@
 # @file        scripts/ops/test-drift-detection.sh
 # @module      ops/test-drift-detection
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/test-drift-detection.sh
 # @description Phase 4: Drift Detection CI Job Validation Testing (#1531)
-# @governance GOV-002 - Comprehensive drift detection testing framework
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @automation Tests all drift detection scenarios without requiring GitHub Actions
 # @prerequisite Must source scripts/_common/init.sh
 

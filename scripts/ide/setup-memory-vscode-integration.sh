@@ -2,7 +2,7 @@
 # @file scripts/ide/setup-memory-vscode-integration.sh
 # @module ide/vscode-integration
 # @description P3-1562 Phase 4: VS Code integration for organizational memory search
-# @governance GOV-002: IDE provides access to collective organizational knowledge
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-memory-vscode-integration.sh
 
 set -euo pipefail

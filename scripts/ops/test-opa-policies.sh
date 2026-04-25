@@ -2,7 +2,7 @@
 # @file scripts/ops/test-opa-policies.sh
 # @module ops/testing
 # @description End-to-end test suite for OPA policy validation
-# @governance GOV-002 - Policy validation before production deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

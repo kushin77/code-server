@@ -2,7 +2,7 @@
 # @file tls-backup-automation.sh
 # @module infrastructure
 # @description Automated TLS certificate backup and recovery for production safety
-# @governance GOV-002 - TLS certificates must be backed up and recoverable
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run continuously
 set -euo pipefail
 

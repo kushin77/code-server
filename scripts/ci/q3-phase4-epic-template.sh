@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Q3 Phase 4 epic generation — create GitHub issue templates at scale
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Generate Q3 Phase 4 GitHub Epic #1537 template and related issues
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly EPIC_TEMPLATE="${EPIC_TEMPLATE:-${REPO_ROOT}/artifacts/EPIC-1537-KUBERNETES-MIGRATION-TEMPLATE.md}"
 
 cat > "${EPIC_TEMPLATE}" << 'EOF'

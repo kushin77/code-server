@@ -14,11 +14,11 @@
 ```bash
 # From your dev machine or any machine with SSH access to 192.168.168.42:
 
-ssh root@192.168.168.42 'cd /code-server-enterprise && bash scripts/ops/deploy-from-primary.sh'
+ssh akushnir@192.168.168.42 'cd /code-server-enterprise && bash scripts/ops/deploy-from-primary.sh'
 
 # Or if you prefer interactive mode:
 
-ssh root@192.168.168.42
+ssh akushnir@192.168.168.42
 cd /code-server-enterprise
 bash scripts/ops/deploy-from-primary.sh
 ```
@@ -253,7 +253,7 @@ ls -la scripts/_common/_*.env
 
 ### Deployment Hangs on SSH
 
-**Problem**: `root@192.168.168.42's password:` (waiting for input)
+**Problem**: Waiting for `akushnir@192.168.168.42` SSH authentication
 
 **Solution**: 
 - Use SSH key authentication (recommended for production)
@@ -319,7 +319,7 @@ bash scripts/ops/cluster-sync-daemon.sh --sync
 
 ## 🎯 Next Steps
 
-1. **SSH to replica node**: `ssh root@192.168.168.42`
+1. **SSH to replica node**: `ssh akushnir@192.168.168.42`
 2. **Navigate to repo**: `cd /code-server-enterprise`
 3. **Execute deployment**: `bash scripts/ops/deploy-from-primary.sh`
 4. **Monitor output**: Watch for ✅ SUCCESS messages

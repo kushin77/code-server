@@ -5,7 +5,7 @@
 # @module github-governance
 # @description Enforce issue lifecycle governance: every closed issue must have
 #              a linked PR or documented close reason
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 ################################################################################
 
 set -euo pipefail

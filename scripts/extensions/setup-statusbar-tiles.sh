@@ -2,7 +2,7 @@
 # @file scripts/extensions/setup-statusbar-tiles.sh
 # @module ide/vscode-extensions
 # @description P3-1055 Phase 1: Setup VS Code status bar tiles extension
-# @governance GOV-002: Extension provides team context visibility in IDE
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-statusbar-tiles.sh [--install]
 
 set -euo pipefail

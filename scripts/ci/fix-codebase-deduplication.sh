@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###
-# @governance: Codebase deduplication fixes — eliminate redundant logic
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: P3 #1533 Phase 2 - Apply codebase deduplication fixes identified by audit
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -14,7 +14,7 @@ set -euo pipefail
 # Source initialization and logging
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly DEDUP_REPORT_DIR="${DEDUP_REPORT_DIR:-${PROJECT_ROOT}/artifacts/reports}"
 
@@ -144,7 +144,7 @@ log_info "STEP $step_count: Verify GOV-002 compliance headers"
 
 # Count files with proper headers
 FILES_WITH_HEADERS=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" -name '*.ts' -type f \
-    -exec grep -l '@governance' {} \; 2>/dev/null | wc -l)
+    -exec grep -l '@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 FILES_TOTAL=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" -name '*.ts' -type f 2>/dev/null | wc -l)
 

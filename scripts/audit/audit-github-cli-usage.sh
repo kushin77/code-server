@@ -19,7 +19,7 @@ source "$SCRIPT_DIR/scripts/_common/init.sh"
 # ============================================================================
 
 readonly AUDIT_OUTPUT="${1:-.audit-github-cli.json}"
-readonly REPO_ROOT="$SCRIPT_DIR"
+REPO_ROOT="$SCRIPT_DIR"
 
 # ============================================================================
 # Audit Functions

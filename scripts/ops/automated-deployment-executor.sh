@@ -2,7 +2,7 @@
 # @file scripts/ops/automated-deployment-executor.sh
 # @module infrastructure
 # @description Production-grade deployment automation with multi-stage execution and rollback
-# @governance GOV-004: All deployments must be automated, audited, and reversible
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @version 2.0
 # @date April 25, 2026
 
@@ -12,7 +12,7 @@ set -euo pipefail
 # CONFIGURATION & INITIALIZATION
 # ============================================================================
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly DEPLOYMENT_ID="deploy-$(date +%Y%m%d-%H%M%S)"
 readonly LOG_DIR="${REPO_ROOT}/artifacts/deployments/${DEPLOYMENT_ID}"
 readonly LOG_FILE="${LOG_DIR}/deployment.log"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###
-# @governance: Codebase hygiene audit — detect duplication and deviations
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Comprehensive codebase hygiene and deduplication audit
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # Source initialization
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh" || {

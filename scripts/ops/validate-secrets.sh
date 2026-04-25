@@ -2,7 +2,7 @@
 # @file validate-secrets.sh
 # @module security
 # @description Validate that all required secrets are configured and non-empty
-# @governance GOV-002 - P0 Security hardening: all secrets must be externally managed
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES
 
 set -euo pipefail

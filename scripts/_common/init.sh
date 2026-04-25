@@ -2,7 +2,7 @@
 # @file        scripts/_common/init.sh
 # @module      common/init
 # @description Canonical bootstrap script for IaC lifecycle control (#1531)
-# @governance GOV-002: All scripts MUST source this file for immutable, idempotent behavior
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @standard This file is the authoritative entry point for all deployment operations
 set -euo pipefail
 

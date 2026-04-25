@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Q2 completion audit (simple) — lightweight validation without complex dependencies
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Q2 2026 Roadmap completion audit - simpler version for minimal deps
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -8,7 +8,7 @@
 set -euo pipefail
 
 readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly AUDIT_DIR="${AUDIT_DIR:-${REPO_ROOT}/artifacts/q2-completion-audit}"
 readonly AUDIT_REPORT="${AUDIT_REPORT:-${AUDIT_DIR}/Q2-COMPLETION-AUDIT-$(date -u +%Y-%m-%d).md}"
 

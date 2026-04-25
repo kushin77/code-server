@@ -188,7 +188,7 @@ readonly GOV002_HEADER_TEMPLATE="###############################################
 # @file        %FILEPATH%
 # @module      %MODULE%
 # @description %DESCRIPTION%
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        %DATE%
 ###############################################################################"

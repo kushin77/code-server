@@ -2,7 +2,7 @@
 # @file        scripts/ci/validate-dns-service-discovery.sh
 # @module      ci/networking
 # @description Validate DNS service discovery — no hardcoded IPs in inter-service config
-# @governance  GOV-002: Immutable, idempotent, version-controlled
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — DNS Service Discovery
 #
 # Checks:

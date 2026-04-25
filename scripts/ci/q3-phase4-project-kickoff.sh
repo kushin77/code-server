@@ -3,7 +3,7 @@
 # @module      q3/orchestration
 # @description Q3 Phase 4 Project Kickoff - Formal launch of Kubernetes migration
 # @type        IaC-compliant orchestration (immutable, idempotent, version-controlled)
-# @governance  GOV-002: All infrastructure as code, no runtime modifications
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

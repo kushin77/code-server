@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ops/setup-vrrp-keepalived.sh
 # @description VRRP HA Virtual IP Configuration (Idempotent IaC)
-# @governance GOV-002: Deterministic, audited, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 #1536 Phase 3 - DNS Architecture & VRRP Failover
@@ -169,7 +169,7 @@ generate_keepalived_config() {
 # Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 # Role: $NODE_ROLE (Priority: $priority)
 #
-# @governance GOV-002: This file is auto-generated. Changes should be made via
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # environment variables and script re-execution, not direct file editing.
 ################################################################################
 

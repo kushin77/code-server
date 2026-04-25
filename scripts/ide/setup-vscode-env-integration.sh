@@ -2,7 +2,7 @@
 # @file scripts/ide/setup-vscode-env-integration.sh
 # @module ide/vscode-integration
 # @description P0-1553 Phase 4: VS Code integration for env.yaml with JSON Schema support
-# @governance GOV-002: IDE provides real-time environment validation
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-vscode-env-integration.sh
 
 set -euo pipefail

@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ops/validate-iac-deployment-readiness.sh
 # @description Comprehensive IaC deployment readiness validation
-# @governance GOV-002: Validate all IaC components before deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 Services Deployment
@@ -257,7 +257,7 @@ validate_configuration_compliance() {
   ((TOTAL_CHECKS++))
   local gov_headers=0
   for file in scripts/ops/*.sh scripts/ci/*.sh terraform/*.tf; do
-    [[ -f "$file" ]] && grep -q "@governance" "$file" && ((gov_headers++))
+    [[ -f "$file" ]] && grep -q "@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
   done
   if [[ $gov_headers -gt 5 ]]; then
     pass "GOV-002 compliance headers present: $gov_headers files"

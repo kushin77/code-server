@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Phase 1 Infrastructure Preparation Report
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Comprehensive Phase 1 readiness report and deployment strategy
 # @phase Q3 Phase 4 Preparation (Phase 1)

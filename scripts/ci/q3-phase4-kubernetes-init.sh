@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Kubernetes migration initialization — prepare for container orchestration
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Q3 Phase 4 initialization - Prepare Kubernetes migration infrastructure
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 readonly INIT_TIMESTAMP="${INIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # Load network configuration SSOT
 source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {

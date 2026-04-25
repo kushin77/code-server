@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Phase 2 Readiness Validation
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Comprehensive validation before Phase 2 stateless services migration
 # @phase Q3 Phase 4 - Phase 2 (May 13-26, 2026)
 # @date $(date '+%Y-%m-%d %H:%M:%S')

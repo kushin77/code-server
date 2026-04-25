@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Global load balancing setup — orchestrate Cloudflare + Caddy for multi-region failover
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Cloudflare + Caddy global load balancing orchestration (Q3 Phase 5)
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/glb-$(date +%Y%m%d-%H%M%S).log"
 readonly CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
 readonly CLOUDFLARE_ZONE_ID="${CLOUDFLARE_ZONE_ID:-}"

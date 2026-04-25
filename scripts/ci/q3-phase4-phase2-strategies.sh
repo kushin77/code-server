@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Phase 2 Deployment Strategies & Load Balancing
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Define deployment strategies for stateless services migration
 # @phase Q3 Phase 4 - Phase 2 (May 13-26, 2026)
 # @date $(date '+%Y-%m-%d %H:%M:%S')

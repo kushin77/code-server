@@ -3,14 +3,14 @@
 # @file        scripts/automation/sync-projects-board-status.sh
 # @module      automation/sync-projects-board-status
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 #
 # @file scripts/automation/sync-projects-board-status.sh
 # @description Auto-sync issue/PR status to GitHub Projects board columns
-# @governance GOV-002: IaC, immutable, idempotent, audit-logged
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @created 2026-04-25
 #

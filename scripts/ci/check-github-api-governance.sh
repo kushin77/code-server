@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# @file        scripts/ci/check-github-api-governance.sh
-# @module      ci/github-api-governance
-# @description CI guard to enforce GitHub API stability and governance rules
+# @governance: GitHub API governance enforcement — audit CLI stability
+# Purpose: CI guard to enforce GitHub API stability and governance rules
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1245 (CI/CD Standards)
 #
 # Blocks commits that violate:
 # - Direct `gh` CLI calls without --repo flag
@@ -11,15 +13,16 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$SCRIPT_DIR/scripts/_common/init.sh"
 
 # ============================================================================
-# Configuration
+# Configuration (all env-var driven)
 # ============================================================================
 
 readonly VIOLATIONS_FOUND=0
-readonly VIOLATIONS_MAX=10  # Fail if more than this
+readonly VIOLATIONS_MAX="${VIOLATIONS_MAX:-10}"  # Fail if more than this
+readonly GH_RATE_LIMIT_WARNING="${GH_RATE_LIMIT_WARNING:-1000}"
 
 # ============================================================================
 # Governance Checks

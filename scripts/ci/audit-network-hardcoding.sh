@@ -1,8 +1,12 @@
 #!/bin/bash
 
 ###############################################################################
-# Epic #1536 Phase 1: Network Hardcoding Audit
-# 
+# @governance: Network hardcoding audit — detect unauthorized static config
+# Purpose: Epic #1536 Phase 1 - Network Hardcoding Audit
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1536 (Network Hardcoding Audit), #1534 (IaC Governance)
+#
 # Audits the repository for hardcoded network configuration that violates:
 # - GOV-002 governance standards (template-driven configuration)
 # - FAANG best practices (environment-driven infrastructure)
@@ -20,14 +24,16 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-AUDIT_LOG="/tmp/network-hardcoding-audit-$(date +%s).log"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly AUDIT_LOG_DIR="${AUDIT_LOG_DIR:-/tmp}"
+readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date +%s)}"
+readonly AUDIT_LOG="${AUDIT_LOG:-${AUDIT_LOG_DIR}/network-hardcoding-audit-${AUDIT_TIMESTAMP}.log}"
 
 # Color codes for output
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-GREEN='\033[0;32m'
+readonly RED='\033[0;31m'
+readonly YELLOW='\033[1;33m'
+readonly GREEN='\033[0;32m'
 NC='\033[0m'
 
 # Violation counter

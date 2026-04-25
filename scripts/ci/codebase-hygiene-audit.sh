@@ -1,25 +1,27 @@
 #!/bin/bash
 
 ###
-# @file codebase-hygiene-audit.sh
-# @module scripts/ci/codebase-hygiene-audit.sh
-# @description Comprehensive codebase hygiene and deduplication audit
-# @compliance IaC, idempotent, audit logging
+# @governance: Codebase hygiene audit — detect duplication and deviations
+# Purpose: Comprehensive codebase hygiene and deduplication audit
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1277 (Deduplication Analysis)
 ###
 
 set -euo pipefail
 
 # Source initialization
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh" || {
     echo "FATAL: Cannot source init.sh" >&2
     exit 1
 }
 
-# Report generation
-AUDIT_REPORT="${PROJECT_ROOT}/artifacts/reports/codebase-hygiene-audit.json"
+# Report generation (env-var driven)
+readonly AUDIT_REPORT_DIR="${AUDIT_REPORT_DIR:-${PROJECT_ROOT}/artifacts/reports}"
+readonly AUDIT_REPORT="${AUDIT_REPORT:-${AUDIT_REPORT_DIR}/codebase-hygiene-audit.json}"
 mkdir -p "$(dirname "$AUDIT_REPORT")"
 
 # Counters

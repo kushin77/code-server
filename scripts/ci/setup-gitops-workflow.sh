@@ -7,9 +7,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-WORKFLOW_FILE="${REPO_ROOT}/.github/workflows/gitops-drift-detection.yml"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly WORKFLOW_FILE="${WORKFLOW_FILE:-${REPO_ROOT}/.github/workflows/gitops-drift-detection.yml}"
+readonly DRIFT_DETECTION_SCHEDULE="${DRIFT_DETECTION_SCHEDULE:-'0 */6 * * *'}"  # Every 6 hours
+readonly RECONCILIATION_TIMEOUT_MINUTES="${RECONCILIATION_TIMEOUT_MINUTES:-30}"
 
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"

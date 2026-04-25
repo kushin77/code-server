@@ -7,16 +7,17 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-DRIFT_LOG="${REPO_ROOT}/logs/drift-detection.log"
-DRIFT_REPORT="${REPO_ROOT}/artifacts/drift-report.json"
-DRIFT_THRESHOLD_HOURS=24
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DRIFT_LOG="${DRIFT_LOG:-${REPO_ROOT}/logs/drift-detection.log}"
+readonly DRIFT_REPORT="${DRIFT_REPORT:-${REPO_ROOT}/artifacts/drift-report.json}"
+readonly DRIFT_THRESHOLD_HOURS="${DRIFT_THRESHOLD_HOURS:-24}"
+readonly DRIFT_CHECK_INTERVAL_MINUTES="${DRIFT_CHECK_INTERVAL_MINUTES:-1440}"
 
 # Source init.sh which includes github-api-client.sh (P3 #1533: consolidated sourcing)
 source "${REPO_ROOT}/scripts/_common/init.sh"
 
-mkdir -p "${REPO_ROOT}/logs" "$(dirname "${DRIFT_REPORT}")"
+mkdir -p "$(dirname "${DRIFT_LOG}")" "$(dirname "${DRIFT_REPORT}")"
 
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*" | tee -a "${DRIFT_LOG}"

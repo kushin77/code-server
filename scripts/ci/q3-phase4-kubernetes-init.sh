@@ -1,23 +1,27 @@
 #!/usr/bin/env bash
-# @file        scripts/ci/q3-phase4-kubernetes-init.sh
-# @module      q3/kubernetes-migration
-# @description Q3 Phase 4 initialization - Prepare Kubernetes migration infrastructure
-# @type        IaC-compliant (immutable, idempotent, template-driven)
-# @governance  GOV-002: Version-controlled, no hardcoding, environment-driven
+# @governance: Kubernetes migration initialization — prepare for container orchestration
+# Purpose: Q3 Phase 4 initialization - Prepare Kubernetes migration infrastructure
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1539 (Q3 Phase 4), #1534 (IaC Governance)
+#
+# Type: IaC-compliant (immutable, idempotent, template-driven)
+# Governance: GOV-002 - Version-controlled, no hardcoding, environment-driven
 
 set -euo pipefail
 
-INIT_DATE=$(date -u +%Y-%m-%d)
-INIT_TIME=$(date -u +%H:%M:%SZ)
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-K8S_INIT_DIR="${REPO_ROOT}/artifacts/q3-phase4-kubernetes-init"
-K8S_INIT_REPORT="${K8S_INIT_DIR}/Q3-PHASE4-KUBERNETES-INIT-${INIT_DATE}.md"
+readonly INIT_TIMESTAMP="${INIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+readonly K8S_INIT_DIR="${K8S_INIT_DIR:-${REPO_ROOT}/artifacts/q3-phase4-kubernetes-init}"
+readonly K8S_INIT_REPORT="${K8S_INIT_REPORT:-${K8S_INIT_DIR}/Q3-PHASE4-KUBERNETES-INIT-$(date -u +%Y-%m-%d).md}"
+readonly HELM_CHARTS_DIR="${HELM_CHARTS_DIR:-${REPO_ROOT}/helm}"
+readonly ISTIO_TEMPLATES_DIR="${ISTIO_TEMPLATES_DIR:-${REPO_ROOT}/istio}"
 
 mkdir -p "${K8S_INIT_DIR}"
 
 # Validate existing K8s infrastructure
-HELM_CHARTS=$(find "${REPO_ROOT}/helm" -name "Chart.yaml" 2>/dev/null | wc -l)
-ISTIO_TEMPLATES=$(find "${REPO_ROOT}/istio" -name "*.yaml" 2>/dev/null | wc -l)
+HELM_CHARTS=$(find "${HELM_CHARTS_DIR}" -name "Chart.yaml" 2>/dev/null | wc -l)
+ISTIO_TEMPLATES=$(find "${ISTIO_TEMPLATES_DIR}" -name "*.yaml" 2>/dev/null | wc -l)
 HPA_POLICIES=$(find "${REPO_ROOT}" -name "*hpa*.yaml" 2>/dev/null | wc -l)
 
 # Count microservices

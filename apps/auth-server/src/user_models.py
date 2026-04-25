@@ -58,7 +58,6 @@ class User(Base):
     
     __table_args__ = (
         Index("ix_users_email_verified", "email", "email_verified"),
-        Index("ix_users_created_at", "created_at"),
     )
 
 

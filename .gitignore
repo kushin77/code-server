@@ -25,6 +25,7 @@ __pycache__/
 
 # Operational Artifacts
 .deployments/
+state/
 artifacts/
 logs/
 *.json

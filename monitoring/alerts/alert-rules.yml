@@ -98,3 +98,88 @@ groups:
           summary: "GPU ECC errors detected"
           description: "Volatile double-bit ECC errors have been observed"
           runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+  # ── Infrastructure: Disk, Memory, 5xx, Container Restarts ──────────────────
+  # Issue #1532 Criterion 2: Alerting rules for 5xx rates, container restarts,
+  # disk > 80%, memory > 90%
+  - name: infrastructure_health
+    interval: 60s
+    rules:
+      - alert: HostDiskSpaceHigh
+        expr: |
+          (
+            node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} -
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          component: host
+        annotations:
+          summary: "Host disk usage above 80%"
+          description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is {{ $value | humanizePercentage }} full"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: HostDiskSpaceCritical
+        expr: |
+          (
+            node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} -
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          component: host
+        annotations:
+          summary: "Host disk usage above 95% — immediate action required"
+          description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is {{ $value | humanizePercentage }} full"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: HostMemoryPressureHigh
+        expr: |
+          (
+            node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+          ) / node_memory_MemTotal_bytes > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          component: host
+        annotations:
+          summary: "Host memory usage above 90%"
+          description: "Host {{ $labels.instance }} memory usage is {{ $value | humanizePercentage }}"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: ContainerRestartingTooOften
+        expr: |
+          increase(container_restart_count{name!=""}[15m]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: CaddyHigh5xxRate
+        expr: |
+          rate(caddy_http_request_errors_total[5m]) /
+          rate(caddy_http_request_duration_seconds_count[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: gateway
+        annotations:
+          summary: "Caddy 5xx error rate above 5%"
+          description: "Caddy is returning 5xx errors at {{ $value | humanizePercentage }} of requests"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: DeadMansSwitch
+        expr: vector(1)
+        labels:
+          severity: none
+          component: watchdog
+        annotations:
+          summary: "Watchdog — alerting pipeline is alive"
+          description: "This alert fires continuously. Silence it. If it stops firing, the alerting pipeline is broken."
+          runbook: "docs/OBSERVABILITY-GUIDE.md"

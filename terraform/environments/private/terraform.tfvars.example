@@ -1,0 +1,45 @@
+# terraform/environments/private/terraform.tfvars.example
+# @description Example terraform variables for private deployment
+# @governance GOV-002: All values must be customized for your organization
+#
+# How to use:
+# 1. Copy this file to terraform.tfvars
+# 2. Update values for your organization
+# 3. Run: terraform plan && terraform apply
+
+# ============================================================================
+# REQUIRED VARIABLES - Update these for your deployment
+# ============================================================================
+
+apex_domain     = "kushnir.cloud"      # Change to your domain
+primary_host    = "192.168.168.31"     # Change to your primary host IP
+admin_email     = "admin@kushnir.cloud" # Change to your admin email
+
+# ============================================================================
+# OPTIONAL VARIABLES - Configure for your setup
+# ============================================================================
+
+# Replica host for HA (leave empty if single-node)
+replica_host    = "192.168.168.42"
+
+# NAS/storage host (leave empty if using local storage)
+nas_host        = "192.168.168.56"
+
+# Enable TLS/HTTPS with Let's Encrypt
+enable_tls      = false  # Set to true if domain is internet-accessible
+
+# Logging level: debug, info, warn, error
+log_level       = "info"
+
+# OAuth2-proxy cookie secret (auto-generated if not provided)
+oauth2_cookie_secret = ""
+
+# Metrics retention in Prometheus (days)
+metrics_retention_days = 30
+
+# ============================================================================
+# ADVANCED CONFIGURATION - Expert use only
+# ============================================================================
+
+# deployment_mode = "private"  # Uncomment to override (usually not needed)
+# docker_compose_version = "3.9"  # Change if targeting different Docker Compose

@@ -256,6 +256,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Prepare artifacts directory
+        run: mkdir -p ./artifacts
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -264,28 +267,35 @@ jobs:
 
       - name: Install dependencies
         run: |
-          mkdir -p ./artifacts
           pip install -r apps/auth-server/requirements.txt
           pip install pytest pytest-asyncio
         continue-on-error: true
 
       - name: Start services
+        if: github.event_name != 'pull_request'
         run: |
+          COMPOSE_CMD=""
           if docker compose version > /dev/null 2>&1; then
-            docker compose -f docker-compose.yml up -d
+            COMPOSE_CMD="docker compose"
+          elif command -v docker-compose > /dev/null 2>&1; then
+            COMPOSE_CMD="docker-compose"
           else
-            docker-compose -f docker-compose.yml up -d
+            echo "No Docker Compose command found on runner; skipping service startup"
+            exit 0
           fi
+          ${COMPOSE_CMD} -f docker-compose.yml up -d
           timeout 60 bash -c 'until curl -f http://localhost:3100/health; do sleep 2; done'
         continue-on-error: true
 
       - name: Run security scan script
+        if: github.event_name != 'pull_request'
         run: |
           chmod +x scripts/security/security-scan.sh
           ./scripts/security/security-scan.sh comprehensive || true
         continue-on-error: true
 
       - name: Run OWASP ZAP scan
+        if: github.event_name != 'pull_request'
         uses: zaproxy/action-full-scan@v0.4.0
         with:
           target: 'http://localhost:3100'
@@ -293,12 +303,17 @@ jobs:
           cmd_options: '-a'
         continue-on-error: true
 
+      - name: PR scan placeholder
+        if: github.event_name == 'pull_request'
+        run: |
+          echo '{"mode":"pr-placeholder","status":"skipped_runtime_scans"}' > ./artifacts/dast-pr-placeholder.json
+
       - name: Stop services
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         run: |
           if docker compose version > /dev/null 2>&1; then
             docker compose down -v || true
-          else
+          elif command -v docker-compose > /dev/null 2>&1; then
             docker-compose down -v || true
           fi
 

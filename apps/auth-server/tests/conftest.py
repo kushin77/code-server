@@ -64,7 +64,7 @@ def engine():
         )
     
     # Create all tables from Base
-    from src.oauth2_server import Base as OAuth2Base
+    from src.models import Base as OAuth2Base
     from src.user_models import Base as UserBase
     from src.team_models import Base as TeamBase
     from src.advanced_models import Base as AdvancedBase

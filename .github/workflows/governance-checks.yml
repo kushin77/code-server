@@ -234,6 +234,18 @@ jobs:
 
           echo "✓ pnpm workspace validated (all packages resolvable)"
 
+  # ── Infrastructure as Code (IaC) Compliance ───────────────────────────────────
+  iac-compliance:
+    name: Infrastructure as Code compliance (GOV-002)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate IaC compliance
+        run: bash scripts/ci/validate-iac-compliance.sh
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+
   # ── DNS Service Discovery Audit ───────────────────────────────────────────────
   dns-service-discovery:
     name: DNS service discovery (no hardcoded IPs)

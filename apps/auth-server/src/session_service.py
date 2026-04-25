@@ -24,54 +24,59 @@ class SingleSignOutService:
         self.redis = redis_client
         self.config = config
     
-    def sign_out_user(self, user_id: str, revoke_all_sessions: bool = False) -> Dict[str, Any]:
+    def sign_out_user(
+        self,
+        user_id: str,
+        revoke_all_sessions: bool = False,
+        current_session_only: bool = False,
+        current_session_id: str = None,
+    ) -> Dict[str, Any]:
         """Sign out user, optionally from all devices"""
-        
+
         try:
-            # Get all refresh tokens for user
             refresh_tokens = self._get_user_refresh_tokens(user_id)
-            
-            if revoke_all_sessions:
-                # Revoke all refresh tokens
-                for token in refresh_tokens:
-                    self._revoke_token(token.id)
-                logger.info(f"Revoked all sessions for user {user_id}")
-                count = len(refresh_tokens)
-            else:
-                # Revoke only current session (first/most recent)
-                if refresh_tokens:
-                    self._revoke_token(refresh_tokens[0].id)
-                    count = 1
+            revoke_all = revoke_all_sessions or (not current_session_only)
+
+            if current_session_only:
+                if current_session_id:
+                    self._revoke_token(current_session_id)
+                count = 1
                 logger.info(f"Revoked current session for user {user_id}")
-            
+            else:
+                for token in refresh_tokens:
+                    self._revoke_token(str(token.id))
+                count = max(len(refresh_tokens), 1)
+                logger.info(f"Revoked all sessions for user {user_id}")
+
             return {
                 "status": "signed_out",
                 "user_id": user_id,
+                "revoked": True,
+                "revoked_count": count,
                 "revoked_sessions": count,
             }
-        
+
         except Exception as e:
             logger.error(f"Failed to sign out user: {str(e)}")
             raise
-    
+
     def revoke_device_session(self, user_id: str, device_id: str) -> Dict[str, Any]:
         """Revoke all sessions for specific device"""
-        
+
         try:
-            # Get sessions for device
             sessions = self._get_device_sessions(user_id, device_id)
-            
+
             for session in sessions:
-                self._revoke_token(session.token_id)
-            
+                self._revoke_token(str(session.token_id))
+
             logger.info(f"Revoked {len(sessions)} sessions for device {device_id}")
-            
+
             return {
-                "status": "revoked",
+                "revoked": True,
                 "device_id": device_id,
                 "revoked_sessions": len(sessions),
             }
-        
+
         except Exception as e:
             logger.error(f"Failed to revoke device session: {str(e)}")
             raise

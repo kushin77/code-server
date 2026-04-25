@@ -26,7 +26,8 @@ class User(Base):
     
     # Account Information
     email = Column(String(255), nullable=False, unique=True)
-    name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=True)
+    password_hash = Column(String(255), nullable=True)
     avatar_url = Column(String(512), nullable=True)
     
     # Account Status

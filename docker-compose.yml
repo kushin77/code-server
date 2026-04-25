@@ -284,7 +284,7 @@ services:
           memory: 256m
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0@sha256:59e6b1c1b9d4f3f4e9183cb3da7e5c6a5bc58d8c7f90e6f7c8c7f2b9d6f8f3a2
+    image: prom/alertmanager:v0.27.0@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
     container_name: alertmanager
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:

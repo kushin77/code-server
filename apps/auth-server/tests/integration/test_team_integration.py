@@ -77,10 +77,11 @@ class TestOrganizationManagement:
         assert result["id"] == str(test_org.id)
         assert result["name"] == test_org.name
     
-    def test_update_organization(self, team_service, test_org, db_session):
+    def test_update_organization(self, team_service, test_org, test_user, db_session):
         """Test updating organization"""
         result = team_service.update_organization(
             org_id=test_org.id,
+            caller_id=test_user.id,
             name="Updated Org Name",
         )
         

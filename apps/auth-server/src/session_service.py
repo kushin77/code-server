@@ -35,23 +35,23 @@ class SingleSignOutService:
 
         try:
             refresh_tokens = self._get_user_refresh_tokens(user_id)
-            revoke_all = revoke_all_sessions or (not current_session_only)
 
             if current_session_only:
-                if current_session_id:
-                    self._revoke_token(current_session_id)
+                if not current_session_id:
+                    raise ValueError("current_session_id is required when current_session_only=True")
+                self._revoke_token(current_session_id)
                 count = 1
                 logger.info(f"Revoked current session for user {user_id}")
             else:
                 for token in refresh_tokens:
                     self._revoke_token(str(token.id))
-                count = max(len(refresh_tokens), 1)
+                count = len(refresh_tokens)
                 logger.info(f"Revoked all sessions for user {user_id}")
 
             return {
                 "status": "signed_out",
                 "user_id": user_id,
-                "revoked": True,
+                "revoked": count > 0,
                 "revoked_count": count,
                 "revoked_sessions": count,
             }

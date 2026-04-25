@@ -121,7 +121,7 @@ class TeamManagementService:
     def update_organization(
         self,
         org_id: str,
-        caller_id: str = None,
+        caller_id: str,
         **kwargs
     ) -> Dict[str, Any]:
         """Update organization"""
@@ -130,7 +130,7 @@ class TeamManagementService:
         if not org:
             raise ValueError(f"Organization {org_id} not found")
 
-        if caller_id and str(org.owner_id) != caller_id:
+        if str(org.owner_id) != str(caller_id):
             raise PermissionError("Only organization owner can update organization")
 
         updateable_fields = ["name", "description", "website_url", "logo_url"]

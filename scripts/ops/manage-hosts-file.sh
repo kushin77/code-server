@@ -9,6 +9,16 @@
 set -euo pipefail
 
 ################################################################################
+# NETWORK CONFIGURATION SSOT
+################################################################################
+
+# Load network configuration SSOT
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
+################################################################################
 # CONFIGURATION (Environment-Driven)
 ################################################################################
 
@@ -17,17 +27,17 @@ BACKUP_DIR="${BACKUP_DIR:-/etc/hosts.backups}"
 BACKUP_FILE="${BACKUP_DIR}/hosts.$(date +'%Y%m%d-%H%M%S').bak"
 
 # Infrastructure hosts (override via environment variables)
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
-VRRP_VIP="${VRRP_VIP:-192.168.168.100}"
+PRIMARY_HOST="${PRIMARY_HOST:-${ONPREM_PRIMARY_IP}}"
+REPLICA_HOST="${REPLICA_HOST:-${ONPREM_REPLICA_IP}}"
+NAS_HOST="${NAS_HOST:-${ONPREM_NAS_IP}}"
+VRRP_VIP="${VRRP_VIP:-${ONPREM_VRRP_VIP}}"
 
-APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
-IDE_DOMAIN="${IDE_DOMAIN:-ide.${APEX_DOMAIN}}"
-API_DOMAIN="${API_DOMAIN:-api.${APEX_DOMAIN}}"
-ADMIN_DOMAIN="${ADMIN_DOMAIN:-admin.${APEX_DOMAIN}}"
-AUTH_DOMAIN="${AUTH_DOMAIN:-auth.${APEX_DOMAIN}}"
-STATUS_DOMAIN="${STATUS_DOMAIN:-status.${APEX_DOMAIN}}"
+APEX_DOMAIN="${APEX_DOMAIN:-${DNS_ZONE}}"
+IDE_DOMAIN="${IDE_DOMAIN:-${APP_IDE_DOMAIN}}"
+API_DOMAIN="${API_DOMAIN:-${APP_API_DOMAIN}}"
+ADMIN_DOMAIN="${ADMIN_DOMAIN:-${APP_ADMIN_DOMAIN}}"
+AUTH_DOMAIN="${AUTH_DOMAIN:-${APP_AUTH_DOMAIN}}"
+STATUS_DOMAIN="${STATUS_DOMAIN:-${APP_STATUS_DOMAIN}}"
 
 # Marker for managed entries (prevents clobbering user entries)
 MARKER_START="# BEGIN KUSHNIR.CLOUD MANAGED ENTRIES"

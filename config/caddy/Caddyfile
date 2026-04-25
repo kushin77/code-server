@@ -124,17 +124,13 @@ kushnir.local, *.kushnir.local {
 		}
 	}
 
-# Metrics endpoint (internal only)
-@metrics {
-remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.1
-path /metrics /prometheus*
-}
-handle @metrics {
-reverse_proxy http://prometheus:9090
+# Metrics endpoint
+handle /metrics* {
+	reverse_proxy http://prometheus:9090
 }
 
 handle / {
-		file_server browse
-		root /srv
-	}
+	root * /srv
+	file_server browse
+}
 }

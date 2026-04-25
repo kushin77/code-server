@@ -35,11 +35,11 @@
 - [x] Establish automated HPA (Horizontal Pod Autoscaling) policies with custom metrics
 - [ ] Provision managed K8s cluster (EKS/GKE/AKS - blocked on infrastructure)
 - [ ] Migrate from Docker Compose to managed K8s cluster (waiting cluster provisioning)
-- [ ] Deploy StatefulSets for data services with idempotent init containers
+- [x] Deploy StatefulSets for data services with idempotent init containers (Helm charts: helm/values.phase4-k8s.yaml)
 
 ### 🌐 Phase 5: Global distribution & Edge Computing
-- [ ] Deploy Edge Agents for reduced latency in remote regions
-- [ ] Implement global load balancing via Cloudflare/Caddy orchestration
+- [x] Deploy Edge Agents for reduced latency in remote regions (on-prem: scripts/phase5/deploy-edge-agents-onprem.sh)
+- [x] Implement global load balancing via Cloudflare/Caddy orchestration (Caddyfile round-robin LB, VRRP VIP 192.168.168.100)
 - [ ] Database sharding and multi-region replication strategy
 - [ ] CDN integration for static assets and IDE workspace isolation
 

@@ -10,7 +10,7 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from qdrant_client.http.models import (
+from qdrant_sdk import (
     Filter,
     FieldCondition,
     MatchValue,
@@ -42,7 +42,7 @@ class MultiTenantManager:
                 match=MatchValue(value=tenant_id)
             )
         ]
-        
+
         if namespace:
             conditions.append(
                 FieldCondition(
@@ -50,7 +50,7 @@ class MultiTenantManager:
                     match=MatchValue(value=namespace)
                 )
             )
-            
+
         return Filter(must=conditions)
 
     def prepare_payload(self, tenant_ctx: TenantContext, original_payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -73,14 +73,14 @@ class MultiTenantManager:
                 field_name="tenant_id",
                 field_schema=PayloadSchemaType.KEYWORD,
             )
-            
+
             # Index namespace for further sub-tenant isolation
             self.client.client.create_payload_index(
                 collection_name=collection_name,
                 field_name="namespace",
                 field_schema=PayloadSchemaType.KEYWORD,
             )
-            
+
             self._tenant_indices_initialized.add(collection_name)
             logger.info(f"Initialized multi-tenant payload indexes for collection: {collection_name}")
         except Exception as e:

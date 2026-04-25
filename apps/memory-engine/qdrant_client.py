@@ -12,8 +12,8 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 import hashlib
 
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import (
+from qdrant_sdk import (
+    QdrantClient,
     Distance,
     VectorParams,
     PointStruct,
@@ -24,7 +24,7 @@ from qdrant_client.http.models import (
     PayloadSchemaType,
 )
 
-from apps.memory_engine.multi_tenant import MultiTenantManager, TenantContext
+from multi_tenant import MultiTenantManager, TenantContext
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,6 @@ class QdrantMemoryClient:
         logger.info(f"Connected to Qdrant at {host}:{port}")
 
     def ensure_collection(self, collection_name: str) -> None:
-        """Create collection if it doesn't exist."""
         try:
             self.client.get_collection(collection_name)
             logger.info(f"Collection '{collection_name}' already exists")
@@ -82,7 +81,7 @@ class QdrantMemoryClient:
                 collection_name=collection_name,
                 vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
             )
-        
+
         # Ensure multi-tenant indexes exist
         self.multi_tenant.ensure_tenant_optimizations(collection_name)
 
@@ -94,12 +93,12 @@ class QdrantMemoryClient:
     ) -> bool:
         """
         Store document with deduplication.
-        
+
         Args:
             collection: Collection name
             document: Document to store
             dedup_threshold: Cosine similarity threshold for deduplication (0-1)
-            
+
         Returns:
             True if stored, False if deduplicated
         """
@@ -138,13 +137,13 @@ class QdrantMemoryClient:
     ) -> List[Dict]:
         """
         Semantic search with freshness weighting.
-        
+
         Args:
             collection: Collection to search
             query_vector: Query embedding vector
             limit: Max results to return
             freshness_weight: Weight for newer documents (0-1)
-            
+
         Returns:
             List of search results with scores and metadata
         """

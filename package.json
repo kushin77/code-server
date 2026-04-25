@@ -24,6 +24,9 @@
     "validate:issues": "python3 scripts/ops/issue_execution_manifest.py validate",
     "issues:queue": "python3 scripts/ops/issue_execution_manifest.py queue",
     "test:e2e:appsmith-login": "bash scripts/ci/run-kushnir-cloud-appsmith-login-e2e.sh",
+    "test:load": "k6 run tests/load/load-test.js",
+    "test:load:stress": "k6 run tests/load/stress-test.js",
+    "test:load:spike": "k6 run tests/load/spike-test.js",
     "redeploy:portal-oauth": "bash scripts/deploy/redeploy-portal-oauth-routing.sh",
     "redeploy:portal-oauth:dry-run": "bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run"
   },

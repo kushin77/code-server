@@ -50,7 +50,8 @@ fi
 readonly K3S_SERVER_HOST="${K3S_SERVER_HOST:-${ONPREM_PRIMARY_IP:-192.168.168.31}}"
 readonly K3S_AGENT_HOST="${K3S_AGENT_HOST:-${ONPREM_SECONDARY_IP:-192.168.168.42}}"
 readonly SSH_USER="${SSH_USER:-akushnir}"
-readonly SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
+# SSH options as array to properly handle word splitting despite IFS=$'\n\t'
+declare -ra SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10)
 readonly K3S_CHANNEL="${K3S_CHANNEL:-stable}"
 readonly K3S_VERSION="${K3S_VERSION:-}"            # empty = latest in channel
 readonly K3S_KUBECONFIG_LOCAL="${K3S_KUBECONFIG_LOCAL:-${HOME}/.kube/k3s-config}"
@@ -93,8 +94,8 @@ remote() {
         log "[DRY-RUN] ssh ${SSH_USER}@${host}: ${cmd}"
         return 0
     fi
-    # shellcheck disable=SC2086
-    ssh ${SSH_OPTS} "${SSH_USER}@${host}" "${cmd}"
+    # Use SSH_OPTS array properly: "${SSH_OPTS[@]}" expands all elements
+    ssh "${SSH_OPTS[@]}" "${SSH_USER}@${host}" "${cmd}"
 }
 
 remote_sudo() {
@@ -113,8 +114,8 @@ preflight() {
     for host in "${K3S_SERVER_HOST}" "${K3S_AGENT_HOST}"; do
         [[ "${SKIP_AGENT}" == "true" && "${host}" == "${K3S_AGENT_HOST}" ]] && continue
         if [[ "${DRY_RUN}" != "true" ]]; then
-            # shellcheck disable=SC2086
-            ssh ${SSH_OPTS} "${SSH_USER}@${host}" "echo ok" > /dev/null 2>&1 \
+            # Use SSH_OPTS array: "${SSH_OPTS[@]}" expands all elements
+            ssh "${SSH_OPTS[@]}" "${SSH_USER}@${host}" "echo ok" > /dev/null 2>&1 \
                 || die "Cannot reach ${SSH_USER}@${host} via SSH"
             log_ok "SSH reachable: ${host}"
         fi

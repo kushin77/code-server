@@ -6,8 +6,50 @@ import os
 import sys
 from typing import Generator, Any
 import pytest
-from faker import Faker
+import hashlib
+import random
+import uuid
+from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+try:
+    from faker import Faker
+except ModuleNotFoundError:
+    class Faker:
+        def uuid4(self):
+            return str(uuid.uuid4())
+
+        def email(self):
+            return f"user{uuid.uuid4().hex[:8]}@example.com"
+
+        def user_name(self):
+            return f"user_{uuid.uuid4().hex[:8]}"
+
+        def first_name(self):
+            return "Test"
+
+        def last_name(self):
+            return "User"
+
+        def date_time(self):
+            return datetime.utcnow()
+
+        def word(self):
+            return random.choice(["alpha", "beta", "gamma", "delta"])
+
+        def slug(self):
+            return f"slug-{uuid.uuid4().hex[:8]}"
+
+        def sentence(self):
+            return "Test sentence for unit testing."
+
+        def sha256(self):
+            return hashlib.sha256(uuid.uuid4().bytes).hexdigest()
+
+        def sha1(self):
+            return hashlib.sha1(uuid.uuid4().bytes).hexdigest()
 
 # Add src to path for imports
 REPO_ROOT = Path(__file__).parent.parent
@@ -66,13 +108,19 @@ def test_env(monkeypatch):
         "DATABASE_URL": "sqlite:///:memory:",
         "REDIS_URL": "redis://localhost:6379/1",
         "SECRET_KEY": "test-secret-key-do-not-use-in-production",
-        "API_KEY": faker.sha256(),
+        "API_KEY": fake.sha256(),
     }
-    
+
     for key, value in test_vars.items():
         monkeypatch.setenv(key, str(value))
-    
+
     return test_vars
+
+
+@pytest.fixture
+def app_env(test_env):
+    """Provide application environment variables for app-level tests."""
+    return test_env
 
 
 @pytest.fixture
@@ -120,17 +168,17 @@ def cleanup():
     class Cleanup:
         def __init__(self):
             self.items = []
-        
+
         def add(self, item):
             self.items.append(item)
-        
+
         def clear_all(self):
             for item in reversed(self.items):
                 try:
                     item()
                 except Exception:
                     pass
-    
+
     c = Cleanup()
     yield c
     c.clear_all()
@@ -163,7 +211,7 @@ def pytest_configure(config):
         "requires_db: test requires database connection",
         "requires_cache: test requires cache (Redis)",
     ]
-    
+
     for marker in markers:
         config.addinivalue_line("markers", marker)
 
@@ -304,15 +352,15 @@ def qdrant_collection_config():
 def mock_qdrant_client(mocker):
     """Mock Qdrant client with common methods."""
     mock = mocker.MagicMock()
-    mock.create_collection = mocker.AsyncMock()
-    mock.delete_collection = mocker.AsyncMock()
-    mock.collection_exists = mocker.AsyncMock(return_value=True)
-    mock.upsert = mocker.AsyncMock()
-    mock.search = mocker.AsyncMock(return_value=[])
-    mock.delete = mocker.AsyncMock()
-    mock.get = mocker.AsyncMock()
-    mock.get_collection = mocker.AsyncMock()
-    mock.create_payload_index = mocker.AsyncMock()
+    mock.create_collection = mocker.MagicMock()
+    mock.delete_collection = mocker.MagicMock()
+    mock.collection_exists = mocker.MagicMock(return_value=True)
+    mock.upsert = mocker.MagicMock()
+    mock.search = mocker.MagicMock(return_value=[])
+    mock.delete = mocker.MagicMock()
+    mock.get = mocker.MagicMock()
+    mock.get_collection = mocker.MagicMock()
+    mock.create_payload_index = mocker.MagicMock()
     return mock
 
 
@@ -324,10 +372,25 @@ def multi_tenant_filter_document():
         "title": "Multi-tenant Test",
         "content": "Testing multi-tenant isolation and filtering.",
         "tenant_id": "tenant-unit-test-001",
-        "namespace": "test",
+        "namespace": "default",
         "created_at": "2026-04-25T12:00:00Z",
         "tags": ["isolation", "filtering"],
     }
+
+
+@pytest.fixture
+def mocker():
+    """Provide a minimal mocker-compatible fixture when pytest-mock is absent."""
+    return SimpleNamespace(MagicMock=MagicMock, AsyncMock=AsyncMock, patch=patch)
+
+
+@pytest.fixture
+def benchmark():
+    """Provide a minimal benchmark fixture when pytest-benchmark is absent."""
+    def _benchmark(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    return _benchmark
 
 
 # ============================================================================
@@ -347,12 +410,12 @@ async def authenticated_client(async_http_client, app_env):
     """Provide authenticated HTTP client with auth token."""
     # Mock auth token for integration tests
     auth_token = "test-jwt-token-" + fake.sha1()
-    
+
     async_http_client.headers.update({
         "Authorization": f"Bearer {auth_token}",
         "X-Tenant-ID": "tenant-int-test-001",
     })
-    
+
     return async_http_client, auth_token
 
 

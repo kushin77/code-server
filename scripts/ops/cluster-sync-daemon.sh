@@ -81,8 +81,20 @@ readonly PREVIOUS_COMMIT_FILE="$STATE_DIR/previous-commit"
 # Source configuration
 source "$PROJECT_ROOT/scripts/_common/init.sh" 2>/dev/null || true
 
-# Sync parameters
-GIT_BRANCH="${GIT_BRANCH:-origin/main}"
+# Detect correct docker-compose command (v1 standalone vs v2 plugin)
+if docker compose version &>/dev/null 2>&1; then
+  DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &>/dev/null; then
+  DOCKER_COMPOSE="docker-compose"
+else
+  DOCKER_COMPOSE="docker compose"  # fallback
+fi
+readonly DOCKER_COMPOSE
+
+# Sync parameters — track the currently checked-out branch, fallback to main
+GIT_BRANCH="${GIT_BRANCH:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
+# Prefix with origin/ for fetch if not already
+[[ "$GIT_BRANCH" != origin/* ]] && GIT_BRANCH="origin/$GIT_BRANCH"
 MAX_SYNC_TIME=300  # 5 minutes
 HEALTH_CHECK_TIMEOUT=60  # 1 minute
 SERVICES_TO_MONITOR=(
@@ -169,15 +181,16 @@ check_for_updates() {
   cd "$PROJECT_ROOT" || return 1
   
   # Fetch latest from remote (no-op, just check)
-  if ! git fetch origin main >/dev/null 2>&1; then
+  local branch_name="${GIT_BRANCH#origin/}"
+  if ! git fetch origin "$branch_name" >/dev/null 2>&1; then
     log_error "Failed to fetch from remote"
     log_audit "fetch_failed" "error" "git fetch error"
     return 2
   fi
   
-  # Compare commits
+  # Compare commits — use FETCH_HEAD which is always populated after git fetch
   local current_commit=$(git rev-parse HEAD)
-  local remote_commit=$(git rev-parse origin/main)
+  local remote_commit=$(git rev-parse FETCH_HEAD)
   
   log_info "Current commit: $current_commit"
   log_info "Remote commit:  $remote_commit"
@@ -206,8 +219,9 @@ pull_updates() {
     log_warn "Not on main/master branch, proceeding anyway"
   fi
   
-  # Pull with timeout
-  if timeout $MAX_SYNC_TIME git pull origin main >/dev/null 2>&1; then
+  # Pull with timeout — reset to FETCH_HEAD (already fetched in check_for_updates)
+  local branch_name="${GIT_BRANCH#origin/}"
+  if timeout $MAX_SYNC_TIME git pull origin "$branch_name" >/dev/null 2>&1; then
     log_success "Git pull completed successfully"
     return 0
   else
@@ -231,7 +245,7 @@ validate_docker_compose() {
   
   cd "$PROJECT_ROOT" || return 1
   
-  if docker compose config >/dev/null 2>&1; then
+  if $DOCKER_COMPOSE config >/dev/null 2>&1; then
     log_success "docker-compose.yml is valid"
     return 0
   else
@@ -254,15 +268,22 @@ restart_affected_services() {
   fi
   
   cd "$PROJECT_ROOT" || return 1
+
+  # Skip restart if port 80 is owned by another process (e.g. k8s ingress on replica)
+  if ss -tlnp sport = :80 2>/dev/null | grep -q LISTEN; then
+    log_warn "Port 80 in use — skipping service restart (k8s ingress detected)"
+    log_audit "services_restart_skipped" "warn" "port 80 conflict with existing ingress"
+    return 0
+  fi
   
   # Restart all services
-  if docker compose up -d >/dev/null 2>&1; then
+  if $DOCKER_COMPOSE up -d >/dev/null 2>&1; then
     log_success "Services restarted successfully"
     log_audit "services_restarted" "success" "all services up-to-date"
     return 0
   else
     log_error "Failed to restart services"
-    log_audit "services_restart_failed" "error" "docker compose up -d failed"
+    log_audit "services_restart_failed" "error" "$DOCKER_COMPOSE up -d failed"
     return 1
   fi
 }

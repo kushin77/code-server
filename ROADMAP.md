@@ -40,8 +40,8 @@
 ### 🌐 Phase 5: Global distribution & Edge Computing
 - [x] Deploy Edge Agents for reduced latency in remote regions (on-prem: scripts/phase5/deploy-edge-agents-onprem.sh)
 - [x] Implement global load balancing via Cloudflare/Caddy orchestration (Caddyfile round-robin LB, VRRP VIP 192.168.168.100)
-- [ ] Database sharding and multi-region replication strategy
-- [ ] CDN integration for static assets and IDE workspace isolation
+- [x] Database sharding and multi-region replication strategy (scripts/phase5/setup-database-sharding.sh)
+- [x] CDN integration for static assets and IDE workspace isolation (scripts/phase5/setup-global-load-balancing.sh: Cloudflare Workers CDN)
 
 ---
 
@@ -55,13 +55,13 @@
 
 ### 🛡️ Phase 7: Business Continuity & Compliance
 - [ ] Achieve SOC2 Type 1 / ISO27001 readiness
-- [ ] Implement automated disaster recovery failover (RTO < 5 min)
+- [x] Implement automated disaster recovery failover (RTO < 5 min) (scripts/ops/auto-failover.sh: health-monitor + Caddy upstream swap)
 - [ ] Predictive security auditing using anomaly detection on OPA logs
 - [ ] Full backup/restore automation with NAS/S3 integration
 
 ---
 
 ## Technical Debt & Maintenance (Rolling)
-- [ ] Complete `npm audit` remediation across all app packages
+- [x] Complete `npm audit` remediation across all app packages (pnpm audit: no known vulnerabilities)
 - [ ] Migrate legacy Python packages to Python 3.12+ (In progress)
 - [ ] Standardize all repository documentation using unified link-checker

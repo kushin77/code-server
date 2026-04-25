@@ -129,9 +129,9 @@ kushnir.local, *.kushnir.local {
 		}
 
 		# GOV-002: env-driven upstreams — no hardcoded IPs
-		# Single-node: only paperclip:8010 is active (REPLICA_BACKEND ignored if empty)
-		# Multi-node: set REPLICA_BACKEND=http://${REPLICA_HOST}:8010 to enable HA
-		reverse_proxy http://paperclip:8010 {$REPLICA_BACKEND:+http://{$REPLICA_HOST}:8010} {
+		# Single-node: REPLICA_UPSTREAM defaults to paperclip:8010 (same host, effectively single-node)
+		# Multi-node: set REPLICA_UPSTREAM=192.168.168.42:8010 in .env to enable HA
+		reverse_proxy paperclip:8010 {$REPLICA_UPSTREAM:-paperclip:8010} {
 			lb_policy round_robin
 			header_up X-Forwarded-For {http.request.remote}
 			header_up X-Forwarded-Proto {http.request.proto}
@@ -150,7 +150,7 @@ kushnir.local, *.kushnir.local {
 			copy_headers Authorization X-User-ID
 		}
 
-		reverse_proxy http://execution-scheduler:8080 {$REPLICA_BACKEND:+http://{$REPLICA_HOST}:8080} {
+		reverse_proxy execution-scheduler:8080 {$REPLICA_UPSTREAM_SCHED:-execution-scheduler:8080} {
 			lb_policy round_robin
 			health_uri /health
 			health_interval 30s

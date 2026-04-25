@@ -246,10 +246,10 @@ services:
       - APEX_DOMAIN=${APEX_DOMAIN}
       - TLS_EMAIL=${TLS_EMAIL}
       - LOG_LEVEL=${LOG_LEVEL}
-      # Multi-node HA: set REPLICA_HOST to enable cross-node load balancing.
+      # Multi-node HA: set REPLICA_UPSTREAM=<host:port> to enable cross-node load balancing.
       # Leave unset for single-node deployments (GOV-002: env-driven, no hardcoded IPs).
-      - REPLICA_HOST
-      - REPLICA_BACKEND
+      - REPLICA_UPSTREAM
+      - REPLICA_UPSTREAM_SCHED
     healthcheck:
       test:
         - CMD
@@ -497,7 +497,7 @@ services:
       - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
       - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
       - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
-      - QDRANT__CLUSTER__ENABLED=true
+      - QDRANT__CLUSTER__ENABLED=${QDRANT_CLUSTER_ENABLED:-false}
       - QDRANT__CLUSTER__P2P__PORT=6335
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
@@ -563,7 +563,7 @@ services:
       - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
       - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
       - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
-      - QDRANT__CLUSTER__ENABLED=true
+      - QDRANT__CLUSTER__ENABLED=${QDRANT_CLUSTER_ENABLED:-false}
       - QDRANT__CLUSTER__P2P__PORT=6335
       - QDRANT__BOOTSTRAP=http://qdrant:6335
     healthcheck:

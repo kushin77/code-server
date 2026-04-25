@@ -129,9 +129,8 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
-        continue-on-error: true
         uses: codecov/codecov-action@v5.5.4
+        continue-on-error: true
         with:
           files: ./apps/auth-server/coverage.xml
           flags: auth-server

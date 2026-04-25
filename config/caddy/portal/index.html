@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Kushnir Cloud Portal</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0d1b31;
+      --panel: rgba(10, 18, 34, 0.78);
+      --panel-border: rgba(163, 184, 255, 0.16);
+      --text: #edf3ff;
+      --muted: #9fb2d5;
+      --accent: #67d5ff;
+      --accent-2: #8affc1;
+      --warn: #f6cc73;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(103, 213, 255, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(138, 255, 193, 0.16), transparent 24%),
+        linear-gradient(160deg, #05101d 0%, #0b172b 44%, #08121f 100%);
+      color: var(--text);
+      font-family: "Segoe UI", "Aptos", sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 92%);
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+      align-items: stretch;
+      margin-bottom: 28px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .hero-copy {
+      padding: 34px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-copy::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -80px;
+      width: 240px;
+      height: 240px;
+      background: radial-gradient(circle, rgba(103, 213, 255, 0.28), transparent 68%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(103, 213, 255, 0.12);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(2.3rem, 5vw, 4.8rem);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+      font-family: "Georgia", "Times New Roman", serif;
+    }
+
+    .lede {
+      max-width: 760px;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--muted);
+      margin: 0 0 20px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button.primary {
+      background: linear-gradient(135deg, var(--accent), #94f3ff);
+      color: #06101a;
+    }
+    .button.secondary {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      padding: 20px;
+    }
+
+    .status-tile {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .status-tile strong {
+      display: block;
+      font-size: 1.2rem;
+      margin-bottom: 6px;
+      color: var(--accent-2);
+    }
+
+    .status-tile span {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .nav {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      margin-bottom: 20px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .card {
+      height: 100%;
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      min-height: 140px;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(103, 213, 255, 0.38);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .card.active {
+      border-color: rgba(138, 255, 193, 0.5);
+      box-shadow: inset 0 0 0 1px rgba(138, 255, 193, 0.12);
+    }
+
+    .card .label {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(103, 213, 255, 0.12);
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    }
+
+    .section {
+      padding: 26px;
+    }
+
+    .section h3 {
+      margin: 0 0 14px;
+      font-size: 1.3rem;
+    }
+
+    .section p {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 12px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .feature-list li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-top: 6px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 18px rgba(103, 213, 255, 0.5);
+      flex: 0 0 auto;
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: rgba(159, 178, 213, 0.8);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    @media (max-width: 1080px) {
+      .hero, .main, .nav { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .shell { padding: 18px 14px 34px; }
+      .hero-copy, .section { padding: 22px; }
+      .status-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="panel hero-copy">
+        <div class="eyebrow">Kushnir Cloud Enterprise Portal</div>
+        <h1 id="page-title">Dashboard</h1>
+        <p class="lede" id="page-lede">
+          Unified access to the enterprise portal, IDE, API surface, and operational controls with a single
+          OAuth session shared across <strong>.kushnir.cloud</strong>.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="https://ide.kushnir.cloud" rel="noreferrer">Open IDE</a>
+          <a class="button secondary" href="/docs">Documentation</a>
+          <a class="button secondary" href="/settings">Settings</a>
+        </div>
+      </div>
+      <aside class="panel status-grid" aria-label="portal status">
+        <div class="status-tile">
+          <strong>Single OAuth</strong>
+          <span>One cookie domain, one login, all subdomains.</span>
+        </div>
+        <div class="status-tile">
+          <strong>IDE</strong>
+          <span>Protected code-server access at <code>ide.kushnir.cloud</code>.</span>
+        </div>
+        <div class="status-tile">
+          <strong>API</strong>
+          <span>Scoped service endpoints and docs at <code>api.kushnir.cloud</code>.</span>
+        </div>
+        <div class="status-tile">
+          <strong>Admin</strong>
+          <span>Administrative entrypoints are isolated and access-controlled.</span>
+        </div>
+      </aside>
+    </section>
+
+    <nav class="nav" aria-label="portal navigation">
+      <a href="/dashboard"><div class="card" data-nav="dashboard"><span class="label">Overview</span><h2>Dashboard</h2><p>Service health, usage, and quick-start actions.</p></div></a>
+      <a href="https://ide.kushnir.cloud"><div class="card" data-nav="ide"><span class="label">Workspace</span><h2>IDE</h2><p>Launch the OAuth-protected code-server instance.</p></div></a>
+      <a href="/repos"><div class="card" data-nav="repos"><span class="label">Source</span><h2>Repositories</h2><p>Repository shortcuts, branch hygiene, and sync tools.</p></div></a>
+      <a href="/admin"><div class="card" data-nav="admin"><span class="label">Governance</span><h2>Admin</h2><p>User, group, and organization management surfaces.</p></div></a>
+      <a href="/settings"><div class="card" data-nav="settings"><span class="label">Identity</span><h2>Settings</h2><p>Profile, API keys, org preferences, and domains.</p></div></a>
+      <a href="/docs"><div class="card" data-nav="docs"><span class="label">Knowledge</span><h2>Docs</h2><p>Architecture, runbooks, and onboarding references.</p></div></a>
+    </nav>
+
+    <section class="panel section">
+      <h3 id="section-title">Portal Overview</h3>
+      <p id="section-copy">
+        The portal is the authenticated front door for Kushnir Cloud. It keeps the IDE separate from the
+        landing page while sharing the same <code>_oauth2_proxy</code> session cookie across the entire domain.
+      </p>
+      <ul class="feature-list">
+        <li><span class="dot"></span><span>Portal routing is served from Caddy and protected by oauth2-proxy session validation.</span></li>
+        <li><span class="dot"></span><span>The IDE lives on <code>ide.kushnir.cloud</code> and inherits the same session cookie.</span></li>
+        <li><span class="dot"></span><span>API and docs endpoints remain on dedicated subdomains for clear operational boundaries.</span></li>
+      </ul>
+    </section>
+
+    <div class="footer">Issue #1545: Endpoint &amp; SSO portal · Kushnir Cloud</div>
+  </div>
+
+  <script>
+    const routes = {
+      "/": {
+        title: "Dashboard",
+        lede: "A single authenticated landing page for the enterprise control surface.",
+        sectionTitle: "Portal Overview",
+        sectionCopy: "Monitor services, jump into the IDE, and open operational controls without leaving the authenticated portal boundary."
+      },
+      "/dashboard": {
+        title: "Dashboard",
+        lede: "Service status, quick links, and tenant-wide visibility.",
+        sectionTitle: "Dashboard",
+        sectionCopy: "Use this page to track the platform, confirm the session boundary, and reach the operational tools that live behind SSO."
+      },
+      "/repos": {
+        title: "Repositories",
+        lede: "Code ownership, branch policies, and source-control integrations.",
+        sectionTitle: "Repository Management",
+        sectionCopy: "Manage GitHub and GitLab integrations, repo shortcuts, and governance workflows from a single authenticated surface."
+      },
+      "/admin": {
+        title: "Administration",
+        lede: "User, group, and organization controls for privileged operators.",
+        sectionTitle: "Administrative Controls",
+        sectionCopy: "Administrative features remain isolated and are only exposed to authenticated operators with the proper role."
+      },
+      "/settings": {
+        title: "Settings",
+        lede: "User profile, API keys, and external integrations.",
+        sectionTitle: "Settings & Identity",
+        sectionCopy: "Tune personal preferences, rotate credentials, and manage API access from the portal without leaking infrastructure details."
+      },
+      "/docs": {
+        title: "Documentation",
+        lede: "Architecture guides, runbooks, and operational playbooks.",
+        sectionTitle: "Documentation Hub",
+        sectionCopy: "The docs surface collects the architecture, rollout, and operational references for the enterprise portal and IDE environment."
+      }
+    };
+
+    const path = window.location.pathname.replace(/\/$/, "") || "/";
+    const current = routes[path] || routes["/"];
+
+    document.title = `Kushnir Cloud Portal · ${current.title}`;
+    document.getElementById("page-title").textContent = current.title;
+    document.getElementById("page-lede").textContent = current.lede;
+    document.getElementById("section-title").textContent = current.sectionTitle;
+    document.getElementById("section-copy").textContent = current.sectionCopy;
+
+    document.querySelectorAll(".card").forEach((card) => {
+      if (card.dataset.nav === path.replace(/^\//, "") || (path === "/" && card.dataset.nav === "dashboard")) {
+        card.classList.add("active");
+      }
+    });
+  </script>
+</body>
+</html>

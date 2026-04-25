@@ -233,7 +233,7 @@ class TeamInvitation(Base):
 class OrganizationCreateRequest(BaseModel):
     """Request to create organization"""
     name: str = Field(..., min_length=1, max_length=255)
-    slug: str = Field(..., min_length=1, max_length=255, regex="^[a-z0-9-]+$")
+    slug: str = Field(..., min_length=1, max_length=255, pattern="^[a-z0-9-]+$")
     description: Optional[str] = Field(None, max_length=500)
     website_url: Optional[str] = None
 
@@ -259,7 +259,7 @@ class OrganizationResponse(BaseModel):
 class TeamCreateRequest(BaseModel):
     """Request to create team"""
     name: str = Field(..., min_length=1, max_length=255)
-    slug: str = Field(..., min_length=1, max_length=255, regex="^[a-z0-9-]+$")
+    slug: str = Field(..., min_length=1, max_length=255, pattern="^[a-z0-9-]+$")
     description: Optional[str] = Field(None, max_length=500)
 
 

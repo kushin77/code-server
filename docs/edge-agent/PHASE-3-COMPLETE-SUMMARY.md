@@ -59,7 +59,7 @@ bash scripts/edge-agent/register-edge-agent.sh \
 
 #### Heartbeat Mechanism
 
-```
+```text
 Every 30 seconds (configurable):
 ├─ Agent sends: {timestamp, status, cpu%, memory%, task_count}
 ├─ Control plane receives and updates last_heartbeat
@@ -70,7 +70,7 @@ Every 30 seconds (configurable):
 
 #### Health Monitoring
 
-```
+```text
 Every 10 seconds (configurable):
 ├─ Monitor fetches all agents from registry
 ├─ For each agent: now - last_heartbeat > timeout?

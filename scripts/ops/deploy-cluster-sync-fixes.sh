@@ -14,8 +14,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
 . "${PROJECT_ROOT}/scripts/_common/_base-config.env"
 
+# Source Network Configuration (Epic #1536 SSOT)
+. "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env"
+
 # Configuration
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+REPLICA_HOST="${REPLICA_HOST:-${ONPREM_REPLICA_IP}}"
 BRANCH_NAME="${BRANCH_NAME:-feat/cluster-sync-fixes}"
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"

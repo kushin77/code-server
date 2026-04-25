@@ -1,4 +1,7 @@
 {
+	"// IMPORTANT": "@dev-local-only - This file contains developer/local utility tasks. These are NOT used in production CI/CD or runtime execution.",
+	"// GOVERNANCE": "D07: Windows/PowerShell artifacts are isolated to developer contexts only. Production paths (.github/workflows/, scripts/ops/, scripts/ci/) must use only Linux shell.",
+	"// NOTE": "PowerShell tasks in this file are development utilities for Windows-based developers. Production automation uses bash/sh exclusively.",
 	"version": "2.0.0",
 	"tasks": [
 		{

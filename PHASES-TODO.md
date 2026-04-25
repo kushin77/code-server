@@ -6,4 +6,6 @@
   — Helm chart: `helm/code-server-enterprise/` (values.phase4-k8s.yaml); copilot-engine service added
   — cert-manager + metrics-server installed for TLS and HPA
   — Run: `DRY_RUN=true ./scripts/ops/provision-k3s-cluster.sh` to validate, then remove DRY_RUN to execute
-- [ ] [P2] Standardize Documentation using unified link-checker (Tech Debt)
+- [x] [P2] Standardize Documentation using unified link-checker (Tech Debt)
+  — unified checker entrypoint: `scripts/ci/check-doc-links.sh`
+  — CI: `.github/workflows/documentation-governance.yml` uses unified checker with fail-on-broken-link semantics

@@ -7,9 +7,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REPORT_FILE="${REPO_ROOT}/artifacts/config-ssot-validation-report.json"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/config-ssot-validation-report.json}"
+readonly CONFIG_SSOT_DIR="${CONFIG_SSOT_DIR:-${REPO_ROOT}/config}"
+readonly MAX_CONFIG_SIZE_MB="${MAX_CONFIG_SIZE_MB:-100}"
 
 mkdir -p "$(dirname "${REPORT_FILE}")"
 

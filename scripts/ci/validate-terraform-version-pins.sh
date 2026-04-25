@@ -7,21 +7,22 @@
 
 set -euo pipefail
 
-SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-REPO_ROOT=$(cd ${SCRIPT_DIR}/../.. && pwd)
-TERRAFORM_DIR=${REPO_ROOT}/terraform
-REPORT_FILE=${REPO_ROOT}/artifacts/terraform-version-pins-report.txt
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly TERRAFORM_DIR="${TERRAFORM_DIR:-${REPO_ROOT}/terraform}"
+readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/terraform-version-pins-report.txt}"
+readonly ALLOWED_FLOATING_PATTERNS="${ALLOWED_FLOATING_PATTERNS:-}"  # Empty = no floating allowed
 
 log_info() {
-  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [INFO] $*
+  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
 }
 
 log_error() {
-  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [ERROR] $* >&2
+  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2
 }
 
 log_warning() {
-  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [WARN] $*
+  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*"
 }
 
 check_floating_versions() {

@@ -14,7 +14,7 @@ services:
     image: openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe
     container_name: opa-service
     user: "101:101"  # @security P0 #969 - Run as non-root openpolicyagent user
-    command: run --server --log-level=info --set decision_logs.console.enabled=true
+    command: run --server --log-level=info --set decision_logs.console=true
     ports:
       - "8181:8181"
     volumes:

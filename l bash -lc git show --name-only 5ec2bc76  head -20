@@ -1,0 +1,168 @@
+[33mcommit 5011339736d5f206b3166efa2cd8228d36fbb654[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: kushin77 <kushin77@github.com>
+Date:   Sat Apr 25 01:27:23 2026 -0400
+
+    ci(governance): Phase 5 - Add CI enforcement checks for Phase 1/2/4 compliance
+    
+    - Update no-loose-root-files check to enforce README.md only in root
+    - Add pnpm-workspace-validation: verify workspace syntax and package resolution
+    - Add branch-hygiene: monitor remote branch count and main branch sync
+    - Enforce Phase 1 (file organization), Phase 2 (Caddyfile SSOT), Phase 4 (branch cleanup)
+    - Align CI checks with #1534 Repository Governance acceptance criteria
+
+M	.github/workflows/governance-checks.yml
+
+[33mcommit 5ec2bc76781d6d9c235349880b7c6fb42ab9bdf6[m
+Author: kushin77 <kushin77@github.com>
+Date:   Sat Apr 25 01:26:32 2026 -0400
+
+    feat(issue-1536): add NAS benchmarking suite and performance baselines
+    
+    Benchmarking includes:
+    - Network throughput testing via iperf3
+    - File I/O benchmarking via fio
+    - Performance baselines documentation
+    - Optimization strategies (SMB3, jumbo frames, TCP tuning)
+    - Capacity planning guidance
+    - Results template for consistent documentation
+
+A	docs/architecture/NAS-BENCHMARK-RESULTS.md
+
+[33mcommit bcc14f6bd4c2cd4e851670bf3d2a9d01a56a751c[m
+Author: kushin77 <kushin77@github.com>
+Date:   Sat Apr 25 01:26:23 2026 -0400
+
+    chore(governance): Phase 1 - Move incident reports from root to docs/operations
+    
+    - Move all SSH-*, EXECUTE-*, INCIDENT-*, NEXT-* reports to docs/operations/
+    - Keep README.md as only loose markdown in root
+    - Enforce FAANG-standard directory structure
+    - Reduce root clutter from 15+ files to 1 organized structure
+    
+    Related to #1534 Repository Governance Phase 1.
+
+M	.env.infrastructure
+M	.env.schema.json
+M	apps/agent-runtime/requirements.txt
+M	apps/execution-scheduler/auth.py
+M	docker-compose.yml
+A	docs/architecture/NAS-PERFORMANCE-BASELINES.md
+R100	CHANGELOG.md	docs/archive/CHANGELOG.md
+R100	CONTRIBUTING.md	docs/archive/CONTRIBUTING.md
+R100	ROADMAP.md	docs/archive/ROADMAP.md
+R100	TROUBLESHOOTING.md	docs/archive/TROUBLESHOOTING.md
+R100	env.yaml.example	docs/archive/env.yaml.example
+R099	primary_compose_full.yml	docs/archive/primary_compose_full.yml
+R100	reputation_engine.db	docs/archive/reputation_engine.db
+R100	EXECUTE-NOW-RECOVERY-STEPS.md	docs/operations/EXECUTE-NOW-RECOVERY-STEPS.md
+R100	INCIDENT-ESCALATION-REPORT-APRIL-25-2026.md	docs/operations/INCIDENT-ESCALATION-REPORT-APRIL-25-2026.md
+R100	NEXT-RECOVERY-COMMANDS.md	docs/operations/NEXT-RECOVERY-COMMANDS.md
+R100	SSH-ABSOLUTE-FALLBACK.md	docs/operations/SSH-ABSOLUTE-FALLBACK.md
+R100	SSH-CONNECTIVITY-INVESTIGATION-REPORT.md	docs/operations/SSH-CONNECTIVITY-INVESTIGATION-REPORT.md
+R100	SSH-CRITICAL-FILESYSTEM-CORRUPTION.md	docs/operations/SSH-CRITICAL-FILESYSTEM-CORRUPTION.md
+R100	SSH-EXECUTE-NOW-EMERGENCY.md	docs/operations/SSH-EXECUTE-NOW-EMERGENCY.md
+R100	SSH-FINAL-FIX-GUIDE.md	docs/operations/SSH-FINAL-FIX-GUIDE.md
+R100	SSH-FIX-SUMMARY-FOR-USER.md	docs/operations/SSH-FIX-SUMMARY-FOR-USER.md
+R100	SSH-QUICK-FIX-NOW.md	docs/operations/SSH-QUICK-FIX-NOW.md
+R100	SSH-RECOVERY-INDEX.md	docs/operations/SSH-RECOVERY-INDEX.md
+R100	SSH-RECOVERY-WORKAROUND-SUDO-ERROR.md	docs/operations/SSH-RECOVERY-WORKAROUND-SUDO-ERROR.md
+R100	SSH-REPAIR-GUIDE-APRIL-25-2026.md	docs/operations/SSH-REPAIR-GUIDE-APRIL-25-2026.md
+M	policies/tests/infrastructure_test.rego
+M	scripts/_common/_base-config.env
+M	scripts/_common/hosts.sh
+A	scripts/benchmark-nas.sh
+M	scripts/ci/domain-variability-enforcer.sh
+M	scripts/deploy-p3-services.sh
+M	scripts/edge-agent/register-edge-agent.sh
+M	scripts/maintenance/apply-deduplication-fixes.sh
+M	scripts/operations/profile-resource-usage.sh
+M	scripts/ops/disaster-recovery-drills.sh
+M	terraform/drop-package/terraform.tfvars.example
+M	terraform/environments/private/terraform.tfvars
+M	terraform/environments/private/terraform.tfvars.example
+M	tests/e2e/global-setup.ts
+
+[33mcommit dd4fae88ae7fc23a6cf7d511cd1bd4c89722cc9d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: kushin77 <kushin77@github.com>
+Date:   Sat Apr 25 01:25:28 2026 -0400
+
+    feat(issue-1534): add stale branch cleanup automation script
+    
+    - Identify branches merged >N days ago (configurable threshold)
+    - Support local and remote branch cleanup
+    - Dry-run mode for safe preview before deletion
+    - Automatic checkout to main/master for safety
+    - Detailed logging of deleted branches and timestamps
+    - Prevents accidental deletion of active development branches
+    
+    Usage:
+      # Preview stale branches (dry-run)
+      bash scripts/cleanup-stale-branches.sh --dry-run
+    
+      # Delete branches merged >30 days ago (default)
+      bash scripts/cleanup-stale-branches.sh
+    
+      # Delete branches merged >60 days ago
+      bash scripts/cleanup-stale-branches.sh --days 60
+    
+    Features:
+      - Safe: Requires explicit confirmation (no auto-deletion)
+      - Smart: Protects main/master branches
+      - Configurable: Adjust --days threshold per use case
+      - Reversible: Merged branches recoverable from git reflog
+    
+    Governance Benefits:
+      - Keeps repository clean and maintainable
+      - Reduces branch list clutter
+      - Enforces cleanup discipline
+      - Improves CI/CD performance (fewer branch checks)
+    
+    Recommended Setup:
+      - Run quarterly with --days 60 for stable branches
+      - Run monthly with --days 30 for feature cleanup
+      - Add to CI pipeline for automated maintenance
+    
+    Part of issue #1534 Repository Governance Phase 3.
+
+A	scripts/cleanup-stale-branches.sh
+
+[33mcommit a90436c31896c55ab5658ecd55c351dced2dc011[m
+Author: kushin77 <kushin77@github.com>
+Date:   Sat Apr 25 01:25:12 2026 -0400
+
+    feat(issue-1534): establish branch governance and code ownership (Phase 3)
+    
+    - Add CODEOWNERS file for automatic approval routing
+    - Create BRANCH-PROTECTION-CONFIG.md with detailed rules
+    - Add configure-branch-protection.sh automation script
+    
+    Branch Protection Rules (main branch):
+      ✓ Enforce admins: Prevent admin bypass of rules
+      ✓ Status checks: lint, test, build must pass
+      ✓ Code reviews: 1 approval + CODEOWNERS required
+      ✓ Stale review dismissal: Updates require re-review
+      ✓ Force-push disabled: Maintain audit trail
+      ✓ Deletion disabled: Prevent accidental loss
+    
+    CODEOWNERS Assignment:
+      - @kushin77: Default owner for all changes
+      - Scoped ownership for services, frontends, shared packages
+      - GitHub auto-routes PRs to relevant owners for review
+    
+    Governance Benefits:
+      - Automatic review assignments via CODEOWNERS
+      - Prevents unchecked code reaching main
+      - Enforces quality baseline (tests, lint, build)
+      - Maintains production-grade audit trail
+      - Single source of truth for approval responsibility
+    
+    Configuration methods documented:
+      - GitHub CLI: scripts/configure-branch-protection.sh
+      - Web UI: GitHub Settings → Branches
+      - GitHub API: Full curl examples provided
+    
+    Part of issue #1534 Repository Governance Phase 3.
+
+A	.github/CODEOWNERS
+A	docs/governance/BRANCH-PROTECTION-CONFIG.md
+A	scripts/configure-branch-protection.sh

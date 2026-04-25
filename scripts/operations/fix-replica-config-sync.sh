@@ -3,7 +3,7 @@
 ###############################################################################
 # @file        scripts/operations/fix-replica-config-sync.sh
 # @module      operations/multi-host-deployment
-# @description Fix replica node (192.168.168.42) config mount issues
+# @description Fix replica node (${REPLICA_HOST}) config mount issues
 #
 # GOV-002 COMPLIANCE
 # - Deterministic: Consistent transformation applied to all config files
@@ -25,7 +25,7 @@
 # SOLUTION
 # 1. Remove incorrectly mounted directories on replica
 # 2. Create files instead of directories on replica
-# 3. Copy content from primary node (.31) to replica node (.42)
+# 3. Copy content from primary node (${PRIMARY_HOST}) to replica node (${REPLICA_HOST})
 # 4. Verify mounts are files, not directories
 # 5. Restart affected services
 #
@@ -37,7 +37,7 @@
 #     ssh <replica> 'bash -s' < <(cat ./scripts/operations/fix-replica-config-sync.sh)
 #
 #   Or manually:
-#     ssh 192.168.168.42 'bash -s' < fix-replica-config-sync.sh
+#     ssh ${REPLICA_HOST} 'bash -s' < fix-replica-config-sync.sh
 #
 # AFFECTED SERVICES
 # - caddy (port 443, 80)
@@ -57,6 +57,9 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+source "$REPO_ROOT/scripts/_common/init.sh"
+source "$REPO_ROOT/scripts/_common/hosts.sh"
 
 # Target directories on replica
 readonly REPLICA_CADDY_DIR="/var/paperclip/caddy"
@@ -145,8 +148,8 @@ phase_prepare() {
   
   log_success "Package ready: $package_dir"
   log_info "Next: Transfer package to replica via SSH:"
-  log_info "  scp -r $package_dir 192.168.168.42:/tmp/"
-  log_info "  ssh 192.168.168.42 'bash -s' < <(cat $0 --apply <package_dir>)"
+  log_info "  scp -r $package_dir ${REPLICA_HOST}:/tmp/"
+  log_info "  ssh ${REPLICA_HOST} 'bash -s' < <(cat $0 --apply <package_dir>)"
 }
 
 # ============================================================================

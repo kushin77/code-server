@@ -31,10 +31,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration from environment
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./reputation_engine.db",
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable must be set")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 OPA_URL = os.getenv("OPA_URL", "http://localhost:8181")
 

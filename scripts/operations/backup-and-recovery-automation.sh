@@ -24,7 +24,7 @@
 # BACKUP ARCHITECTURE
 #
 # Primary Storage: /var/paperclip/backups/ (local)
-# NAS Backup: /nas/cold/paperclip-backups/ (192.168.168.56)
+# NAS Backup: /nas/cold/paperclip-backups/ (${NAS_HOST})
 # S3 Archive: s3://kushnir-cloud-backups/paperclip/ (off-site)
 #
 # Backup Contents:

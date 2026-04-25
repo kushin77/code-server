@@ -7,8 +7,8 @@
 # @created 2026-04-24
 #
 # Usage:
-#   ssh akushnir@192.168.168.31 'cd code-server-enterprise && bash scripts/ops/deploy-production-fix.sh'
-#   ssh akushnir@192.168.168.42 'cd code-server-enterprise && bash scripts/ops/deploy-production-fix.sh'
+#   ssh akushnir@${PRIMARY_HOST} 'cd code-server-enterprise && bash scripts/ops/deploy-production-fix.sh'
+#   ssh akushnir@${REPLICA_HOST} 'cd code-server-enterprise && bash scripts/ops/deploy-production-fix.sh'
 #
 
 set -euo pipefail

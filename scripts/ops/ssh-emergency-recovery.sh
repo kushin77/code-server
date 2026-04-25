@@ -1,5 +1,5 @@
 #!/bin/bash
-# SSH Service Emergency Recovery - 192.168.168.42
+# SSH Service Emergency Recovery - ${REPLICA_HOST}
 # Usage: bash /tmp/ssh-emergency-recovery.sh [--dry-run]
 # 
 # This script fixes the SSH daemon on Replica 2 which is resetting connections

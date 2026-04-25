@@ -74,13 +74,18 @@ done < <(find "${PROJECT_ROOT}/scripts" -name "*.sh" -type f)
 
 log_info "CHECK 3: Hardcoded IPs (should use \$PRIMARY_HOST, \$REPLICA_HOST, etc.)"
 
+readonly AUDIT_HOSTS=("${PRIMARY_HOST}" "${REPLICA_HOST}" "${NAS_HOST}")
+
 # Search for hardcoded IPs in scripts (exclude comments and templates)
 while IFS= read -r script; do
-    if grep -E '192\.168\.168\.(31|42|56)' "$script" 2>/dev/null | grep -v '^[[:space:]]*#' | grep -v 'APEX_DOMAIN\|template\|example' >/dev/null; then
-        ((audit_results[hardcoded_ips]++))
-        issues+=("HARDCODED_IP: $script - contains hardcoded IP addresses")
-        log_warn "  $script: hardcoded IP detected"
-    fi
+    for host in "${AUDIT_HOSTS[@]}"; do
+        if grep -F "$host" "$script" 2>/dev/null | grep -v '^[[:space:]]*#' | grep -v 'APEX_DOMAIN\|template\|example' >/dev/null; then
+            ((audit_results[hardcoded_ips]++))
+            issues+=("HARDCODED_IP: $script - contains hardcoded IP addresses")
+            log_warn "  $script: hardcoded IP detected"
+            break
+        fi
+    done
 done < <(find "${PROJECT_ROOT}/scripts" -name "*.sh" -type f)
 
 # ============================================================================

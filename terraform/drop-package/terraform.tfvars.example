@@ -1,7 +1,7 @@
 apex_domain     = "example.com"
 primary_host    = "primary.example.internal"
 replica_host    = "replica.example.internal"
-nas_host        = "10.0.0.56"
+nas_host        = "nas.example.internal"
 registry_url    = "registry.internal.example"
 admin_email     = "admin@example.com"
 deployment_mode = "private"

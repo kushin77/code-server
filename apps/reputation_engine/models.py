@@ -181,7 +181,9 @@ class ReputationAudit(Base):
 
 def init_db():
     """Initialize database tables."""
-    database_url = os.getenv("DATABASE_URL", "postgresql://appuser:changeme@localhost:5432/appdb")
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL environment variable must be set")
     engine = create_engine(database_url, echo=False)
     Base.metadata.create_all(bind=engine)
     return engine

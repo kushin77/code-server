@@ -4,12 +4,12 @@
 # Measures network throughput, file I/O, and mount performance
 #
 # Prerequisites:
-#   - SSH access to primary host (192.168.168.31)
+#   - SSH access to primary host (${PRIMARY_HOST})
 #   - iperf3 and fio installed on both hosts
 #   - NAS mounted at /mnt/nas or Z: drive
 #
 # Usage:
-#   bash scripts/benchmark-nas.sh [--nas-host 192.168.168.56] [--output report.json]
+#   bash scripts/benchmark-nas.sh [--nas-host ${NAS_HOST}] [--output report.json]
 #
 # Expected Metrics:
 #   - Network: >100 Mbps on 1GbE, >1000 Mbps on 10GbE
@@ -19,9 +19,15 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/hosts.sh"
+
 # Configuration
-NAS_HOST="${1:-192.168.168.56}"
-PRIMARY_HOST="${2:-192.168.168.31}"
+NAS_HOST="${1:-${NAS_HOST}}"
+PRIMARY_HOST="${2:-${PRIMARY_HOST}}"
 OUTPUT_FILE="${3:-$(date +nas-benchmark-%Y%m%d-%H%M%S.json)}"
 BENCHMARK_DIR="/tmp/nas-benchmark-$$"
 MOUNT_POINT="/mnt/nas"

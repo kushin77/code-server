@@ -1,0 +1,31 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: KUBERNETES_PDB_TEMPLATE
+# PURPOSE: Pod Disruption Budgets for maintaining service availability during disruptions
+# PATTERN: Ensures minimum pod availability during node drains, updates, etc.
+
+{{- $root := . -}}
+{{- if $root.Values.podDisruptionBudgets.enabled }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if and $serviceConfig.enabled (gt $serviceConfig.replicas 1) }}
+{{- $pdb := $root.Values.podDisruptionBudgets.services | default (dict) | index $serviceName | default $root.Values.podDisruptionBudgets.default }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}-pdb
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  minAvailable: {{ $pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "code-server-enterprise.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceConfig.name }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}
+{{- end }}
+{{- end }}

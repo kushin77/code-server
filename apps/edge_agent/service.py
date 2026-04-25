@@ -7,10 +7,28 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
+import logging
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from pydantic import BaseModel, Field
+
+
+class ServiceConfig(BaseModel):
+    redis_url: str = "redis://redis:6379/0"
+    kafka_bootstrap_servers: str = "kafka:9092"
+    replication_topic: str = "edge.replication.events"
+
+
+logger = logging.getLogger(__name__)
+
+
+class ReplicationEvent(BaseModel):
+    event_id: str
+    timestamp: datetime
+    type: str  # e.g., "replication_started", "replication_completed"
+    data: Dict[str, Any]
 
 
 def utcnow() -> datetime:
@@ -136,14 +154,29 @@ class ReplicationPlanResponse(BaseModel):
 
 
 class EdgeAgentRegistryService:
-    def __init__(self, heartbeat_ttl_seconds: int = 90):
+    def __init__(self, config: Optional[ServiceConfig] = None, heartbeat_ttl_seconds: int = 90):
+        self.config = config or ServiceConfig()
         self.heartbeat_ttl_seconds = heartbeat_ttl_seconds
         self._agents: Dict[str, EdgeAgentRecord] = {}
         self._replication_jobs: Dict[str, ReplicationJob] = {}
+        self._event_log: List[ReplicationEvent] = []
 
     def reset(self) -> None:
         self._agents.clear()
         self._replication_jobs.clear()
+        self._event_log.clear()
+
+    async def _broadcast_event(self, event_type: str, data: Dict[str, Any]) -> ReplicationEvent:
+        event = ReplicationEvent(
+            event_id=f"evt-{int(utcnow().timestamp())}-{event_type}",
+            timestamp=utcnow(),
+            type=event_type,
+            data=data
+        )
+        self._event_log.append(event)
+        # TODO: Implement actual Kafka producer send here
+        logger.info(f"Broadcasted event: {event.model_dump_json()}")
+        return event
 
     def register_agent(
         self,
@@ -382,7 +415,7 @@ class EdgeAgentRegistryService:
     def _region_group(self, region: str) -> str:
         return region.split("-", 1)[0]
 
-    def create_replication_job(
+    async def create_replication_job(
         self,
         workspace_id: str,
         source_agent_id: str,
@@ -402,9 +435,19 @@ class EdgeAgentRegistryService:
             updated_at=now,
         )
         self._replication_jobs[job_id] = job
+
+        await self._broadcast_event(
+            "replication_started",
+            {
+                "job_id": job.job_id,
+                "workspace_id": job.workspace_id,
+                "source": job.source_agent_id,
+                "target": job.target_agent_id,
+            }
+        )
         return job
 
-    def update_replication_status(
+    async def update_replication_status(
         self,
         job_id: str,
         status: ReplicationJobStatus,
@@ -424,6 +467,15 @@ class EdgeAgentRegistryService:
             }
         )
         self._replication_jobs[job_id] = updated
+
+        await self._broadcast_event(
+            "replication_status_changed",
+            {
+                "job_id": job.job_id,
+                "status": status,
+                "error": error_message
+            }
+        )
         return updated
 
     def get_replication_job(self, job_id: str) -> ReplicationJob:

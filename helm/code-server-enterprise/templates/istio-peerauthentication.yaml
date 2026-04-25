@@ -1,0 +1,41 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: ISTIO_PEERAUTHENTICATION_TEMPLATE
+# PURPOSE: Istio PeerAuthentication for mutual TLS enforcement
+# PATTERN: Namespace-wide mTLS enforcement (STRICT mode)
+
+{{- $root := . -}}
+{{- if $root.Values.istio.enabled }}
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-mesh
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    "5432":
+      mode: DISABLE  # PostgreSQL - handled by PG SSL
+    "6379":
+      mode: DISABLE  # Redis - handled by Redis TLS
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-tls-partial
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  selector:
+    matchLabels:
+      mtls-mode: "partial"
+  mtls:
+    mode: PERMISSIVE  # Gradual rollout support
+{{- end }}

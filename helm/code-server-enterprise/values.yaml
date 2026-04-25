@@ -198,3 +198,130 @@ podSecurity:
   enforce: "baseline"
   audit: "restricted"
   warn: "restricted"
+
+# Istio Service Mesh Configuration (Phase 4: K8s Migration)
+istio:
+  enabled: true
+  namespace: "istio-system"
+  ingressGateway:
+    enabled: true
+    replicas: 3
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "1024Mi"
+      requests:
+        cpu: "1000m"
+        memory: "512Mi"
+  # Traffic management policies
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+      tcp:
+        maxConnections: 200
+    loadBalancing:
+      simple: ROUND_ROBIN
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+  # mTLS configuration
+  mtls:
+    mode: STRICT
+    certificateRefreshInterval: "24h"
+  # Monitoring and observability
+  monitoring:
+    prometheus:
+      enabled: true
+      interval: "15s"
+    jaeger:
+      enabled: true
+      samplingRate: 0.1
+
+# Horizontal Pod Autoscaling Configuration (Phase 4: K8s Migration)
+autoscaling:
+  enabled: true
+  default:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCpuUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  # Custom metrics support (requires Prometheus/metrics-server)
+  customMetrics:
+    enabled: true
+    # Example: scale based on HTTP requests per second
+    http_requests_per_second:
+      enabled: true
+      threshold: 1000
+    # Example: scale based on task queue depth
+    pending_tasks:
+      enabled: true
+      threshold: 30
+  # Per-service autoscaling overrides
+  services:
+    api:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCpuUtilizationPercentage: 60
+    frontend:
+      minReplicas: 2
+      maxReplicas: 15
+      targetCpuUtilizationPercentage: 75
+    agent_runtime:
+      minReplicas: 1
+      maxReplicas: 8
+      targetCpuUtilizationPercentage: 65
+
+# Kubernetes Resource Quotas (for namespace isolation)
+resourceQuota:
+  enabled: true
+  requests:
+    cpu: "50"
+    memory: "100Gi"
+  limits:
+    cpu: "100"
+    memory: "200Gi"
+
+# Network Policies (Zero-trust networking)
+networkPolicies:
+  enabled: true
+  default:
+    policyTypes:
+    - Ingress
+    - Egress
+  # Service-to-service communication rules
+  serviceCommunication:
+    api:
+      ingressFrom:
+      - frontend
+      - orchestrator
+      egressTo:
+      - postgres
+      - redis
+      - reputation-engine
+    frontend:
+      ingressFrom:
+      - ingress-controller
+      egressTo:
+      - api
+    agent_runtime:
+      ingressFrom:
+      - orchestrator
+      egressTo:
+      - api
+      - postgres
+      - kafka
+
+# Pod Disruption Budgets (High availability)
+podDisruptionBudgets:
+  enabled: true
+  default:
+    minAvailable: 1
+  # Per-service overrides
+  services:
+    api:
+      minAvailable: 2
+    reputation_engine:
+      minAvailable: 1

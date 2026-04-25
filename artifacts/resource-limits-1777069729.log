@@ -1,9 +1,0 @@
-[2026-04-24 18:28:49] ==========================================
-[2026-04-24 18:28:49] Enforce Resource Limits
-[2026-04-24 18:28:49] ==========================================
-[2026-04-24 18:28:49] Generated resource limits configuration: ./config/resource-limits.yaml
-[2026-04-24 18:28:49] Created validation script
-[2026-04-24 18:28:49] ==========================================
-[2026-04-24 18:28:49] Resource limits configuration complete
-[2026-04-24 18:28:49] Next: Update docker-compose.yml with deploy sections
-[2026-04-24 18:28:49] ==========================================

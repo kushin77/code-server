@@ -1,3 +1,0 @@
-scan_timestamp=2026-04-25T04:24:51Z
-status=PASSED
-violations=0

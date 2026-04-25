@@ -1,6 +1,0 @@
-[2026-04-24 18:29:04] ==========================================
-[2026-04-24 18:29:04] Complete TLS Backup Setup
-[2026-04-24 18:29:04] ==========================================
-[2026-04-24 18:29:04] Backup directory initialized: ./state/backups/tls
-[2026-04-24 18:29:04] Starting TLS certificate backup...
-[2026-04-24 18:29:04] WARNING: Caddy data directory not found: ./caddy_data

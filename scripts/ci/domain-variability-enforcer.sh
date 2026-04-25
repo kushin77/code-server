@@ -12,6 +12,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 export REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/domain-variability-report.json}"
 export APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
 export IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
+# Pre-set host vars so _base-config.env :? checks pass without external env
+export PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
+export REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+export NAS_HOST="${NAS_HOST:-192.168.168.56}"
 
 source "${REPO_ROOT}/scripts/_common/init.sh"
 source "${REPO_ROOT}/scripts/_common/hosts.sh"

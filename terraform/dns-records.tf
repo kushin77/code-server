@@ -39,19 +39,19 @@ variable "cloudflare_api_token" {
 }
 
 variable "zone_id" {
-  description = "Cloudflare Zone ID for kushnir.cloud"
+  description = "Cloudflare Zone ID for "
   type        = string
   # Example: export TF_VAR_zone_id=abc123def456...
 }
 
 variable "primary_host_ip" {
-  description = "Primary infrastructure host IP (192.168.168.31)"
+  description = "Primary infrastructure host IP"
   type        = string
   default     = "203.0.113.1"  # placeholder - override via TF_VAR
 }
 
 variable "replica_host_ip" {
-  description = "Replica infrastructure host IP (192.168.168.42)"
+  description = "Replica infrastructure host IP"
   type        = string
   default     = "203.0.113.2"  # placeholder - override via TF_VAR
 }
@@ -59,7 +59,7 @@ variable "replica_host_ip" {
 variable "apex_domain" {
   description = "Apex domain name"
   type        = string
-  default     = "kushnir.cloud"
+  default     = ""
 }
 
 variable "ttl_short" {

@@ -155,7 +155,7 @@ Preparation completed:
 ## DEPLOYMENT READINESS CHECKLIST
 
 ### Q2 Completion (IMMEDIATE - 1 hour)
-- [ ] SSH to replica node (192.168.168.42)
+- [ ] SSH to replica node (${ONPREM_REPLICA_IP})
 - [ ] Execute replica config fix: `bash scripts/operations/fix-replica-config-sync.sh all`
 - [ ] Verify config mounts (file type, not directory)
 - [ ] Restart affected services: caddy, prometheus, grafana, alertmanager, loki, promtail

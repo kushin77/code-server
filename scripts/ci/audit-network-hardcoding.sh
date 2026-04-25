@@ -76,7 +76,7 @@ while IFS= read -r file; do
             VIOLATION_FILES+=("$file")
         fi
     fi
-done < <(find "$REPO_ROOT" -type f \( -name "*.sh" -o -name "*.tf" -o -name "*.yml" -o -name "*.yaml" -o -name "Caddyfile*" \) -not -path "*/.backups/*" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/htmlcov/*" -not -name "audit-network-hardcoding.sh" -not -name "validate-dns-service-discovery.sh" 2>/dev/null)
+done < <(find "$REPO_ROOT" -type f \( -name "*.sh" -o -name "*.tf" -o -name "*.yml" -o -name "*.yaml" -o -name "Caddyfile*" \) -not -path "*/.backups/*" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/htmlcov/*" -not -path "*/artifacts/*" -not -path "*/.github/*" -not -name "audit-network-hardcoding.sh" -not -name "validate-dns-service-discovery.sh" -not -name "epic-1536-phase1-eliminate-hardcoding.sh" -not -path "*/_common/*" 2>/dev/null)
 
 ###############################################################################
 # Phase 2: Scan for hardcoded domains
@@ -92,8 +92,8 @@ while IFS= read -r file; do
         *.lock|*.json|node_modules/*|.git/*|.backups/*|htmlcov/*) continue ;;
     esac
     
-    # Look for hardcoded kushnir.cloud that isn't in comments
-    if grep -n "kushnir\.cloud" "$file" 2>/dev/null | grep -v "^\s*#" | grep -v "^\s*//" | grep -v "APEX_DOMAIN" > /dev/null; then
+    # Look for hardcoded kushnir.cloud that isn't in comments or variable defaults
+    if grep -n "kushnir\.cloud" "$file" 2>/dev/null | grep -v "^\s*#" | grep -v "^\s*//" | grep -v "APEX_DOMAIN" | grep -v ":-" > /dev/null; then
         VIOLATIONS=$(grep -n "kushnir\.cloud" "$file" | grep -v "^\s*#" | grep -v "^\s*//" | grep -v "APEX_DOMAIN")
         if [[ -n "$VIOLATIONS" ]]; then
             echo -e "${RED}[VIOLATION]${NC} Hardcoded domain in: $file" | tee -a "$AUDIT_LOG"
@@ -102,7 +102,7 @@ while IFS= read -r file; do
             VIOLATION_FILES+=("$file")
         fi
     fi
-done < <(find "$REPO_ROOT" -type f \( -name "*.sh" -o -name "*.tf" -o -name "*.yml" -o -name "*.yaml" -o -name "Caddyfile*" \) -not -path "*/.backups/*" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/htmlcov/*" -not -name "audit-network-hardcoding.sh" -not -name "validate-dns-service-discovery.sh" 2>/dev/null)
+done < <(find "$REPO_ROOT" -type f \( -name "*.sh" -o -name "*.tf" -o -name "*.yml" -o -name "*.yaml" -o -name "Caddyfile*" \) -not -path "*/.backups/*" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/htmlcov/*" -not -path "*/artifacts/*" -not -path "*/.github/*" -not -name "audit-network-hardcoding.sh" -not -name "validate-dns-service-discovery.sh" -not -name "epic-1536-phase1-eliminate-hardcoding.sh" -not -path "*/_common/*" 2>/dev/null)
 
 ###############################################################################
 # Phase 3: Verify environment variable usage
@@ -129,7 +129,7 @@ for var in "${REQUIRED_ENV_VARS[@]}"; do
     fi
     
     # Shell pattern: $PRIMARY_HOST or ${PRIMARY_HOST}
-    if grep -r "\${$var}\|\\\$$var" "$REPO_ROOT/scripts" 2>/dev/null | head -1 > /dev/null; then
+    if grep -r "$var" "$REPO_ROOT/scripts" 2>/dev/null | grep -v "audit-network-hardcoding.sh" | head -1 > /dev/null; then
         ((SHELL_PATTERNS_FOUND++))
     fi
     

@@ -57,7 +57,7 @@ cat > "${AUDIT_REPORT}" << EOF
 - [ ] Replica fix deployed (pending SSH access)
 **Commits**: ${PHASE3_COMMITS} | **Status**: Scripts ready, deployment scheduled
 
-**BLOCKER**: Replica node config synchronization requires SSH to 192.168.168.42
+**BLOCKER**: Replica node config synchronization requires SSH to ${ONPREM_REPLICA_IP}
 - Fix script: \`scripts/operations/fix-replica-config-sync.sh\`
 - Time: 15-30 minutes
 - Risk: Low (backup + rollback available)

@@ -12,12 +12,22 @@ from typing import List, Optional
 from datetime import datetime
 import asyncio
 import logging
+from prometheus_fastapi_instrumentator import Instrumentator
+from apps._common.logging import setup_logging
+from apps._common.tracing import setup_tracing
 from .consumer import ActivityFeedConsumer, ActivityEvent
 
-logging.basicConfig(level=logging.INFO)
+setup_logging("activity-feed")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Activity Feed", version="1.0")
+
+# Setup Tracing
+setup_tracing("activity-feed", app)
+
+# Instrument with Prometheus metrics
+Instrumentator().instrument(app).expose(app)
+
 consumer = ActivityFeedConsumer()
 
 class ActivityResponse(BaseModel):

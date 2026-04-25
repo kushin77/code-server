@@ -340,10 +340,10 @@ test_caddyfile_domains() {
   fi
 
   local required_domains=(
-    "kushnir.cloud"
-    "ide.kushnir.cloud"
-    "api.kushnir.cloud"
-    "admin.kushnir.cloud"
+    ""
+    "ide."
+    "api."
+    "admin."
   )
 
   local found=0

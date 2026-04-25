@@ -40,7 +40,7 @@ cat > "${CONFIG_FILE}" <<'EOF'
 ---
 
 ## VRRP Virtual IP Configuration (Ingress Entry Point)
-virtual_ip: 192.168.168.100
+virtual_ip: 
 virtual_port_http: 80
 virtual_port_https: 443
 vrrp_priority: 100
@@ -93,10 +93,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - auth.kushnir.cloud
+    - auth.
     secretName: auth-server-tls
   rules:
-  - host: auth.kushnir.cloud
+  - host: auth.
     http:
       paths:
       - path: /
@@ -147,10 +147,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.kushnir.cloud
+    - 
     secretName: api-gateway-tls
   rules:
-  - host: api.kushnir.cloud
+  - host: 
     http:
       paths:
       - path: /api
@@ -193,10 +193,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - control.kushnir.cloud
+    - control.
     secretName: control-plane-tls
   rules:
-  - host: control.kushnir.cloud
+  - host: control.
     http:
       paths:
       - path: /
@@ -420,14 +420,14 @@ kubectl get deployment -n ingress-nginx
 
 # 2. Verify service external IP
 kubectl get svc -n ingress-nginx ingress-nginx-controller
-# Expected: EXTERNAL-IP = 192.168.168.100
+# Expected: EXTERNAL-IP = 
 
 # 3. Verify VRRP active
-ip addr show | grep 192.168.168.100
-# Expected: inet 192.168.168.100/32 (on primary host)
+ip addr show | grep 
+# Expected: inet /32 (on primary host)
 
 # 4. Test ingress connectivity
-curl -I https://192.168.168.100
+curl -I https://
 # Expected: HTTP 200 or 301 (redirect to app)
 ```
 

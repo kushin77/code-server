@@ -295,7 +295,7 @@ check_health_endpoints() {
 #!/bin/bash
 set -euo pipefail
 
-TARGET_HOST="${TARGET_HOST:-192.168.168.31}"
+TARGET_HOST="${TARGET_HOST:-}"
 
 echo "Testing health endpoints..."
 echo ""

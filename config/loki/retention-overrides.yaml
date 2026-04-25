@@ -1,42 +1,20 @@
 # @file        config/loki/retention-overrides.yaml
-# @module      observability/loki
-# @description Per-stream retention overrides for Loki compactor
-# @governance  GOV-002: Immutable, version-controlled
-# Issue #1532: Centralized Observability & SLOG — tiered retention policy
-#
-# Ref: https://grafana.com/docs/loki/latest/operations/storage/retention/#per-stream-retention
-#
-# Retention tiers:
-#   Hot  (30 days):  all streams — default via limits_config.retention_period
-#   Warm (90 days):  infrastructure events, container lifecycle
-#   Cold (365 days): audit logs, auth events — compliance requirement
+# @description Stream-level retention overrides for Loki
+# @governance  GOV-002: Compliance-driven log archiving
 
 overrides:
-  # ── Audit logs: 365-day retention (1 year) ──────────────────────────────
-  # Streams matching {job="audit"} or {compose_service="oauth2-proxy"}
-  # are subject to extended compliance-grade retention.
-  "fake":  # Loki single-tenant fake org
-    retention_period: 8760h  # 365 days — applied globally when per_stream is used
+  # Audit logs: 1 Year (Compliance)
+  - labels: {job="audit"}
+    retention_period: 8760h
 
-# NOTE: Per-stream retention requires Loki >= 2.9 with:
-#   compactor.retention_enabled: true
-#   compactor.shared_store: filesystem
-#
-# To apply per-stream (label-selector) retention, add rules to:
-#   /loki/rules/<tenant>/retention.yaml
-#
-# Example retention rule (loki rules format):
-#
-#   groups:
-#     - name: retention
-#       interval: 24h
-#       rules:
-#         - record: loki_retention_period
-#           expr: |
-#             {job="audit"} | retention_period = "8760h"
-#         - record: loki_retention_period
-#           expr: |
-#             {job="infrastructure"} | retention_period = "2160h"
-#         - record: loki_retention_period
-#           expr: |
-#             {compose_service="oauth2-proxy"} | retention_period = "8760h"
+  # Auth events: 1 Year (Security)
+  - labels: {job="auth-server"}
+    retention_period: 8760h
+
+  # Infrastructure logs: 90 Days (Hot/Warm tier)
+  - labels: {job="caddy"}
+    retention_period: 2160h
+  - labels: {job="postgres"}
+    retention_period: 2160h
+
+  # App metadata logs: 30 Days (Standard Tier) - Enforced by global retention_period

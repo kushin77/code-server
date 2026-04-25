@@ -12,7 +12,6 @@ packages:
   - "apps/federation"
   - "apps/knowledge-graph"
   - "apps/memory-engine"
-  - "apps/multimodal-ai"
   - "apps/paperclip-control-plane"
   - "apps/presence-sidecar"
   - "apps/prompt-gateway"

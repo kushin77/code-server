@@ -327,10 +327,10 @@ Commands:
   status       Show current configuration
 
 Environment Variables:
-  PRIMARY_HOST         Primary host IP (default: 192.168.168.31)
-  REPLICA_HOST         Replica host IP (default: 192.168.168.42)
-  NAS_HOST             NAS host IP (default: 192.168.168.56)
-  VRRP_VIP             VRRP virtual IP (default: 192.168.168.100)
+  PRIMARY_HOST         Primary host IP (default: )
+  REPLICA_HOST         Replica host IP (default: )
+  NAS_HOST             NAS host IP (default: )
+  VRRP_VIP             VRRP virtual IP (default: )
   APEX_DOMAIN          Domain name (default: kushnir.cloud)
   HOSTS_FILE           Path to hosts file (default: /etc/hosts)
 
@@ -339,7 +339,7 @@ Examples:
   $0 apply
 
   # Verify configuration with custom primary host
-  PRIMARY_HOST=192.168.168.99 $0 verify
+  PRIMARY_HOST=\${ONPREM_PRIMARY_IP} $0 verify
 
   # Restore from backup
   $0 restore

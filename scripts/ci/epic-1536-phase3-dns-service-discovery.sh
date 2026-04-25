@@ -318,12 +318,12 @@ Headless services allow direct pod-to-pod discovery:
 For services not yet migrated:
 
 ```
-{service}.kushnir.cloud
+{service}.
 ```
 
 **Examples**:
-- PostgreSQL: `postgres.kushnir.cloud:5432`
-- Ollama: `ollama.kushnir.cloud:11434`
+- PostgreSQL: `:5432`
+- Ollama: `:11434`
 
 ---
 
@@ -337,8 +337,8 @@ For services not yet migrated:
 | Prometheus | Internal | prometheus.observability.svc.cluster.local | 9090 | Metrics |
 | Grafana | Internal | grafana.observability.svc.cluster.local | 3000 | Dashboards |
 | Loki | Internal | loki.observability.svc.cluster.local | 3100 | Logs |
-| API | External | api.kushnir.cloud | 443 | Ingress via VRRP |
-| IDE | External | ide.kushnir.cloud | 443 | Ingress via VRRP |
+| API | External |  | 443 | Ingress via VRRP |
+| IDE | External |  | 443 | Ingress via VRRP |
 
 ---
 

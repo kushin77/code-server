@@ -127,8 +127,8 @@ Two-week timeline with automated rollback at every step and 24/7 monitoring.
 
 **Application Services Shutdown**:
 1. Health checks stop returning OK (services unavailable)
-2. Load balancer removes Docker Compose IP pool (192.168.168.31)
-3. DNS records point exclusively to K8s virtual IP (192.168.168.100)
+2. Load balancer removes Docker Compose IP pool ()
+3. DNS records point exclusively to K8s virtual IP ()
 4. Container images archived but not deleted
 5. Docker Compose manifests version-controlled (git history)
 
@@ -142,11 +142,11 @@ kubectl get pods --all-ns      # All pods Running
 kubectl top nodes              # CPU/Memory available
 
 # Verify load balancer health
-curl -sk https://192.168.168.100/health  # Returns 200 OK
-curl -sk https://192.168.168.42/health   # Replica ready
+curl -sk https:///health  # Returns 200 OK
+curl -sk https:///health   # Replica ready
 
 # Verify DNS resolution
-dig kushnir.cloud              # Points to 192.168.168.100
+dig               # Points to 
 ```
 
 **Cutover Window (30 minutes)**:
@@ -207,9 +207,9 @@ If critical issues detected within 1 hour post-cutover:
 ### Day 2: Multi-Zone Failure Scenario (Jun 18)
 
 **Chaos Injection**:
-1. Simulate network partition (disable VRRP on primary 192.168.168.31)
-2. Replica 192.168.168.42 takes over as active (auto-failover)
-3. Verify virtual IP 192.168.168.100 now routes to replica
+1. Simulate network partition (disable VRRP on primary )
+2. Replica  takes over as active (auto-failover)
+3. Verify virtual IP  now routes to replica
 4. All services continue operating
 5. Restore primary and verify convergence
 
@@ -291,7 +291,7 @@ If critical issues detected within 1 hour post-cutover:
 ### Operational Readiness ✅
 - All 26 services (8 stateless + 3 stateful) 100% on Kubernetes
 - Zero Docker Compose infrastructure remaining
-- All traffic through VRRP virtual IP 192.168.168.100
+- All traffic through VRRP virtual IP 
 
 ### Reliability ✅
 - 99.95% uptime during cutover (< 2.5 min downtime)
@@ -360,7 +360,7 @@ If critical issues detected within 1 hour post-cutover:
 
 ## Conclusion
 
-Phase 4 completes the three-month Kubernetes migration (May 13 - Jun 23, 2026) from Docker Compose development environment to production-grade infrastructure. With careful execution of Phase 2 (stateless), Phase 3 (stateful), and Phase 4 (production cutover) procedures, kushnir.cloud transitions to a resilient, auto-healing, zero-downtime deployment platform.
+Phase 4 completes the three-month Kubernetes migration (May 13 - Jun 23, 2026) from Docker Compose development environment to production-grade infrastructure. With careful execution of Phase 2 (stateless), Phase 3 (stateful), and Phase 4 (production cutover) procedures,  transitions to a resilient, auto-healing, zero-downtime deployment platform.
 
 **Status**: Strategy COMPLETE and READY FOR EXECUTION  
 **Target Completion**: Jun 23, 2026  

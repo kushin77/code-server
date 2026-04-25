@@ -5,6 +5,7 @@
 # @governance GOV-002: Event-driven, deterministic routing, audit-logged
 
 import logging
+from apps._common.logging import setup_logging
 import os
 from fastapi import FastAPI, Query, HTTPException, Header, Depends
 from pydantic import BaseModel
@@ -18,7 +19,7 @@ from events import SchedulerEventPublisher
 from persistence import SchedulerDatabase, TaskStatus, ScheduledTask
 from auth import SchedulerAuth
 
-logging.basicConfig(level=logging.INFO)
+setup_logging("execution-scheduler")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Execution Scheduler", version="1.0")

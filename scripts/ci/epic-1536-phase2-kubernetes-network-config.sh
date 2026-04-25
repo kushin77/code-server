@@ -147,10 +147,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - api.kushnir.cloud
+        - 
       secretName: api-tls-cert
   rules:
-    - host: api.kushnir.cloud
+    - host: 
       http:
         paths:
           - path: /
@@ -231,7 +231,7 @@ kubectl run test-dns --image=busybox --rm -it \
 ### Test 3: External API Gateway Access
 ```bash
 # Test external ingress
-curl https://api.kushnir.cloud/health
+curl https:///health
 ```
 
 ### Test 4: Network Policy Isolation
@@ -309,11 +309,11 @@ Transform 123+ files with hardcoded network values to use Epic #1536 SSOT config
 **Remediation**:
 ```bash
 # Pattern: Replace hardcoded IP with environment variable
-# OLD: VRRP_IP="192.168.168.100"
+# OLD: VRRP_IP="${HARDCODED_IP}"
 # NEW: VRRP_IP="${ONPREM_VRRP_VIP}"
 
 # Pattern: Replace hardcoded domain with environment variable
-# OLD: API_DOMAIN="api.kushnir.cloud"
+# OLD: API_DOMAIN="api.${DOMAIN_NAME}"
 # NEW: API_DOMAIN="${DNS_ZONE}"
 ```
 

@@ -39,7 +39,7 @@ cat > "${REPORT_FILE}" <<'EOF'
 
 Phase 1 of the Kubernetes migration is **infrastructure provisioning and validation**. This report provides comprehensive guidance for:
 
-1. **Kubernetes Cluster Provisioning** (Primary Host 192.168.168.31 + Replica 192.168.168.42)
+1. **Kubernetes Cluster Provisioning** (Primary Host  + Replica )
 2. **Infrastructure Prerequisites** (Storage, Networking, Certificate Management)
 3. **Monitoring & Observability** (Prometheus, Grafana, Loki)
 4. **Helm Chart Deployment** (18 microservices to staging cluster)
@@ -55,7 +55,7 @@ Phase 1 of the Kubernetes migration is **infrastructure provisioning and validat
 |-----------|------------------|-------|
 | **Cluster Provisioning** | K8s 1.28+, 3 masters, 8 workers, all Ready | Infra Lead |
 | **Storage Ready** | StorageClass created, PV provisioned | Infra Lead |
-| **Network Ready** | Ingress controller live at 192.168.168.100 | Infra Lead |
+| **Network Ready** | Ingress controller live at  | Infra Lead |
 | **Monitoring Deployed** | Prometheus, Grafana, Loki operational | Platform Eng |
 | **Services Running** | All 18 microservices deployed to staging | Platform Eng |
 | **Health Checks Passing** | 100% readiness/liveness probes Green | QA Lead |
@@ -85,19 +85,19 @@ Deployment Time:    < 5 minutes per Helm install
 ├─────────────────────────────────────────────┤
 │                                             │
 │  Control Plane (3 masters - HA)             │
-│  ├── Master-1 (192.168.168.31)             │
-│  ├── Master-2 (192.168.168.42)             │
+│  ├── Master-1 ()             │
+│  ├── Master-2 ()             │
 │  └── Master-3 (floating)                    │
 │                                             │
 │  Worker Nodes (8 nodes)                    │
 │  ├── Worker-1 to Worker-4 (16-core/64GB)  │
 │  └── Worker-5 to Worker-8 (16-core/64GB)  │
 │                                             │
-│  Load Balancer: 192.168.168.100 (VRRP)    │
+│  Load Balancer:  (VRRP)    │
 │  Ingress Controller: NGINX/Traefik          │
 │  ServiceMesh: Istio 1.18+ (optional Phase2) │
 │                                             │
-│  Storage: NAS 192.168.168.56 (10Gbps)     │
+│  Storage: NAS  (10Gbps)     │
 │  ├── PostgreSQL WAL archiving               │
 │  ├── Redis persistence                     │
 │  └── Application data volumes              │
@@ -107,7 +107,7 @@ Deployment Time:    < 5 minutes per Helm install
 ### Network Architecture
 
 - **API Endpoint**: kubernetes.default.svc.cluster.local
-- **Ingress VRRP**: 192.168.168.100:443 (virtual IP)
+- **Ingress VRRP**: ${ONPREM_VRRP_VIP}:443 (virtual IP)
 - **Service Discovery**: CoreDNS (internal)
 - **External DNS**: kushnir.cloud (managed via external provider)
 - **Network Policies**: Enabled (enforce pod-to-pod communication rules)
@@ -149,7 +149,7 @@ kubectl top nodes
 - **Tasks**:
   - [ ] Create StorageClass (fast-ssd, EBS gp3)
   - [ ] Provision PersistentVolumes (100Gi each)
-  - [ ] Deploy Ingress Controller (NGINX at 192.168.168.100)
+  - [ ] Deploy Ingress Controller (NGINX at ${ONPREM_VRRP_VIP})
   - [ ] Install cert-manager for TLS
   - [ ] Configure network policies (default deny + allow same-namespace)
 
@@ -158,7 +158,7 @@ kubectl top nodes
 kubectl get storageclass
 kubectl get pv
 kubectl get svc -n ingress-nginx
-# Expected: ingress-nginx LoadBalancer with EXTERNAL-IP = 192.168.168.100
+# Expected: ingress-nginx LoadBalancer with EXTERNAL-IP = ${ONPREM_VRRP_VIP}
 ```
 
 #### Day 3: Monitoring Setup (May 3)
@@ -419,11 +419,11 @@ kubectl get pv
 # Expected: fast-ssd StorageClass, PVs available
 
 # 4. Network access
-ping -c 5 192.168.168.56
+ping -c 5 
 # Expected: All packets received, no loss
 
 # 5. NAS mount test
-mount -t cifs //192.168.168.56/nas /mnt/nas
+mount -t cifs //${ONPREM_NAS_IP}/nas /mnt/nas
 # Expected: Successful mount
 ```
 
@@ -574,7 +574,7 @@ kubectl exec -it postgres-0 -n staging -- \
 
 ### Infrastructure
 - ✅ Kubernetes cluster (3 control, 8 worker nodes)
-- ✅ Ingress controller at 192.168.168.100
+- ✅ Ingress controller at 
 - ✅ Storage classes and PersistentVolumes
 - ✅ Monitoring stack (Prometheus, Grafana, Loki)
 - ✅ Network policies for pod communication
@@ -668,7 +668,7 @@ cat > "${REPORT_FILE}" <<'EOF'
 
 Phase 1 of the Kubernetes migration is **infrastructure provisioning and validation**. This report provides comprehensive guidance for:
 
-1. **Kubernetes Cluster Provisioning** (Primary Host 192.168.168.31 + Replica 192.168.168.42)
+1. **Kubernetes Cluster Provisioning** (Primary Host  + Replica )
 2. **Infrastructure Prerequisites** (Storage, Networking, Certificate Management)
 3. **Monitoring & Observability** (Prometheus, Grafana, Loki)
 4. **Helm Chart Deployment** (18 microservices to staging cluster)
@@ -684,7 +684,7 @@ Phase 1 of the Kubernetes migration is **infrastructure provisioning and validat
 |-----------|------------------|-------|
 | **Cluster Provisioning** | K8s 1.28+, 3 masters, 8 workers, all Ready | Infra Lead |
 | **Storage Ready** | StorageClass created, PV provisioned | Infra Lead |
-| **Network Ready** | Ingress controller live at 192.168.168.100 | Infra Lead |
+| **Network Ready** | Ingress controller live at  | Infra Lead |
 | **Monitoring Deployed** | Prometheus, Grafana, Loki operational | Platform Eng |
 | **Services Running** | All 18 microservices deployed to staging | Platform Eng |
 | **Health Checks Passing** | 100% readiness/liveness probes Green | QA Lead |
@@ -714,19 +714,19 @@ Deployment Time:    < 5 minutes per Helm install
 ├─────────────────────────────────────────────┤
 │                                             │
 │  Control Plane (3 masters - HA)             │
-│  ├── Master-1 (192.168.168.31)             │
-│  ├── Master-2 (192.168.168.42)             │
+│  ├── Master-1 ()             │
+│  ├── Master-2 ()             │
 │  └── Master-3 (floating)                    │
 │                                             │
 │  Worker Nodes (8 nodes)                    │
 │  ├── Worker-1 to Worker-4 (16-core/64GB)  │
 │  └── Worker-5 to Worker-8 (16-core/64GB)  │
 │                                             │
-│  Load Balancer: 192.168.168.100 (VRRP)    │
+│  Load Balancer:  (VRRP)    │
 │  Ingress Controller: NGINX/Traefik          │
 │  ServiceMesh: Istio 1.18+ (optional Phase2) │
 │                                             │
-│  Storage: NAS 192.168.168.56 (10Gbps)     │
+│  Storage: NAS  (10Gbps)     │
 │  ├── PostgreSQL WAL archiving               │
 │  ├── Redis persistence                     │
 │  └── Application data volumes              │
@@ -746,7 +746,7 @@ Deployment Time:    < 5 minutes per Helm install
 
 **Day 2 (May 2)**: Storage & Networking (3-4 hours)
 - StorageClass configuration (fast-ssd)
-- Ingress controller deployment (192.168.168.100)
+- Ingress controller deployment (${ONPREM_VRRP_VIP})
 - Certificate manager installation
 
 **Day 3 (May 3)**: Monitoring Setup (3-4 hours)
@@ -814,7 +814,7 @@ Deployment Time:    < 5 minutes per Helm install
 - [ ] 8 worker nodes operational (Ready status)
 - [ ] kubectl configured and authenticated
 - [ ] Network security groups configured
-- [ ] Ingress load balancer provisioned (192.168.168.100)
+- [ ] Ingress load balancer provisioned (${ONPREM_VRRP_VIP})
 - [ ] 10Gbps NAS connectivity verified
 - [ ] StorageClass defined
 - [ ] Helm 3.x, kubeval, k6 installed
@@ -914,7 +914,7 @@ kubectl exec postgres-0 -- psql -f /tmp/backup.sql
 
 ### Infrastructure
 - ✅ Kubernetes cluster (3 control, 8 worker nodes)
-- ✅ Ingress controller at 192.168.168.100
+- ✅ Ingress controller at 
 - ✅ Storage classes and PersistentVolumes
 - ✅ Monitoring stack (Prometheus, Grafana, Loki)
 - ✅ Network policies for pod communication

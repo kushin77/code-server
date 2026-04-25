@@ -1,0 +1,6 @@
+Phase 1: Scanning for hardcoded IPs (192.168.168.*)
+
+Phase 2: Scanning for hardcoded domains (kushnir.cloud)
+
+Phase 3: Verifying environment variable substitution patterns
+  Checking for $PRIMARY_HOST or ${PRIMARY_HOST} usage...

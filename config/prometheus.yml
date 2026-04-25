@@ -18,7 +18,8 @@ alerting:
             - localhost:9093
 
 rule_files:
-  - /etc/prometheus/rules/*.yml
+  - "/etc/prometheus/rules/*.yml"
+  - "/etc/prometheus/global-rules.yml"
 
 # Scrape configurations for each service
 scrape_configs:
@@ -135,3 +136,31 @@ scrape_configs:
     file_sd_configs:
       - files:
           - /etc/prometheus/targets/*.json
+
+  # Activity Feed Service metrics
+  - job_name: activity-feed
+    static_configs:
+      - targets:
+          - activity-feed:8000
+    metrics_path: /metrics
+
+  # Reputation Engine Service metrics
+  - job_name: reputation-engine
+    static_configs:
+      - targets:
+          - reputation-engine:8000
+    metrics_path: /metrics
+
+  # Agent Runtime Service metrics
+  - job_name: agent-runtime
+    static_configs:
+      - targets:
+          - agent-runtime:8000
+    metrics_path: /metrics
+
+  # Memory Engine Service metrics
+  - job_name: memory-engine
+    static_configs:
+      - targets:
+          - memory-engine:8000
+    metrics_path: /metrics

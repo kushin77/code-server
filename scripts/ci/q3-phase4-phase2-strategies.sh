@@ -48,7 +48,7 @@ cat > "${REPORT_FILE}" <<'EOF'
 Phase 2 focuses on **stateless services migration from Docker Compose to Kubernetes**. This document defines:
 
 1. **Deployment Strategies** (blue-green, canary, rolling update)
-2. **Load Balancing Architecture** (VRRP 192.168.168.100, Ingress routing)
+2. **Load Balancing Architecture** (VRRP , Ingress routing)
 3. **Traffic Management** (traffic shifting, health checks, gradual rollout)
 4. **Validation Procedures** (endpoint verification, integration tests, smoke tests)
 5. **Rollback Procedures** (service cutover, traffic redirect, fallback)
@@ -310,7 +310,7 @@ kubectl rollout status deployment/execution-scheduler --watch
 
 ### Ingress Controller Configuration
 
-**Virtual IP**: 192.168.168.100 (VRRP)  
+**Virtual IP**:  (VRRP)  
 **External Port**: 443 (TLS)  
 **Internal Port**: 80 (HTTP)  
 
@@ -326,10 +326,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.kushnir.cloud
+    - 
     secretName: api-gateway-tls
   rules:
-  - host: api.kushnir.cloud
+  - host: 
     http:
       paths:
       - path: /api
@@ -386,11 +386,11 @@ spec:
 ```
 Client Request
   ↓
-Ingress (192.168.168.100:443)
+Ingress (:443)
   ↓
 TLS Termination (cert-manager)
   ↓
-NGINX Service Routing (api.kushnir.cloud → api-gateway)
+NGINX Service Routing ( → api-gateway)
   ↓
 Service Load Balancer (Round-robin to 3 replicas)
   ↓

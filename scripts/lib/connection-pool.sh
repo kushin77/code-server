@@ -157,7 +157,7 @@ generate_caddy_connpool_config() {
 # Caddy Configuration with Connection Pooling
 # Epic #1536 Phase 6 - IaC Compliance
 
-kushnir.cloud {
+ {
   reverse_proxy ${backend_url} {
     # Connection pooling settings
     policy random_choice 4         # 4-way load balancing

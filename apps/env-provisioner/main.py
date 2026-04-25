@@ -7,6 +7,7 @@
 """
 
 import logging
+from apps._common.logging import setup_logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -18,12 +19,7 @@ from pydantic import BaseModel
 from provisioner import EnvProvisioner
 
 # Configure logging
-log_level = os.getenv("LOG_LEVEL", "INFO")
-logging.basicConfig(
-    level=log_level,
-    format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%SZ"
-)
+setup_logging("env-provisioner")
 logger = logging.getLogger(__name__)
 
 # FastAPI app

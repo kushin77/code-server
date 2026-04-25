@@ -6,6 +6,9 @@
 
 import os
 import logging
+from prometheus_fastapi_instrumentator import Instrumentator
+from apps._common.logging import setup_logging
+from apps._common.tracing import setup_tracing
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
@@ -24,10 +27,7 @@ except ModuleNotFoundError:
     ReputationEventProcessor = None
 
 # Logging configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+setup_logging("reputation-engine")
 logger = logging.getLogger(__name__)
 
 # Configuration from environment
@@ -112,6 +112,12 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Setup Tracing
+setup_tracing("reputation-engine", app)
+
+# Instrument with Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 setup_api_routes(app, SessionLocal)
 

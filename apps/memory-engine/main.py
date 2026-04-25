@@ -11,12 +11,21 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
+from prometheus_fastapi_instrumentator import Instrumentator
+from apps._common.logging import setup_logging
+from apps._common.tracing import setup_tracing
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+setup_logging("memory-engine")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Organizational Memory Engine", version="1.0")
+
+# Setup Tracing
+setup_tracing("memory-engine", app)
+
+# Instrument with Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 class SearchResult(BaseModel):
     """Search result with metadata"""

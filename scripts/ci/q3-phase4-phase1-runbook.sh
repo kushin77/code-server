@@ -274,7 +274,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: ops@kushnir.cloud
+    email: ops@
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
@@ -400,7 +400,7 @@ kubectl label namespace staging tier=staging
 
 # Create image pull secrets
 kubectl create secret docker-registry regcred \
-  --docker-server=registry.kushnir.cloud \
+  --docker-server=registry. \
   --docker-username=${REGISTRY_USER} \
   --docker-password=${REGISTRY_PASSWORD} \
   -n staging
@@ -828,7 +828,7 @@ aws s3 cp /tmp/k8s-state.yaml s3://code-server-backups/k8s-$(date +%Y%m%d).yaml
 - **Kubernetes Docs**: https://kubernetes.io/docs/
 - **Helm Docs**: https://helm.sh/docs/
 - **Cluster API**: kubectl api-resources
-- **Monitoring**: Prometheus/Grafana dashboards on monitoring.kushnir.cloud
+- **Monitoring**: Prometheus/Grafana dashboards on monitoring.
 - **Logs**: Loki dashboard in Grafana
 - **Terraform**: terraform/kubernetes/ directory
 

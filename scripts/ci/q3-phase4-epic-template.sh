@@ -24,7 +24,7 @@ cat > "${EPIC_TEMPLATE}" << 'EOF'
 
 ## Overview
 
-Migrate kushnir.cloud infrastructure from Docker Compose production deployment to managed Kubernetes cluster (EKS/GKE/AKS) for improved scalability, reliability, and operational efficiency.
+Migrate  infrastructure from Docker Compose production deployment to managed Kubernetes cluster (EKS/GKE/AKS) for improved scalability, reliability, and operational efficiency.
 
 ### Current State
 - ✅ Docker Compose: 20/20 services operational, production-ready

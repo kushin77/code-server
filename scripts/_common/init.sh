@@ -30,16 +30,39 @@ export REPO_ROOT SCRIPT_DIR
 # PHASE 2: Logging helpers (maintain backward compatibility)
 # ==============================================================================
 
+# JSON Formatter for SLOG integration
+_slog_json() {
+  local level="$1"
+  shift
+  local message="$*"
+  # Sanitize message for JSON (escape double quotes)
+  local sanitized_message="${message//\"/\\\"}"
+  printf '{"timestamp": "%s", "level": "%s", "message": "%s", "host": "%s", "epic": "1532", "service": "shell-script"}\n' \
+    "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$level" "$sanitized_message" "${HOSTNAME:-unknown}"
+}
+
 log_info() {
-  printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  if [[ "${STRUCTURED_LOGGING:-0}" == "1" ]]; then
+    _slog_json "INFO" "$*"
+  else
+    printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  fi
 }
 
 log_success() {
-  printf '[%s] [SUCCESS] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  if [[ "${STRUCTURED_LOGGING:-0}" == "1" ]]; then
+    _slog_json "SUCCESS" "$*"
+  else
+    printf '[%s] [SUCCESS] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  fi
 }
 
 log_warn() {
-  printf '[%s] [WARN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  if [[ "${STRUCTURED_LOGGING:-0}" == "1" ]]; then
+    _slog_json "WARN" "$*" >&2
+  else
+    printf '[%s] [WARN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  fi
 }
 
 log_warning() {
@@ -47,10 +70,14 @@ log_warning() {
 }
 
 log_error() {
-  printf '[%s] [ERROR] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  if [[ "${STRUCTURED_LOGGING:-0}" == "1" ]]; then
+    _slog_json "ERROR" "$*" >&2
+  else
+    printf '[%s] [ERROR] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  fi
 }
 
-export -f log_info log_success log_warn log_warning log_error
+export -f log_info log_success log_warn log_warning log_error _slog_json
 
 # ==============================================================================
 # PHASE 3: Utility functions for IaC compliance

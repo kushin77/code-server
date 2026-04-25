@@ -9,6 +9,9 @@
 import logging
 import asyncio
 from datetime import datetime
+from apps._common.logging import setup_logging
+from apps._common.tracing import setup_tracing
+from prometheus_fastapi_instrumentator import Instrumentator
 from typing import Optional, List, Dict
 from fastapi import FastAPI, Query, HTTPException, BackgroundTasks, Body, Request
 from contextlib import asynccontextmanager
@@ -29,7 +32,7 @@ from audit_logging import get_audit_logger, AuditLogger
 from sandbox_enforcement import SandboxOrchestrator, SandboxConstraint
 from config import get_config, get_agent_constraints
 
-logging.basicConfig(level=logging.INFO)
+setup_logging("agent-runtime")
 logger = logging.getLogger(__name__)
 
 # Initialize configuration (readonly, from environment)
@@ -176,6 +179,12 @@ app = FastAPI(
     version="1.0",
     lifespan=lifespan
 )
+
+# Setup Tracing
+setup_tracing("agent-runtime", app)
+
+# Instrument with Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 
 # ============================================================================

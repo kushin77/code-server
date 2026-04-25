@@ -1288,6 +1288,23 @@ services:
   # ── Grafana Tempo ────────────────────────────────────────────────────────────
   # Distributed tracing backend — stores and queries traces via OTLP
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
+  tempo-init:
+    image: alpine:3.20
+    container_name: tempo-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /var/tempo; owner="$$(stat -c '%u:%g' /var/tempo 2>/dev/null || true)"; [ "$$owner" = "10001:10001" ] || chown -R 10001:10001 /var/tempo
+    volumes:
+      - tempo_data:/var/tempo
+    restart: "no"
+    networks:
+      - services
+    profiles:
+      - "observability"
+      - "all"
+
   tempo:
     image: grafana/tempo:2.4.1@sha256:cf1ed1d5cc671c80d389f7c59cfa491a9e5b99d28a42fccb9d6cbbef0da378e4
     container_name: tempo-traces
@@ -1314,6 +1331,9 @@ services:
     restart: unless-stopped
     networks:
       - services
+    depends_on:
+      tempo-init:
+        condition: service_completed_successfully
     logging:
       driver: "json-file"
       options:

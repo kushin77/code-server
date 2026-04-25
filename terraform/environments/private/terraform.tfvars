@@ -4,13 +4,16 @@
 # @automation MUST be sourced from scripts/_common/_base-config.env - NEVER hardcode
 # @immutable VERSION PINNED - All container digests immutable for reproducibility
 
-# DEPLOYMENT TARGETS (from canonical config)
-apex_domain     = "kushnir.cloud"
-primary_host    = "192.168.168.31"
-replica_host    = "192.168.168.42"
-nas_host        = "192.168.168.56"
-registry_url    = "registry.kushnir.cloud:5000"
-admin_email     = "ops@kushnir.cloud"
+# DEPLOYMENT TARGETS (from canonical config via TF_VAR_ environment variables)
+# NOTE: These values are sourced from environment variables at runtime
+# Do NOT hardcode values here - use 'export TF_VAR_apex_domain="kushnir.cloud"'
+# Or set defaults in variables.tf
+# apex_domain     = "kushnir.cloud"     # ← Use TF_VAR_apex_domain instead
+# primary_host    = "192.168.168.31"    # ← Use TF_VAR_primary_host instead
+# replica_host    = "192.168.168.42"    # ← Use TF_VAR_replica_host instead
+# nas_host        = "192.168.168.56"    # ← Use TF_VAR_nas_host instead
+# registry_url    = "registry.kushnir.cloud:5000"  # ← Use TF_VAR_registry_domain
+# admin_email     = "ops@kushnir.cloud" # ← Use TF_VAR_admin_email
 
 # DEPLOYMENT MODE (immutable)
 deployment_mode = "private"    # Options: private, air-gapped, federated

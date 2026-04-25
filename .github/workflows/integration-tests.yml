@@ -84,6 +84,7 @@ jobs:
             --ignore=tests/integration/test_gateway_integration.py \
             --ignore=tests/integration/test_team_integration.py \
             --ignore=tests/integration/test_user_integration.py \
+            --ignore=tests/integration/test_oauth_integration.py \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml \

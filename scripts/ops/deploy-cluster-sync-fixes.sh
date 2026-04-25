@@ -205,7 +205,7 @@ deploy_restart_services() {
 deploy_install_daemon() {
   log INFO "Step 4/5: Installing continuous sync daemon..."
   
-  local cmd="cd ~/code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --install-cron"
+  local cmd="cd ~/code-server-enterprise && PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} NAS_HOST=${NAS_HOST} APEX_DOMAIN=${APEX_DOMAIN} bash scripts/ops/cluster-sync-daemon.sh --install-cron"
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $cmd"
@@ -236,7 +236,7 @@ deploy_install_daemon() {
 deploy_verify() {
   log INFO "Step 5/5: Verifying deployment..."
   
-  local verify_cmd="cd ~/code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --status"
+  local verify_cmd="cd ~/code-server-enterprise && PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} NAS_HOST=${NAS_HOST} APEX_DOMAIN=${APEX_DOMAIN} bash scripts/ops/cluster-sync-daemon.sh --status"
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $verify_cmd"

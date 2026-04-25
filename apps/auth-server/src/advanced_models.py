@@ -80,10 +80,6 @@ class UserDevice(Base):
     is_current = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     last_seen = Column(DateTime, nullable=True)
-    
-    __table_args__ = (
-        Index("ix_user_devices_user_id", "user_id"),
-    )
 
 
 # ============================================================================
@@ -150,10 +146,6 @@ class RecoveryCode(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     used_at = Column(DateTime, nullable=True, index=True)
-    
-    __table_args__ = (
-        Index("ix_recovery_codes_user_id", "user_id"),
-    )
 
 
 # ============================================================================

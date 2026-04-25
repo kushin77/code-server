@@ -1,13 +1,20 @@
 #!/bin/bash
 
 ###
-# @file scripts/ops/sla-metrics-reporter.sh
-# @module operations/sla
-# @description Collect and report on SLA compliance metrics
-# @governance GOV-002: All SLA metrics audited and reported for accountability
+# @governance: SLA metrics reporting — track availability and performance
+# Purpose: Collect and report on SLA compliance metrics
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1537 (SLO Framework)
 ###
 
 set -euo pipefail
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SLA_AVAILABILITY_TARGET="${SLA_AVAILABILITY_TARGET:-99.9}"
+readonly SLA_LATENCY_P99_MS="${SLA_LATENCY_P99_MS:-200}"
+readonly REPORT_INTERVAL_MINUTES="${REPORT_INTERVAL_MINUTES:-60}"
 
 # ============================================================================
 # Logging Functions

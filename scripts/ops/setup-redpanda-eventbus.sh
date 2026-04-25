@@ -7,10 +7,13 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REDPANDA_DATA_PATH="${REPO_ROOT}/data/redpanda"
-KAFKA_CONFIG="${REPO_ROOT}/config/kafka-topics.yaml"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly REDPANDA_DATA_PATH="${REDPANDA_DATA_PATH:-${REPO_ROOT}/data/redpanda}"
+readonly KAFKA_CONFIG="${KAFKA_CONFIG:-${REPO_ROOT}/config/kafka-topics.yaml}"
+readonly REDPANDA_PORT="${REDPANDA_PORT:-9092}"
+readonly REDPANDA_ADMIN_PORT="${REDPANDA_ADMIN_PORT:-9644}"
+readonly REDPANDA_HEALTH_CHECK_ATTEMPTS="${REDPANDA_HEALTH_CHECK_ATTEMPTS:-30}"
 
 mkdir -p "${REDPANDA_DATA_PATH}" "$(dirname "${KAFKA_CONFIG}")"
 
@@ -27,7 +30,7 @@ log_success() {
 }
 
 wait_for_redpanda_health() {
-  local max_attempts=30
+  local max_attempts="${REDPANDA_HEALTH_CHECK_ATTEMPTS}"
   local attempt=0
 
   while [[ ${attempt} -lt ${max_attempts} ]]; do

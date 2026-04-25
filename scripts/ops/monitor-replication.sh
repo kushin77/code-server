@@ -1,20 +1,21 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/monitor-replication.sh
-# @module      ops/monitor-replication
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: Database replication monitoring — track lag and health
+# Purpose: Monitors database replication lag and status for PostgreSQL and Redis
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Replica Deployment)
 ###############################################################################
-# @file scripts/ops/monitor-replication.sh
-# @description Monitors database replication lag and status for PostgreSQL and Redis.
-# @governance GOV-002
 
 set -euo pipefail
 
-# Configuration
-PG_USER=${DB_USER:?DB_USER must be set}
+# Configuration (all env-var driven)
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DB_USER="${DB_USER:-postgres}"
+readonly DB_CONTAINER="${DB_CONTAINER:-postgres}"
+readonly PG_LAG_WARNING_THRESHOLD="${PG_LAG_WARNING_THRESHOLD:-1048576}"  # 1MB in bytes
+readonly REDIS_CONTAINER="${REDIS_CONTAINER:-redis}"
 
 log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
 log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
@@ -27,7 +28,7 @@ check_pg_replication() {
     # Query replication lag using docker exec to avoid local dependencies
     QUERY="SELECT client_addr, state, sent_lsn, write_lsn, flush_lsn, replay_lsn, pg_wal_lsn_diff(sent_lsn, replay_lsn) AS replication_lag_bytes FROM pg_stat_replication;"
     
-    RESULT=$(docker exec postgres psql -U "$PG_USER" -c "$QUERY" 2>/dev/null || true)
+    RESULT=$(docker exec "${DB_CONTAINER}" psql -U "${DB_USER}" -c "$QUERY" 2>/dev/null || true)
     
     if [[ -z "$RESULT" ]] || [[ "$RESULT" == *"0 rows"* ]]; then
         log_warn "No PostgreSQL replication slots active or unable to query."

@@ -7,11 +7,13 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-LOG_FILE="${REPO_DIR}/logs/tls-validation.log"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/tls-validation.log}"
+readonly TLS_MIN_VERSION="${TLS_MIN_VERSION:-1.2}"
+readonly CADDYFILE="${CADDYFILE:-${REPO_DIR}/Caddyfile}"
 
-mkdir -p "${REPO_DIR}/logs"
+mkdir -p "$(dirname "${LOG_FILE}")"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"

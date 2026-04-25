@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:b1ad68e8e2e89c6a9db7b025e02e55b9a6e6556f088f1577f68e06d9e88e31d5
+FROM python:3.11-slim@sha256:6d85378d88a19cd4d76079817532d62232be95757cb45945a99fec8e8084b9c2
 
 LABEL org.opencontainers.image.title="Execution Scheduler"
 LABEL org.opencontainers.image.description="Intelligent task routing for local/CI/edge/cloud execution"

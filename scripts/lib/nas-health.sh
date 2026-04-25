@@ -14,7 +14,7 @@ source "${REPO_ROOT}/scripts/_common/_base-config.env"
 source "${REPO_ROOT}/scripts/lib/nas.sh"
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
+# All configuration via environment variables from _base-config.env
 NAS_MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas}"
 NAS_MAX_LATENCY_MS="${NAS_MAX_LATENCY_MS:-100}"
 NAS_DISK_USAGE_ALERT_PCT="${NAS_DISK_USAGE_ALERT_PCT:-80}"

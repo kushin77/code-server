@@ -99,7 +99,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Notes" >> $GITHUB_STEP_SUMMARY
           echo "- Full k6 tests require live kushnir.cloud endpoint (GitHub Actions runners behind NAT)" >> $GITHUB_STEP_SUMMARY
-          echo "- For production testing: run from code-server primary host (192.168.168.31) with internal network access" >> $GITHUB_STEP_SUMMARY
+          echo "- For production testing: run from \${PRIMARY_HOST:-primary-host} with internal network access" >> $GITHUB_STEP_SUMMARY
           echo "- Smoke test runs in CI to validate k6 syntax; no actual load metrics available in CI environment" >> $GITHUB_STEP_SUMMARY
 
   # ── E2E Browser Performance ──────────────────────────────────────────────────

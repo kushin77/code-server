@@ -1259,7 +1259,7 @@ services:
   # Reference: https://github.com/kushin77/code-server/issues/1546
   #
   # For this deployment, provide OLLAMA_HOST env var pointing to external ollama:
-  #   export OLLAMA_HOST=http://192.168.168.31:11434  # or your deployment
+  #   export OLLAMA_HOST=http://${OLLAMA_HOST_IP:-ollama-host}:11434  # or your deployment
   #
   # Services below reference ollama via ${OLLAMA_HOST} environment variable
 

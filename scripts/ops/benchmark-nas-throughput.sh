@@ -14,9 +14,7 @@ source "${REPO_ROOT}/scripts/_common/_base-config.env"
 source "${REPO_ROOT}/scripts/lib/nas.sh"
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
+# All infrastructure hosts come from _base-config.env (SSOT)
 NAS_MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas}"
 
 DRY_RUN="${DRY_RUN:-0}"

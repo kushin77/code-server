@@ -340,11 +340,7 @@ services:
       - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
       - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
     healthcheck:
-      test:
-        - CMD
-        - curl
-        - "-f"
-        - "http://localhost:6333/healthz"
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -417,6 +413,55 @@ services:
           memory: 512m
     profiles:
       - "ai"
+
+  multimodal-ai:
+    build:
+      context: apps/multimodal-ai
+      dockerfile: Dockerfile
+    container_name: multimodal-ai
+    user: "1000:1000"
+    ports:
+      - "8040:8040"
+    environment:
+      - VISION_BACKEND=${VISION_BACKEND:-ollama}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_VISION_MODEL=${OLLAMA_VISION_MODEL:-llava:13b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3:8b}
+      - DIAGRAM_LLM_BACKEND=${DIAGRAM_LLM_BACKEND:-ollama}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - TTS_BACKEND=${TTS_BACKEND:-gtts}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8040/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "ai"
+    labels:
+      io.elevatediq.component: "multimodal-ai"
+      io.elevatediq.tier: "application"
 
   reputation-engine:
     build:

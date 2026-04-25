@@ -21,11 +21,17 @@ NC='\033[0m'
 # CONFIGURATION (Environment-Driven Variables with Defaults)
 ################################################################################
 
+# Load network configuration SSOT
+source "scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 # VRRP Configuration
 VRRP_ROUTER_ID="${VRRP_ROUTER_ID:-1}"
 VRRP_INTERFACE="${VRRP_INTERFACE:-eth0}"
-VRRP_VIRTUAL_IP="${VRRP_VIRTUAL_IP:-192.168.168.100}"
-VRRP_AUTH_PASS="${VRRP_AUTH_PASS:-KushnirCloudHA123}"  # Override in production!
+VRRP_VIRTUAL_IP="${VRRP_VIRTUAL_IP:-${ONPREM_VRRP_VIP}}"
+VRRP_AUTH_PASS="${VRRP_AUTH_PASS:-${VRRP_AUTH_PASSWORD}}"  # Override in production!
 VRRP_HEARTBEAT_INTERVAL="${VRRP_HEARTBEAT_INTERVAL:-1}"  # seconds
 
 # Node Role and Priority

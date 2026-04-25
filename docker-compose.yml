@@ -1530,7 +1530,6 @@ services:
     build:
       context: apps/copilot-engine
       dockerfile: Dockerfile
-    image: copilot-engine:1.0.0
     container_name: copilot-engine
     user: "1010:1010"  # @security GOV-002 - non-root copilot user
     ports:

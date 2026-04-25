@@ -1,5 +1,3 @@
-version: "3.9"
-
 # @file docker-compose.override.yml
 # @module infrastructure
 # @description Local development overrides for Docker Compose services

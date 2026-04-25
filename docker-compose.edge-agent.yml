@@ -2,8 +2,6 @@
 # This file demonstrates how to integrate edge agents with the main deployment
 # Reference: docker-compose.yml (include this via docker-compose -f)
 
-version: '3.9'
-
 services:
   # Control Plane API (orchestrates edge agents)
   control-plane-edge-api:

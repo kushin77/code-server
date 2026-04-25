@@ -1,5 +1,3 @@
-version: "3.9"
-
 # @file docker-compose.yml
 # @module infrastructure
 # @description Production-grade Docker Compose for ElevatedIQ DevOS stack

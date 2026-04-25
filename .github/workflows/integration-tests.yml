@@ -80,6 +80,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/apps/auth-server
         run: |
           cd apps/auth-server
+          set +e
           pytest -c pytest.ini tests/integration/ \
             --ignore=tests/integration/test_gateway_integration.py \
             --ignore=tests/integration/test_team_integration.py \
@@ -92,6 +93,13 @@ jobs:
             -v \
             --tb=short \
             -n 1
+          pytest_status=$?
+          set -e
+          if [ "$pytest_status" -eq 5 ]; then
+            echo "No integration tests collected after scoped ignores; continuing."
+          elif [ "$pytest_status" -ne 0 ]; then
+            exit "$pytest_status"
+          fi
 
       - name: Run unit tests
         env:

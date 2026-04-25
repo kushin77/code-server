@@ -1,25 +1,24 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/harden-ssl-tls.sh
-# @module      ops/harden-ssl-tls
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: SSL/TLS hardening — enforce modern crypto for all services
+# Purpose: Hardens SSL/TLS configuration for Caddy, OPA, and other services
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #412 (Security P0)
 ###############################################################################
-# @file scripts/ops/harden-ssl-tls.sh
-# @description Hardens SSL/TLS configuration for Caddy, OPA, and other services.
-# @governance GOV-002
 
 set -euo pipefail
 
-# Configuration
-CERT_DIR="certs/ssl"
-CA_CERT="$CERT_DIR/ca.crt"
-CA_KEY="$CERT_DIR/ca.key"
-SERVER_CERT="$CERT_DIR/server.crt"
-SERVER_KEY="$CERT_DIR/server.key"
-DAYS=365
+# Configuration (all env-var driven)
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly CERT_DIR="${CERT_DIR:-${PROJECT_ROOT}/certs/ssl}"
+readonly CA_CERT="${CA_CERT:-${CERT_DIR}/ca.crt}"
+readonly CA_KEY="${CA_KEY:-${CERT_DIR}/ca.key}"
+readonly SERVER_CERT="${SERVER_CERT:-${CERT_DIR}/server.crt}"
+readonly SERVER_KEY="${SERVER_KEY:-${CERT_DIR}/server.key}"
+readonly CERT_VALIDITY_DAYS="${CERT_VALIDITY_DAYS:-365}"
+readonly TLS_MIN_VERSION="${TLS_MIN_VERSION:-1.2}"
 
 log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
 log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }

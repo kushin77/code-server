@@ -7,13 +7,17 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CERT_DIR="${REPO_DIR}/vault-tls/postgres"
-CONFIG_DIR="${REPO_DIR}/config/postgres"
-LOG_FILE="${REPO_DIR}/logs/postgres-ssl-config.log"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly CERT_DIR="${CERT_DIR:-${REPO_DIR}/vault-tls/postgres}"
+readonly CONFIG_DIR="${CONFIG_DIR:-${REPO_DIR}/config/postgres}"
+readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/postgres-ssl-config.log}"
+readonly SSL_MODE="${SSL_MODE:-require}"
+readonly SSL_CERT_FILE="${SSL_CERT_FILE:-${CERT_DIR}/server.crt}"
+readonly SSL_KEY_FILE="${SSL_KEY_FILE:-${CERT_DIR}/server.key}"
+readonly SSL_CA_FILE="${SSL_CA_FILE:-${CERT_DIR}/ca.crt}"
 
-mkdir -p "${CONFIG_DIR}" "${REPO_DIR}/logs"
+mkdir -p "${CONFIG_DIR}" "$(dirname "${LOG_FILE}")"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"

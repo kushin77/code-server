@@ -7,12 +7,14 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CONFIG_DIR="${REPO_DIR}/config"
-LOG_FILE="${REPO_DIR}/logs/network-policies.log"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly CONFIG_DIR="${CONFIG_DIR:-${REPO_DIR}/config}"
+readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/network-policies.log}"
+readonly DNS_DOMAIN="${DNS_DOMAIN:-paperclip.internal}"
+readonly NETWORK_BACKEND="${NETWORK_BACKEND:-bridge}"
 
-mkdir -p "${CONFIG_DIR}/network-policies" "${REPO_DIR}/logs"
+mkdir -p "${CONFIG_DIR}/network-policies" "$(dirname "${LOG_FILE}")"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"

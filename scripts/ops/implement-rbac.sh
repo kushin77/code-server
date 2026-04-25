@@ -1,27 +1,23 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/implement-rbac.sh
-# @module      ops/implement-rbac
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: RBAC implementation — enforce access control via OPA and Redis
+# Purpose: Implements Role-Based Access Control (RBAC) via OPA policies and service configuration
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #412 (Security P0)
 ###############################################################################
-# @file scripts/ops/implement-rbac.sh
-# @description Implements Role-Based Access Control (RBAC) via OPA policies and service configuration.
-# @governance GOV-002
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly OPA_POLICY_DIR="${OPA_POLICY_DIR:-${PROJECT_ROOT}/policies}"
+readonly REDIS_ACL_TEMPLATE="${REDIS_ACL_TEMPLATE:-${PROJECT_ROOT}/config/redis.acl.example}"
+readonly RBAC_PROVIDER="${RBAC_PROVIDER:-opa}"
 
 log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
 log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
 log_error() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*"; }
-
-OPA_POLICY_DIR="${PROJECT_ROOT}/policies"
-REDIS_ACL_TEMPLATE="${PROJECT_ROOT}/config/redis.acl.example"
 
 setup_opa_rbac() {
     log_info "Configuring OPA RBAC policies..."

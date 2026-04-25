@@ -66,7 +66,7 @@ jobs:
           gzip ./state/backups/auth_db_backup.sql
           sha256sum ./state/backups/auth_db_backup.sql.gz > ./state/backups/auth_db_backup.sql.gz.sha256
 
-      - name: Run Drill 1: Backup Verification
+      - name: "Run Drill 1: Backup Verification"
         run: |
           chmod +x scripts/ops/disaster-recovery-drills.sh
           ./scripts/ops/disaster-recovery-drills.sh backup-verify
@@ -74,24 +74,24 @@ jobs:
         env:
           BACKUP_DIR: ./state/backups
 
-      - name: Run Drill 2: Point-in-Time Restore
+      - name: "Run Drill 2: Point-in-Time Restore"
         run: |
           ./scripts/ops/disaster-recovery-drills.sh pitr
         continue-on-error: true
         env:
           BACKUP_DIR: ./state/backups
 
-      - name: Run Drill 3: Failover to Replica
+      - name: "Run Drill 3: Failover to Replica"
         run: |
           ./scripts/ops/disaster-recovery-drills.sh failover
         continue-on-error: true
 
-      - name: Run Drill 4: Failback to Primary
+      - name: "Run Drill 4: Failback to Primary"
         run: |
           ./scripts/ops/disaster-recovery-drills.sh failback
         continue-on-error: true
 
-      - name: Run Drill 5: Cluster Health Verification
+      - name: "Run Drill 5: Cluster Health Verification"
         run: |
           ./scripts/ops/disaster-recovery-drills.sh cluster-health
         continue-on-error: true

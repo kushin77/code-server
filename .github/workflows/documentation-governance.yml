@@ -62,16 +62,8 @@ jobs:
 
             if [ "$MISSING" -gt 0 ]; then
               REPORT=$(cat artifacts/documentation-gap-issues.md)
-              github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" -b "## Documentation Gap Analysis
-
-**Coverage**: ${COVERAGE}%
-**Missing Documents**: ${MISSING}
-
-\`\`\`
-${REPORT}
-\`\`\`
-
-Please address documentation gaps before merge."
+              MSG="## Documentation Gap Analysis\n\n**Coverage**: ${COVERAGE}%\n**Missing Documents**: ${MISSING}\n\n\`\`\`\n${REPORT}\n\`\`\`\n\nPlease address documentation gaps before merge."
+              github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" -b "${MSG}"
             fi
           fi
 

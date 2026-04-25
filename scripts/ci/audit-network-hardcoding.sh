@@ -22,7 +22,7 @@
 # 1 = Violations found (requires remediation)
 ###############################################################################
 
-set -euo pipefail
+set -uo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -124,17 +124,17 @@ for var in "${REQUIRED_ENV_VARS[@]}"; do
     echo "  Checking for \$$var or \${$var} usage..." | tee -a "$AUDIT_LOG"
     
     # Terraform pattern: var.primary_host
-    if grep -r "var\\.$(echo $var | tr '[:upper:]' '[:lower:]')" "$REPO_ROOT/terraform" 2>/dev/null | head -1 > /dev/null; then
+    if grep -r "var\.$(echo $var | tr '[:upper:]' '[:lower:]')" "$REPO_ROOT/terraform" 2>/dev/null | grep . > /dev/null; then
         ((TERRAFORM_PATTERNS_FOUND++))
     fi
     
     # Shell pattern: $PRIMARY_HOST or ${PRIMARY_HOST}
-    if grep -r "$var" "$REPO_ROOT/scripts" 2>/dev/null | grep -v "audit-network-hardcoding.sh" | head -1 > /dev/null; then
+    if grep -r "$var" "$REPO_ROOT/scripts" 2>/dev/null | grep -v "audit-network-hardcoding.sh" | grep . > /dev/null; then
         ((SHELL_PATTERNS_FOUND++))
     fi
     
     # Compose pattern: ${PRIMARY_HOST}
-    if grep -r "\${$var}" "$REPO_ROOT"/docker-compose*.yml 2>/dev/null | head -1 > /dev/null; then
+    if grep -r "\${$var}" "$REPO_ROOT"/*.yml 2>/dev/null | grep . > /dev/null; then
         ((COMPOSE_PATTERNS_FOUND++))
     fi
 done

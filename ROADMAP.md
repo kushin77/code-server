@@ -51,7 +51,7 @@
 - [ ] Scale Qdrant Vector DB for multi-tenant organizational memory
 - [ ] Implement real-time code generation pipelines with fine-tuned local LLMs
 - [ ] Advanced Team Coordination (Phase 8): ML-based task routing and capacity forecasting
-- [ ] Multi-modal AI processing for architectural diagram analysis
+- [ ] Multi-modal AI processing for architectural diagram analysis (see [kushin77/ollama](https://github.com/kushin77/ollama))
 
 ### 🛡️ Phase 7: Business Continuity & Compliance
 - [ ] Achieve SOC2 Type 1 / ISO27001 readiness

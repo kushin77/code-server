@@ -239,7 +239,7 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./config/caddy:/etc/caddy:ro
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
@@ -291,7 +291,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./config:/prometheus-config:ro
+      - ./config/prometheus.yml:/prometheus-config/prometheus.yml:ro
       - ./monitoring/alerts:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     environment:
@@ -376,7 +376,7 @@ services:
       - "3100:3100"
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./config/loki:/etc/loki:ro
+      - ./config/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki_data:/loki
     environment:
       - LOG_LEVEL=info

@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 class ReputationTierManager:
     """Query Reputation Engine for user tier and approval authority."""
 
-    def __init__(self, reputation_url: str = "http://reputation-engine:8002"):
-        self.reputation_url = reputation_url or os.getenv("REPUTATION_ENGINE_URL", "http://reputation-engine:8002")
+    def __init__(self, reputation_url: Optional[str] = None):
+        self.reputation_url = reputation_url or os.getenv("REPUTATION_ENGINE_URL", "http://reputation-engine:8000")
         self.timeout = 10
 
     def get_user_tier(self, user_id: str) -> Optional[str]:

@@ -164,6 +164,11 @@ main() {
 
   if [[ "${dry_run}" == "true" ]]; then
     health_check_timeout=0
+    # Set default test values for dry-run mode if not already set
+    export PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
+    export REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+    export NAS_HOST="${NAS_HOST:-192.168.168.50}"
+    export APEX_DOMAIN="${APEX_DOMAIN:-example.local}"
   fi
   
   log_info "=" 

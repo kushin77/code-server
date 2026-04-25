@@ -5,40 +5,42 @@
 # @module operations/readiness
 # @description Comprehensive production readiness verification
 # @governance GOV-002: All deployment gates verified and documented
-###
 
-# Don't use set -euo pipefail to allow graceful handling of missing tools
-trap 'exit 0' INT TERM
+set -euo pipefail
+
+# Gracefully handle missing tools (continue on soft errors)
+trap 'true' INT TERM
 
 # ============================================================================
 # Logging Functions
 # ============================================================================
 
 log_info() {
-  printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  printf '[INFO] %s\n' "$*"
 }
 
 log_success() {
-  printf '[%s] [✓] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  printf '[✓] %s\n' "$*"
 }
 
 log_warn() {
-  printf '[%s] [⚠] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  printf '[⚠] %s\n' "$*" >&2
 }
 
 log_error() {
-  printf '[%s] [✗] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  printf '[✗] %s\n' "$*" >&2
 }
 
 # ============================================================================
 # Configuration
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REPORT_FILE="${PROJECT_ROOT}/artifacts/production-readiness-$(date +%Y%m%d-%H%M%S).json"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly REPORT_DIR="${PROJECT_ROOT}/artifacts"
+readonly READINESS_REPORT_FILE="${READINESS_REPORT_FILE:-${REPORT_DIR}/production-readiness.json}"
 
-mkdir -p "${PROJECT_ROOT}/artifacts"
+mkdir -p "${REPORT_DIR}"
 
 declare -i CHECKS_TOTAL=0
 declare -i CHECKS_PASSED=0

@@ -14,32 +14,32 @@ set -euo pipefail
 # ============================================================================
 
 log_info() {
-  printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  printf '[INFO] %s\n' "$*"
 }
 
 log_success() {
-  printf '[%s] [SUCCESS] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+  printf '[SUCCESS] %s\n' "$*"
 }
 
 log_warn() {
-  printf '[%s] [WARN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  printf '[WARN] %s\n' "$*" >&2
 }
 
 log_error() {
-  printf '[%s] [ERROR] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+  printf '[ERROR] %s\n' "$*" >&2
 }
 
 # ============================================================================
 # Configuration
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-ENVIRONMENT=${1:-production}
-DEPLOYMENT_ID=$(date +%s)
-LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
-REPORT_FILE="${ARTIFACT_DIR}/deployment-pipeline-${DEPLOYMENT_ID}.json"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly ENVIRONMENT="${1:-${ENVIRONMENT:-production}}"
+readonly DEPLOYMENT_ID="${DEPLOYMENT_ID:-manual-${RANDOM}}"
+readonly LOG_FILE="${LOG_FILE:-${PROJECT_ROOT}/logs/deployment.log}"
+readonly ARTIFACT_DIR="${ARTIFACT_DIR:-${PROJECT_ROOT}/artifacts}"
+readonly REPORT_FILE="${REPORT_FILE:-${ARTIFACT_DIR}/deployment-pipeline.json}"
 
 # Argument flags
 FORCE_DEPLOY=false
@@ -55,9 +55,9 @@ done
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 source_env_file "${PROJECT_ROOT}/.env.infrastructure"
 
-: "${API_PROTOCOL:=http}"
-: "${API_HOST:=localhost}"
-: "${API_PORT:=3100}"
+: "${API_PROTOCOL:=${API_PROTOCOL:-http}}"
+: "${API_HOST:=${API_HOST:-localhost}}"
+: "${API_PORT:=${API_PORT:-3100}}"
 : "${API_ENDPOINT:=http://${API_HOST}:${API_PORT}}"
 : "${API_HEALTH_ENDPOINT:=${API_ENDPOINT}/health}"
 

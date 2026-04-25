@@ -19,9 +19,9 @@ source "${PROJECT_ROOT}/scripts/_common/init.sh"
 # ============================================================================
 
 ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
-REPORT_FILE="${ARTIFACT_DIR}/infrastructure-health-check-$(date +%s).json"
-CRITICAL_THRESHOLD=1
-WARNING_THRESHOLD=3
+REPORT_FILE="${HEALTH_REPORT_FILE:-${ARTIFACT_DIR}/infrastructure-health-check.json}"
+CRITICAL_THRESHOLD="${CRITICAL_THRESHOLD:-1}"
+WARNING_THRESHOLD="${WARNING_THRESHOLD:-3}"
 
 mkdir -p "${ARTIFACT_DIR}"
 

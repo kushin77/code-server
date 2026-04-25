@@ -1,10 +1,12 @@
 #!/bin/bash
-
-# @file        scripts/lib/nas.sh
-# @module      operations/nas
-# @description NAS mount latency and retry helpers
-# @governance  GOV-002: Immutable, version-controlled, no hardcoded secrets
-# Issue #1536: NAS / 10G Network Throughput
+# @governance: NAS mount health checks and retry logic — immutable, env-driven configuration
+# Purpose: Provides health monitoring and exponential backoff retry helpers for NAS operations
+# Author: Infrastructure Team
+# Date: 2026-04-25
+# Related issues: #1536
+#
+# All configuration via environment variables with sensible defaults.
+# No hardcoded paths, thresholds, or credentials.
 
 set -euo pipefail
 

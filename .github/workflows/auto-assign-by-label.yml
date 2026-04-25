@@ -1,0 +1,68 @@
+name: Auto-Assign Issue by Labels
+
+on:
+  issues:
+    types:
+      - opened
+      - labeled
+  pull_request:
+    types:
+      - opened
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to process
+        required: true
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine issue/PR number
+        id: issue_num
+        run: |
+          if [ -n "${{ github.event.issue.number }}" ]; then
+            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+            echo "type=issue" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.pull_request.number }}" ]; then
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "type=pr" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
+            echo "type=issue" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Auto-assign based on labels
+        run: |
+          chmod +x scripts/automation/auto-assign-by-label.sh
+          bash scripts/automation/auto-assign-by-label.sh ${{ steps.issue_num.outputs.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log automation execution
+        if: always()
+        run: |
+          echo "## Auto-Assign Execution" >> $GITHUB_STEP_SUMMARY
+          echo "Item: #${{ steps.issue_num.outputs.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "Type: ${{ steps.issue_num.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          if [ -d "artifacts/automation-logs" ]; then
+            echo "\n### Logs:" >> $GITHUB_STEP_SUMMARY
+            tail -20 artifacts/automation-logs/*.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          fi
+
+      - name: Upload automation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-assign-logs
+          path: artifacts/automation-logs/
+          retention-days: 7

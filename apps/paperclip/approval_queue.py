@@ -27,7 +27,11 @@ class ApprovalQueue:
         self._escalation_policy = self._load_escalation_policy(config_path)
 
     def _default_config_path(self) -> Path:
-        return Path(__file__).resolve().parents[2] / "config" / "paperclip.yaml"
+        source_path = Path(__file__).resolve()
+        # Supports both repo layout (apps/paperclip/...) and container mount layout (/app/...)
+        if len(source_path.parents) >= 3:
+            return source_path.parents[2] / "config" / "paperclip.yaml"
+        return source_path.parent / "config" / "paperclip.yaml"
 
     def _load_escalation_policy(self, config_path: Optional[str]) -> Dict[str, Dict[str, object]]:
         policy = deepcopy(DEFAULT_ESCALATION_POLICY)

@@ -3,19 +3,20 @@
 # PURPOSE: Kubernetes Service template for internal and external communication
 # PATTERN: ClusterIP for internal, LoadBalancer for API gateway
 
-{{- if .Values.services }}
-{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- $root := . -}}
+{{- if $root.Values.services }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
 {{- if $serviceConfig.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "code-server-enterprise.fullname" . }}-{{ $serviceConfig.name }}
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
   labels:
-    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $serviceConfig.name }}
   annotations:
-    {{- toYaml .Values.annotations | nindent 4 }}
+    {{- toYaml $root.Values.annotations | nindent 4 }}
 spec:
   type: {{ if eq $serviceConfig.name "api" }}LoadBalancer{{ else }}ClusterIP{{ end }}
   ports:
@@ -24,7 +25,7 @@ spec:
     protocol: TCP
     name: http
   selector:
-    {{- include "code-server-enterprise.selectorLabels" . | nindent 4 }}
+    {{- include "code-server-enterprise.selectorLabels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $serviceConfig.name }}
 {{- end }}
 {{- end }}

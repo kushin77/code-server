@@ -14,6 +14,8 @@ from typing import Dict, List, Optional, Any
 
 from prometheus_client import Counter, Gauge
 from pydantic import BaseModel, Field
+from kafka import KafkaProducer
+from kafka.errors import KafkaError
 
 # METRICS DEFINITION
 AGENT_REGISTRATIONS = Counter("edge_agent_registrations_total", "Total registered edge agents", ["region"])
@@ -170,11 +172,30 @@ class EdgeAgentRegistryService:
         self._agents: Dict[str, EdgeAgentRecord] = {}
         self._replication_jobs: Dict[str, ReplicationJob] = {}
         self._event_log: List[ReplicationEvent] = []
+        # Initialize Kafka producer for event replication
+        try:
+            self._kafka_producer = KafkaProducer(
+                bootstrap_servers=self.config.kafka_bootstrap_servers.split(','),
+                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            )
+            logger.info(f"Kafka producer initialized: {self.config.kafka_bootstrap_servers}")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Kafka producer: {e}. Events will be logged only.")
+            self._kafka_producer = None
 
     def reset(self) -> None:
         self._agents.clear()
         self._replication_jobs.clear()
         self._event_log.clear()
+        
+        # Close Kafka producer gracefully
+        if self._kafka_producer:
+            try:
+                self._kafka_producer.flush()
+                self._kafka_producer.close()
+                logger.info("Kafka producer closed")
+            except Exception as e:
+                logger.warning(f"Error closing Kafka producer: {e}")
 
     async def _broadcast_event(self, event_type: str, data: Dict[str, Any]) -> ReplicationEvent:
         event = ReplicationEvent(
@@ -184,7 +205,29 @@ class EdgeAgentRegistryService:
             data=data
         )
         self._event_log.append(event)
-        # TODO: Implement actual Kafka producer send here
+        
+        # Send event to Kafka topic
+        if self._kafka_producer:
+            try:
+                future = self._kafka_producer.send(
+                    self.config.replication_topic,
+                    value={
+                        'event_id': event.event_id,
+                        'timestamp': event.timestamp.isoformat(),
+                        'type': event.type,
+                        'data': event.data
+                    }
+                )
+                # Wait for acknowledgment with timeout
+                future.get(timeout=5)
+                logger.info(f"Event published to Kafka: {event.event_id}")
+            except KafkaError as e:
+                logger.error(f"Failed to publish event to Kafka: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error publishing event: {e}")
+        else:
+            logger.info(f"Kafka producer unavailable. Event logged locally: {event.model_dump_json()}")
+        
         logger.info(f"Broadcasted event: {event.model_dump_json()}")
         return event
 

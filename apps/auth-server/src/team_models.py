@@ -78,7 +78,6 @@ class Organization(Base):
     members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
     
     __table_args__ = (
-        Index("ix_organizations_slug", "slug"),
         Index("ix_organizations_owner_id", "owner_id"),
     )
 

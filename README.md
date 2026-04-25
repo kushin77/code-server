@@ -134,8 +134,16 @@ See [ARCHITECTURE.md](docs/status/ARCHITECTURE.md),
 See [CONTRIBUTING.md](docs/status/CONTRIBUTING.md) and
 [GitHub Issues](https://github.com/kushin77/code-server/issues).
 
-## Governance SSOT
+## Governance & Repository Standards
 
+**Issue #1534**: Repository Governance (FAANG-standard structure, branch protection, CI enforcement)
+
+### Standards & Policies
+- Repository standards: [docs/governance/REPOSITORY-STANDARDS.md](docs/governance/REPOSITORY-STANDARDS.md) — Directory structure, naming conventions, SSOT principles
+- Branch protection configuration: [docs/governance/BRANCH-PROTECTION-CONFIG.md](docs/governance/BRANCH-PROTECTION-CONFIG.md) — Main branch rules, status checks, code reviews
+- Environment schema: [.env.schema.json](.env.schema.json) — Single Source of Truth for all environment variables
+
+### Elite Best Practices
 - Elite best-practices index: [docs/governance/elite-best-practices/README.md](docs/governance/elite-best-practices/README.md)
 - On-prem immutable/idempotent redeploy: [docs/governance/elite-best-practices/ssot/ON-PREM-REDEPLOY-IMMUTABLE-IDEMPOTENT.md](docs/governance/elite-best-practices/ssot/ON-PREM-REDEPLOY-IMMUTABLE-IDEMPOTENT.md)
 - Repository structure and clean-tree policy: [docs/governance/elite-best-practices/structure/ELITE-FOLDER-STRUCTURE.md](docs/governance/elite-best-practices/structure/ELITE-FOLDER-STRUCTURE.md)

@@ -28,12 +28,12 @@ export default defineConfig({
   // Reporter
   reporter: [
     ["list"],
-    ["html", { outputFolder: "../../artifacts/reports/playwright", open: "never" }],
-    ["json", { outputFile: "../../artifacts/reports/playwright/results.json" }],
+    ["html", { outputFolder: "../../artifacts/reports/playwright-html", open: "never" }],
+    ["json", { outputFile: "../../artifacts/reports/playwright-results.json" }],
   ],
 
   // Artifacts
-  outputDir: "../../artifacts/reports/playwright/traces",
+  outputDir: "../../artifacts/reports/playwright-traces",
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",

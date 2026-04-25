@@ -5,6 +5,7 @@
 # @governance GOV-002: Edge control-plane APIs must remain auditable and deterministic
 
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 
@@ -15,6 +16,8 @@ from service import (
     EdgeAgentRegistryService,
     ReplicationPlanRequest,
     ReplicationPlanResponse,
+    ReplicationJob,
+    ReplicationJobStatus,
     RoutingDecision,
     RoutingRequest,
 )
@@ -78,6 +81,35 @@ async def plan_replication(request: ReplicationPlanRequest) -> ReplicationPlanRe
         return registry_service.build_replication_plan(request)
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/replication/jobs", response_model=list[ReplicationJob])
+async def list_replication_jobs(
+    workspace_id: Optional[str] = None, agent_id: Optional[str] = None
+) -> list[ReplicationJob]:
+    return registry_service.list_replication_jobs(
+        workspace_id=workspace_id, target_agent_id=agent_id
+    )
+
+
+@app.get("/replication/jobs/{job_id}", response_model=ReplicationJob)
+async def get_replication_job(job_id: str) -> ReplicationJob:
+    try:
+        return registry_service.get_replication_job(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.patch("/replication/jobs/{job_id}", response_model=ReplicationJob)
+async def update_replication_job(
+    job_id: str, status: ReplicationJobStatus, error_message: Optional[str] = None
+) -> ReplicationJob:
+    try:
+        return registry_service.update_replication_status(
+            job_id, status, error_message=error_message
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 if __name__ == "__main__":

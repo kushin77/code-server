@@ -21,6 +21,7 @@ from service import (
     EdgeAgentRegistrationRequest,
     EdgeAgentRegistryService,
     EdgeAgentRuntimeState,
+    ReplicationJobStatus,
     ReplicationPlanRequest,
     RoutingRequest,
 )
@@ -183,6 +184,27 @@ class EdgeAgentRegistryTests(unittest.TestCase):
         self.assertEqual(plan.actions[0].source_agent_id, "edge-us-primary")
         self.assertEqual({action.target_region for action in plan.actions}, {"eu-west-1", "ap-south-1"})
         self.assertEqual(plan.missing_regions, [])
+
+    def test_replication_job_lifecycle(self):
+        job = self.service.create_replication_job(
+            workspace_id="ws-1",
+            source_agent_id="source-1",
+            target_agent_id="target-1",
+            assets=["a", "b"],
+            now=datetime(2026, 4, 24, 18, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(job.status, ReplicationJobStatus.PENDING)
+        self.assertEqual(job.workspace_id, "ws-1")
+
+        updated = self.service.update_replication_status(
+            job.job_id,
+            status=ReplicationJobStatus.COMPLETED,
+            now=datetime(2026, 4, 24, 18, 5, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(updated.status, ReplicationJobStatus.COMPLETED)
+        self.assertEqual(len(self.service.list_replication_jobs(workspace_id="ws-1")), 1)
 
 
 class EdgeAgentApiTests(unittest.TestCase):

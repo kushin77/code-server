@@ -109,6 +109,25 @@ class ReplicationAction(BaseModel):
     reason: str
 
 
+class ReplicationJobStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ReplicationJob(BaseModel):
+    job_id: str
+    workspace_id: str
+    source_agent_id: str
+    target_agent_id: str
+    assets: List[str]
+    status: ReplicationJobStatus = ReplicationJobStatus.PENDING
+    started_at: datetime
+    updated_at: datetime
+    error_message: Optional[str] = None
+
+
 class ReplicationPlanResponse(BaseModel):
     workspace_id: str
     strategy: str
@@ -120,9 +139,11 @@ class EdgeAgentRegistryService:
     def __init__(self, heartbeat_ttl_seconds: int = 90):
         self.heartbeat_ttl_seconds = heartbeat_ttl_seconds
         self._agents: Dict[str, EdgeAgentRecord] = {}
+        self._replication_jobs: Dict[str, ReplicationJob] = {}
 
     def reset(self) -> None:
         self._agents.clear()
+        self._replication_jobs.clear()
 
     def register_agent(
         self,
@@ -360,3 +381,65 @@ class EdgeAgentRegistryService:
 
     def _region_group(self, region: str) -> str:
         return region.split("-", 1)[0]
+
+    def create_replication_job(
+        self,
+        workspace_id: str,
+        source_agent_id: str,
+        target_agent_id: str,
+        assets: List[str],
+        now: Optional[datetime] = None,
+    ) -> ReplicationJob:
+        now = now or utcnow()
+        job_id = f"repl-{workspace_id}-{target_agent_id}-{int(now.timestamp())}"
+        job = ReplicationJob(
+            job_id=job_id,
+            workspace_id=workspace_id,
+            source_agent_id=source_agent_id,
+            target_agent_id=target_agent_id,
+            assets=assets,
+            started_at=now,
+            updated_at=now,
+        )
+        self._replication_jobs[job_id] = job
+        return job
+
+    def update_replication_status(
+        self,
+        job_id: str,
+        status: ReplicationJobStatus,
+        error_message: Optional[str] = None,
+        now: Optional[datetime] = None,
+    ) -> ReplicationJob:
+        now = now or utcnow()
+        job = self._replication_jobs.get(job_id)
+        if not job:
+            raise KeyError(f"replication job '{job_id}' not found")
+
+        updated = job.model_copy(
+            update={
+                "status": status,
+                "error_message": error_message,
+                "updated_at": now,
+            }
+        )
+        self._replication_jobs[job_id] = updated
+        return updated
+
+    def get_replication_job(self, job_id: str) -> ReplicationJob:
+        job = self._replication_jobs.get(job_id)
+        if not job:
+            raise KeyError(f"replication job '{job_id}' not found")
+        return job
+
+    def list_replication_jobs(
+        self,
+        workspace_id: Optional[str] = None,
+        target_agent_id: Optional[str] = None,
+    ) -> List[ReplicationJob]:
+        jobs = list(self._replication_jobs.values())
+        if workspace_id:
+            jobs = [j for j in jobs if j.workspace_id == workspace_id]
+        if target_agent_id:
+            jobs = [j for j in jobs if j.target_agent_id == target_agent_id]
+        return sorted(jobs, key=lambda j: j.started_at, reverse=True)

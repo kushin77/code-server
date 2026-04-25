@@ -341,7 +341,7 @@ source "${SCRIPT_DIR}/../scripts/_common/hosts.sh"
 
 # 1. Copy Prometheus rules
 echo "1/3: Configuring Prometheus alerting rules..."
-scp resource-limits-rules.yml "${SSH_USER}@${PRIMARY_HOST}:/etc/prometheus/rules/resource-limits.yml"
+scp "${SCRIPT_DIR}/resource-limits-rules.yml" "${SSH_USER}@${PRIMARY_HOST}:/etc/prometheus/rules/resource-limits.yml"
 ssh "${SSH_USER}@${PRIMARY_HOST}" "docker exec prometheus prometheus-reload-config"
 
 # 2. Import Grafana dashboard
@@ -349,7 +349,7 @@ echo "2/3: Importing Grafana dashboard..."
 curl -X POST http://grafana:3000/api/dashboards/db \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(cat /etc/grafana/api-token)" \
-  -d @resource-limits-dashboard.json
+  -d @"${SCRIPT_DIR}/resource-limits-dashboard.json"
 
 # 3. Configure alert notifications
 echo "3/3: Configuring alert notifications..."

@@ -23,6 +23,7 @@ source "${REPO_ROOT}/scripts/_common/hosts.sh"
 REPORT_DIR="${1:-.}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="${REPORT_DIR}/resource-profile-${TIMESTAMP}.json"
+mkdir -p "${REPORT_DIR}"
 
 echo "🔍 Starting Resource Profiling... ($(date))"
 echo "📊 Output: ${REPORT_FILE}"

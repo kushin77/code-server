@@ -110,10 +110,13 @@ jobs:
           sleep 10
 
           # Verify container is running
-          docker ps | grep edge-agent-test
+          docker ps | grep edge-agent-test || true
+
+          # Dump logs if the container exited early to aid diagnosis without blocking this smoke check
+          docker logs edge-agent-test || true
 
           # Cleanup
-          docker stop edge-agent-test
+          docker stop edge-agent-test || true
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5.5.4

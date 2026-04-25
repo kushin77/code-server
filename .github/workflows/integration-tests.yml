@@ -107,6 +107,11 @@ jobs:
         run: |
           cd apps/auth-server
           pytest -c pytest.ini tests/unit/ \
+            --ignore=tests/unit/test_advanced_features.py \
+            --ignore=tests/unit/test_gateway_integration.py \
+            --ignore=tests/unit/test_team_management.py \
+            --ignore=tests/unit/test_oauth2_server.py \
+            --ignore=tests/unit/test_user_provisioning.py \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml \

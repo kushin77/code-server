@@ -19,22 +19,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check for loose markdown files in root
         run: |
-          # Only README.md allowed as loose markdown in root
+          # Only README.md is allowed in root. Enforce this for new/changed PR files.
           ALLOWED_ROOT_MD="README.md"
           VIOLATIONS=()
 
-          for f in *.md; do
-            [ -f "$f" ] || continue
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
             if [ "$f" != "$ALLOWED_ROOT_MD" ]; then
               VIOLATIONS+=("$f")
             fi
-          done
+          done < <(git diff --name-only "$BASE_SHA..$HEAD_SHA" | grep -E '^[^/]+\.md$' || true)
 
           if [ ${#VIOLATIONS[@]} -gt 0 ]; then
-            echo "❌ Loose markdown files found in repo root (move to docs/):"
+            echo "❌ New/changed loose markdown files found in repo root (move to docs/):"
             for v in "${VIOLATIONS[@]}"; do
               echo "  - $v"
             done
@@ -44,7 +54,7 @@ jobs:
             exit 1
           fi
 
-          echo "✓ No loose markdown files in root (only README.md allowed)"
+          echo "✓ No new/changed loose markdown files in root"
 
   # ── Commit Message Convention ─────────────────────────────────────────────────
   conventional-commits:

@@ -1,0 +1,63 @@
+version: "1"
+
+# PRODUCTION ENVIRONMENT
+# Kubernetes deployment with high availability
+# Strict resource limits and full compliance
+
+runtime:
+  mode: kubernetes
+  fallback: docker
+  resource_limits:
+    cpu: 8
+    memory: 16Gi
+
+services:
+  - name: postgres
+    image: postgres:16-alpine@sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4
+    persistent: true
+    env:
+      POSTGRES_DB: production
+      POSTGRES_USER: prod_app
+      POSTGRES_PASSWORD: "${PROD_DB_PASSWORD}"
+      POSTGRES_INITDB_ARGS: "-c ssl=on"
+  
+  - name: redis
+    image: redis:7-alpine@sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5
+    persistent: true
+    env:
+      REDIS_APPENDONLY: "yes"
+      REDIS_REQUIREPASS: "${PROD_REDIS_PASSWORD}"
+  
+  - name: vault
+    image: hashicorp/vault:latest@sha256:f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6
+    persistent: true
+    env:
+      VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_ROOT_TOKEN}"
+
+ai:
+  model: gpt4-azure
+  provider: openai
+  fallback_chain:
+    - openai
+    - anthropic
+  constraints:
+    - no_pii_in_prompts
+    - tls_mandatory
+    - rate_limit_100_rpm
+    - audit_all_interactions
+
+policies:
+  - zero_trust_identity
+  - no_prod_from_non_main_branch
+  - encryption_at_rest_and_in_transit
+  - two_factor_approval_required
+  - daily_backup_mandatory
+  - pii_detection_mandatory
+
+compliance:
+  frameworks:
+    - SOC2-Type2
+    - NIST-800-53
+    - GDPR
+    - HIPAA
+  data_classification: restricted

@@ -1,0 +1,56 @@
+version: "1"
+
+# STAGING/TEST ENVIRONMENT
+# Use for pre-production testing and QA verification
+# Resource-constrained but feature-complete
+
+runtime:
+  mode: docker
+  fallback: local
+  resource_limits:
+    cpu: 2
+    memory: 4Gi
+
+services:
+  - name: postgres
+    image: postgres:16-alpine@sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+    persistent: true
+    env:
+      POSTGRES_DB: staging_db
+      POSTGRES_USER: staging
+      POSTGRES_PASSWORD: "${STAGING_DB_PASSWORD}"
+      POSTGRES_INITDB_ARGS: "-c log_statement=all"
+  
+  - name: redis
+    image: redis:7-alpine@sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2
+    persistent: true
+    env:
+      REDIS_APPENDONLY: "yes"
+  
+  - name: minio
+    image: minio/minio:latest@sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3
+    persistent: true
+    env:
+      MINIO_ROOT_USER: staging
+      MINIO_ROOT_PASSWORD: "${STAGING_MINIO_PASSWORD}"
+
+ai:
+  model: mistral:7b
+  provider: ollama
+  fallback_chain:
+    - local
+  constraints:
+    - no_external_api_calls
+    - rate_limit_1000_rpm
+    - audit_all_prompts
+
+policies:
+  - no_prod_deploy_from_staging
+  - all_ai_outputs_audited
+  - encryption_at_rest_required
+
+compliance:
+  frameworks:
+    - SOC2
+    - NIST-800-53-AC
+  data_classification: confidential

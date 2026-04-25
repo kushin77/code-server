@@ -1,0 +1,39 @@
+version: "1"
+
+# CI/CD ENVIRONMENT
+# Minimal configuration for GitHub Actions / GitLab CI
+# Fast startup, minimal resource usage
+
+runtime:
+  mode: docker
+  fallback: none
+  resource_limits:
+    cpu: 2
+    memory: 2Gi
+
+services:
+  - name: postgres
+    image: postgres:16-alpine@sha256:a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9
+    persistent: false
+    env:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test_password
+  
+  - name: redis
+    image: redis:7-alpine@sha256:b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0
+    persistent: false
+
+ai:
+  model: null
+  provider: none
+  constraints:
+    - no_ai_in_ci
+
+policies:
+  - fail_fast_on_errors
+  - no_external_dependencies
+
+compliance:
+  frameworks: []
+  data_classification: internal

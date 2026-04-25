@@ -213,6 +213,7 @@ class EdgeAgentRegistryService:
         # METRICS
         AGENT_REGISTRATIONS.labels(region=request.region).inc()
         ACTIVE_AGENTS.set(len(self.list_agents(include_stale=False)))
+        return record
 
     def record_heartbeat(
         self,
@@ -237,11 +238,12 @@ class EdgeAgentRegistryService:
         )
         self._agents[request.agent_id] = updated
           
-          # METRICS
-          AGENT_HEARTBEATS.labels(agent_id=request.agent_id).inc()
-          AGENT_CPU_USAGE.labels(agent_id=request.agent_id).set(request.runtime.cpu_utilization)
-          AGENT_MEM_USAGE.labels(agent_id=request.agent_id).set(request.runtime.memory_utilization)
-          AGENT_SESSIONS.labels(agent_id=request.agent_id).set(request.runtime.active_sessions)
+        # METRICS
+        AGENT_HEARTBEATS.labels(agent_id=request.agent_id).inc()
+        AGENT_CPU_USAGE.labels(agent_id=request.agent_id).set(request.runtime.cpu_utilization)
+        AGENT_MEM_USAGE.labels(agent_id=request.agent_id).set(request.runtime.memory_utilization)
+        AGENT_SESSIONS.labels(agent_id=request.agent_id).set(request.runtime.active_sessions)
+        return updated
           
 
     def list_agents(

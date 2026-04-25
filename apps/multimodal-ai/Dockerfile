@@ -1,6 +1,6 @@
 # @file apps/multimodal-ai/Dockerfile
 # @governance GOV-002 - SHA-pinned base image, non-root user, immutable build
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:6d85378d88a19cd4d76079817532d62232be95757cb45945a99fec8e8084b9c2
 
 WORKDIR /app
 

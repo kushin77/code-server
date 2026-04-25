@@ -74,20 +74,23 @@ validate_env_var_pattern() {
   )
   
   local search_paths=()
-  local candidates=(
-    "${REPO_ROOT}/terraform"
-    "${REPO_ROOT}/config"
-    "${REPO_ROOT}/scripts"
-    "${REPO_ROOT}/docs"
-    "${REPO_ROOT}/Caddyfile"
-    "${REPO_ROOT}/docker-compose.yml"
+  mapfile -t search_paths < <(
+    git -C "${REPO_ROOT}" ls-files -- \
+      'Caddyfile' \
+      'docker-compose*.yml' \
+      'docker/**/*.yml' \
+      'docker/**/*.yaml' \
+      'config/**/*.cfg' \
+      'config/**/*.yml' \
+      'config/**/*.yaml' \
+      'config/**/*.tpl' \
+      'monitoring/**/*.yml' \
+      'monitoring/**/*.yaml' \
+      'scripts/**/*.sh' \
+      'scripts/**/*.env' \
+      'terraform/**/*.tf' \
+      'terraform/**/*.tfvars'
   )
-
-  for candidate in "${candidates[@]}"; do
-    if [[ -e "${candidate}" ]]; then
-      search_paths+=("${candidate#${REPO_ROOT}/}")
-    fi
-  done
 
   if [[ ${#search_paths[@]} -eq 0 ]]; then
     log_warning "No infrastructure search paths found in this snapshot"
@@ -95,7 +98,7 @@ validate_env_var_pattern() {
   fi
   
   for var in "${required_vars[@]}"; do
-    if git -C "${REPO_ROOT}" grep -nE "\${${var}}" -- "${search_paths[@]}" 2>/dev/null | grep -q .; then
+    if git -C "${REPO_ROOT}" grep -nF "${var}" -- "${search_paths[@]}" 2>/dev/null | grep -q .; then
       log_success "Variable referenced: ${var}"
     else
       log_warning "Environment variable not referenced in infrastructure: ${var}"
@@ -151,15 +154,31 @@ validate_no_credentials() {
   return $([ ${violations} -eq 0 ] && echo 0 || echo 1)
 }
 
+# Validate domain and host variability
+validate_domain_variability() {
+  log_info "Validating hardcoded host and domain references..."
+
+  if "${REPO_ROOT}/scripts/ci/domain-variability-enforcer.sh" --check >/dev/null 2>&1; then
+    log_success "Domain variability validation passed"
+    return 0
+  fi
+
+  log_error "Domain variability validation failed"
+  return 1
+}
+
 # Generate compliance report
 generate_report() {
   local vc_status="$1"
   local env_status="$2"
   local cred_status="$3"
+  local domain_status="$4"
   
   local overall_status="PASS"
   [[ "${vc_status}" == "FAIL" ]] && overall_status="FAIL"
+  [[ "${env_status}" == "FAIL" ]] && overall_status="FAIL"
   [[ "${cred_status}" == "FAIL" ]] && overall_status="FAIL"
+  [[ "${domain_status}" == "FAIL" ]] && overall_status="FAIL"
   
   cat > "${REPORT_FILE}" <<EOF
 {
@@ -168,7 +187,8 @@ generate_report() {
   "checks": {
     "version_control": "${vc_status}",
     "env_variables": "${env_status}",
-    "no_credentials": "${cred_status}"
+    "no_credentials": "${cred_status}",
+    "domain_variability": "${domain_status}"
   }
 }
 EOF
@@ -182,14 +202,16 @@ main() {
   local vc_status="PASS"
   local env_status="PASS"
   local cred_status="PASS"
+  local domain_status="PASS"
   
   validate_version_control || vc_status="FAIL"
   validate_env_var_pattern || env_status="FAIL"
   validate_no_credentials || cred_status="FAIL"
+  validate_domain_variability || domain_status="FAIL"
   
-  generate_report "${vc_status}" "${env_status}" "${cred_status}"
+  generate_report "${vc_status}" "${env_status}" "${cred_status}" "${domain_status}"
   
-  if [[ "${vc_status}" == "FAIL" ]] || [[ "${cred_status}" == "FAIL" ]]; then
+  if [[ "${vc_status}" == "FAIL" ]] || [[ "${env_status}" == "FAIL" ]] || [[ "${cred_status}" == "FAIL" ]] || [[ "${domain_status}" == "FAIL" ]]; then
     log_error "Configuration SSOT validation FAILED"
     exit 1
   fi

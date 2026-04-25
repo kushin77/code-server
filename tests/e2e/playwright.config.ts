@@ -4,10 +4,14 @@
 // @governance  GOV-002: IaC, idempotent test infrastructure
 // Issue #1537: Testing & QA 100x — E2E Playwright
 
+import { existsSync } from "fs";
+import path from "path";
 import { defineConfig, devices } from "@playwright/test";
 
 const BASE_URL = process.env.BASE_URL || "https://ide.kushnir.cloud";
 const REQUIRE_VPN = process.env.REQUIRE_VPN === "1";
+const QA_SESSION_PATH = path.resolve(process.cwd(), "auth", "qa-session.json");
+const QA_SESSION_STATE = existsSync(QA_SESSION_PATH) ? QA_SESSION_PATH : undefined;
 
 export default defineConfig({
   testDir: "./",
@@ -43,13 +47,23 @@ export default defineConfig({
   },
 
   projects: [
+    // ── Portal flows (authenticated landing page) ─────────────────────────
+    {
+      name: "portal-chrome",
+      testMatch: "**/portal/**/*.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(QA_SESSION_STATE ? { storageState: QA_SESSION_STATE } : {}),
+      },
+    },
+
     // ── Authenticated flows (requires QA session) ──────────────────────────
     {
       name: "ide-chrome",
       testMatch: "**/ide/**/*.spec.ts",
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "auth/qa-session.json",
+        ...(QA_SESSION_STATE ? { storageState: QA_SESSION_STATE } : {}),
       },
     },
 

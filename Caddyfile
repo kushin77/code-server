@@ -53,8 +53,8 @@
 	}
 }
 
-# Development environment (kushnir.local)
-kushnir.local, *.kushnir.local {
+# Development environment (env-driven)
+{$APEX_DOMAIN}, *.{$APEX_DOMAIN} {
 	# HTTP → HTTPS redirect
 	# All traffic must use encrypted connection
 	redir http:// https:// permanent
@@ -305,7 +305,7 @@ kushnir.local, *.kushnir.local {
 #
 # Testing Recommendations:
 # 1. Verify TLS 1.2+ with: openssl s_client -tls1_2 -connect localhost:443
-# 2. Verify HSTS with: curl -i https://kushnir.local | grep Strict-Transport
+# 2. Verify HSTS with: curl -i https://{$APEX_DOMAIN} | grep Strict-Transport
 # 3. Test weak TLS rejection: openssl s_client -tls1 -connect localhost:443
 # 4. SSL Labs test: https://www.ssllabs.com/ssltest/ (after production deploy)
 #

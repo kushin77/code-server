@@ -10,7 +10,35 @@ from datetime import datetime, timezone
 import json
 import logging
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
+
+
+# --- OPTIMIZATION: Simple Cache for Query Results ---
+class SimpleQueryCache:
+    def __init__(self, ttl_seconds: int = 60):
+        self.ttl = ttl_seconds
+        self._cache: Dict[str, Tuple[datetime, Any]] = {}
+
+    def get(self, key: str) -> Optional[Any]:
+        if key not in self._cache:
+            return None
+        timestamp, value = self._cache[key]
+        if (datetime.now(timezone.utc) - timestamp).total_seconds() > self.ttl:
+            del self._cache[key]
+            return None
+        return value
+
+    def set(self, key: str, value: Any):
+        self._cache[key] = (datetime.now(timezone.utc), value)
+
+    def invalidate(self, prefix: Optional[str] = None):
+        if prefix:
+            keys_to_del = [k for k in self._cache.keys() if k.startswith(prefix)]
+            for k in keys_to_del:
+                del self._cache[k]
+        else:
+            self._cache.clear()
+
 
 from prometheus_client import Counter, Gauge
 from pydantic import BaseModel, Field
@@ -75,6 +103,19 @@ class EdgeAgentRuntimeState(BaseModel):
     health: AgentHealth = AgentHealth.HEALTHY
 
 
+class CircuitState(str, Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+
+class CircuitBreaker(BaseModel):
+    state: CircuitState = CircuitState.CLOSED
+    failure_count: int = 0
+    last_failure_at: Optional[datetime] = None
+    last_success_at: Optional[datetime] = None
+
+
 class EdgeAgentRegistrationRequest(BaseModel):
     agent_id: str
     region: str
@@ -105,6 +146,7 @@ class EdgeAgentRecord(BaseModel):
     metadata: Dict[str, str] = Field(default_factory=dict)
     first_seen_at: datetime
     last_heartbeat_at: datetime
+    circuit_breaker: CircuitBreaker = Field(default_factory=CircuitBreaker)
 
 
 class RoutingRequest(BaseModel):
@@ -172,12 +214,40 @@ class EdgeAgentRegistryService:
         self._agents: Dict[str, EdgeAgentRecord] = {}
         self._replication_jobs: Dict[str, ReplicationJob] = {}
         self._event_log: List[ReplicationEvent] = []
+        
+        # --- OPTIMIZATION: Query Caching ---
+        self._query_cache = SimpleQueryCache(ttl_seconds=30)
+        
+        # --- OPTIMIZATION: Index-like Lookup Maps for Regions ---
+        self._region_index: Dict[str, List[str]] = {}
+        
         # Initialize Kafka producer for event replication
+        self._kafka_producer = None
+        self._kafka_error_threshold = 3
+        self._kafka_error_count = 0
+        self._kafka_last_retry = datetime.min.replace(tzinfo=timezone.utc)
+        self._initialize_kafka()
+
+    def _initialize_kafka(self) -> None:
+        """Isolated Kafka initialization for pre-warming and reconnection"""
+        if self._kafka_producer:
+            return
+
+        now = utcnow()
+        if (now - self._kafka_last_retry).total_seconds() < 30:
+            return # Prevent tight retry loop
+
+        self._kafka_last_retry = now
         try:
             self._kafka_producer = KafkaProducer(
                 bootstrap_servers=self.config.kafka_bootstrap_servers.split(','),
-                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+                acks=1, # Performance optimized
+                retries=2,
+                linger_ms=10, # Batching for throughput
+                buffer_memory=33554432 # 32MB buffer
             )
+            self._kafka_error_count = 0
             logger.info(f"Kafka producer initialized: {self.config.kafka_bootstrap_servers}")
         except Exception as e:
             logger.warning(f"Failed to initialize Kafka producer: {e}. Events will be logged only.")
@@ -187,6 +257,8 @@ class EdgeAgentRegistryService:
         self._agents.clear()
         self._replication_jobs.clear()
         self._event_log.clear()
+        self._query_cache.invalidate()
+        self._region_index.clear()
         
         # Close Kafka producer gracefully
         if self._kafka_producer:
@@ -196,6 +268,8 @@ class EdgeAgentRegistryService:
                 logger.info("Kafka producer closed")
             except Exception as e:
                 logger.warning(f"Error closing Kafka producer: {e}")
+            finally:
+                self._kafka_producer = None # Ensure reset
 
     async def _broadcast_event(self, event_type: str, data: Dict[str, Any]) -> ReplicationEvent:
         event = ReplicationEvent(
@@ -206,6 +280,10 @@ class EdgeAgentRegistryService:
         )
         self._event_log.append(event)
         
+        # Connection pre-warm/retry logic
+        if not self._kafka_producer:
+            self._initialize_kafka()
+
         # Send event to Kafka topic
         if self._kafka_producer:
             try:
@@ -219,10 +297,15 @@ class EdgeAgentRegistryService:
                     }
                 )
                 # Wait for acknowledgment with timeout
-                future.get(timeout=5)
+                future.get(timeout=2) # Tighter timeout for performance
                 logger.info(f"Event published to Kafka: {event.event_id}")
+                self._kafka_error_count = 0 
             except KafkaError as e:
                 logger.error(f"Failed to publish event to Kafka: {e}")
+                self._kafka_error_count += 1
+                if self._kafka_error_count >= self._kafka_error_threshold:
+                    logger.error("Kafka error threshold reached. Resetting producer.")
+                    self._kafka_producer = None
             except Exception as e:
                 logger.error(f"Unexpected error publishing event: {e}")
         else:
@@ -237,6 +320,10 @@ class EdgeAgentRegistryService:
         now: Optional[datetime] = None,
     ) -> EdgeAgentRecord:
         now = now or utcnow()
+        
+        # Invalidate routing caches on new registration
+        self._query_cache.invalidate(prefix="routing:")
+        
         existing = self._agents.get(request.agent_id)
         record = EdgeAgentRecord(
             agent_id=request.agent_id,
@@ -250,8 +337,15 @@ class EdgeAgentRegistryService:
             metadata=request.metadata,
             first_seen_at=existing.first_seen_at if existing else now,
             last_heartbeat_at=now,
+            circuit_breaker=existing.circuit_breaker if existing else CircuitBreaker(),
         )
         self._agents[request.agent_id] = record
+
+        # Update region index
+        if request.region not in self._region_index:
+            self._region_index[request.region] = []
+        if request.agent_id not in self._region_index[request.region]:
+            self._region_index[request.region].append(request.agent_id)
 
         # METRICS
         AGENT_REGISTRATIONS.labels(region=request.region).inc()
@@ -267,6 +361,10 @@ class EdgeAgentRegistryService:
         record = self._agents.get(request.agent_id)
         if record is None:
             raise KeyError(f"edge agent '{request.agent_id}' is not registered")
+
+        # Invalidate routing caches if cache state or health/metrics significant changes could occur
+        # For now, invalidate on any heartbeat to ensure routing is reasonably fresh
+        self._query_cache.invalidate(prefix=f"routing:region:{record.region}")
 
         updated = record.model_copy(
             update={
@@ -313,15 +411,48 @@ class EdgeAgentRegistryService:
         now = now or utcnow()
         return (now - agent.last_heartbeat_at).total_seconds() > self.heartbeat_ttl_seconds
 
+    def _is_circuit_open(self, agent: EdgeAgentRecord, now: datetime) -> bool:
+        """Health check: Check if circuit is open for an agent."""
+        cb = agent.circuit_breaker
+        if cb.state == CircuitState.OPEN:
+            if cb.last_failure_at:
+                # Half-open after 60 seconds
+                if (now - cb.last_failure_at).total_seconds() > 60:
+                    return False
+            return True
+        return False
+
     def resolve_routing(
         self,
         request: RoutingRequest,
         now: Optional[datetime] = None,
     ) -> RoutingDecision:
         now = now or utcnow()
+        
+        # --- OPTIMIZATION: Query Caching ---
+        cache_key = f"routing:region:{request.user_region}:ws:{request.workspace_id or 'none'}:svc:{request.required_service or 'any'}"
+        cached_result = self._query_cache.get(cache_key)
+        if cached_result:
+            return cached_result
+
         ranked = self._rank_agents(request, now)
         if not ranked:
-            raise ValueError("no healthy edge agents available for routing")
+            # --- PHASE 5.3 FAILOVER: Global Search for ANY healthy agent if local fails ---
+            logger.warning(f"No healthy agents in region {request.user_region} or affinity group. Falling back to global search.")
+            global_agents = []
+            for agent in self._agents.values():
+                if not self.is_stale(agent, now) \
+                   and agent.runtime.health != AgentHealth.UNHEALTHY \
+                   and not self._is_circuit_open(agent, now):
+                    score = self._score_agent(agent, request)
+                    global_agents.append((score, agent))
+            
+            if not global_agents:
+                ROUTING_REQUESTS.labels(region=request.user_region, status="failed").inc()
+                raise ValueError("global failover failed: no healthy edge agents available anywhere")
+            
+            global_agents.sort(key=lambda item: item[0], reverse=True)
+            ranked = global_agents
 
         selected_score, selected = ranked[0]
         
@@ -340,7 +471,10 @@ class EdgeAgentRegistryService:
         if not reason_parts:
             reason_parts.append("best available capacity")
 
-        return RoutingDecision(
+        if selected.region != request.user_region:
+            reason_parts.append(f"failover from {request.user_region}")
+
+        decision = RoutingDecision(
             agent_id=selected.agent_id,
             region=selected.region,
             endpoint_url=selected.endpoint_url,
@@ -349,6 +483,9 @@ class EdgeAgentRegistryService:
             fallback_agents=fallback_agents,
             reason=", ".join(reason_parts),
         )
+        
+        self._query_cache.set(cache_key, decision)
+        return decision
 
     def build_replication_plan(
         self,
@@ -408,11 +545,29 @@ class EdgeAgentRegistryService:
         )
 
     def _eligible_agents(self, now: datetime) -> List[EdgeAgentRecord]:
+        """Base list of healthy agents. Can be further filtered by index."""
         return [
             agent
             for agent in self._agents.values()
-            if not self.is_stale(agent, now) and agent.runtime.health != AgentHealth.UNHEALTHY
+            if not self.is_stale(agent, now) 
+            and agent.runtime.health != AgentHealth.UNHEALTHY
+            and not self._is_circuit_open(agent, now)
         ]
+
+    def _eligible_agents_in_region(self, region: str, now: datetime) -> List[EdgeAgentRecord]:
+        """Optimized regional lookup using the region index."""
+        candidate_ids = self._region_index.get(region, [])
+        if not candidate_ids:
+            return []
+        
+        eligible = []
+        for aid in candidate_ids:
+            agent = self._agents.get(aid)
+            if agent and not self.is_stale(agent, now) \
+               and agent.runtime.health != AgentHealth.UNHEALTHY \
+               and not self._is_circuit_open(agent, now):
+                eligible.append(agent)
+        return eligible
 
     def _rank_agents(
         self,
@@ -420,7 +575,32 @@ class EdgeAgentRegistryService:
         now: datetime,
     ) -> List[tuple[float, EdgeAgentRecord]]:
         ranked: List[tuple[float, EdgeAgentRecord]] = []
-        for agent in self._eligible_agents(now):
+        
+        # Performance optimization: Start with regional candidates if possible
+        # This reduces the number of agents to score significantly in a large fleet
+        candidates = []
+        if request.user_region in self._region_index:
+            candidates = self._eligible_agents_in_region(request.user_region, now)
+        
+        # If no regional candidates or we need broader selection for reliability
+        if not candidates or len(candidates) < 3:
+            candidates = self._eligible_agents(now)
+        else:
+            # We already have regional ones, but let's add affinity group ones too
+            group = self._region_group(request.user_region)
+            for r, aids in self._region_index.items():
+                if r != request.user_region and self._region_group(r) == group:
+                    candidates.extend(self._eligible_agents_in_region(r, now))
+        
+        # De-duplicate candidates if they were added multiple ways
+        seen_ids = set()
+        unique_candidates = []
+        for c in candidates:
+            if c.agent_id not in seen_ids:
+                unique_candidates.append(c)
+                seen_ids.add(c.agent_id)
+
+        for agent in unique_candidates:
             if request.required_service and agent.capabilities.supported_services:
                 if request.required_service not in agent.capabilities.supported_services:
                     continue
@@ -572,3 +752,38 @@ class EdgeAgentRegistryService:
         if target_agent_id:
             jobs = [j for j in jobs if j.target_agent_id == target_agent_id]
         return sorted(jobs, key=lambda j: j.started_at, reverse=True)
+
+    def report_failure(self, agent_id: str, now: Optional[datetime] = None) -> None:
+        """Report a failure for an agent, potentially opening the circuit."""
+        now = now or utcnow()
+        agent = self._agents.get(agent_id)
+        if not agent:
+            raise KeyError(f"agent '{agent_id}' not found")
+
+        cb = agent.circuit_breaker
+        cb.failure_count += 1
+        cb.last_failure_at = now
+
+        if cb.failure_count >= 3:
+            cb.state = CircuitState.OPEN
+            logger.warning(f"Circuit OPEN for agent {agent_id} after {cb.failure_count} failures")
+            # Invalidate caches to ensure this agent is removed from routing immediately
+            self._query_cache.invalidate(prefix=f"routing:region:{agent.region}")
+
+        # Update the record
+        self._agents[agent_id] = agent.model_copy(update={"circuit_breaker": cb})
+
+    def report_success(self, agent_id: str, now: Optional[datetime] = None) -> None:
+        """Report a success for an agent, closing the circuit."""
+        now = now or utcnow()
+        agent = self._agents.get(agent_id)
+        if not agent:
+            raise KeyError(f"agent '{agent_id}' not found")
+
+        cb = agent.circuit_breaker
+        cb.failure_count = 0
+        cb.last_success_at = now
+        cb.state = CircuitState.CLOSED
+        
+        # Update the record
+        self._agents[agent_id] = agent.model_copy(update={"circuit_breaker": cb})

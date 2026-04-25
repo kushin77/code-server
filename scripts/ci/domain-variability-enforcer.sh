@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # @file domain-variability-enforcer.sh
 # @module infrastructure/governance
 # @description P3-1531: Enforce domain and config variability - replace hardcoded domains with env vars
@@ -10,170 +10,171 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPORT_FILE="${REPO_ROOT}/artifacts/domain-variability-report.json"
+MODE="${1:---check}"
 
-source "${REPO_ROOT}/scripts/_common/init.sh"
-source "${REPO_ROOT}/scripts/_common/hosts.sh"
+log_error() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2; }
+log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
+log_warning() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*"; }
+log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
 
-# Critical domain and host strings that must be templated
-declare -A REFERENCE_VARS=(
-  ["${APEX_DOMAIN}"]='${APEX_DOMAIN}'
-  ["${IDE_DOMAIN}"]='${IDE_DOMAIN}'
-  ["${AUTH_DOMAIN}"]='${AUTH_DOMAIN}'
-  ["${API_DOMAIN}"]='${API_DOMAIN}'
-  ["${REGISTRY_DOMAIN}"]='${REGISTRY_DOMAIN}'
-  ["${PRIMARY_HOST}"]='${PRIMARY_HOST}'
-  ["${REPLICA_HOST}"]='${REPLICA_HOST}'
+TARGET_PATTERNS=(
+  'Caddyfile'
+  'Caddyfile.*'
+  'docker-compose*.yml'
+  'docker/**/*.yml'
+  'docker/**/*.yaml'
+  'config/**/*.cfg'
+  'config/**/*.yml'
+  'config/**/*.yaml'
+  'config/**/*.tpl'
+  'monitoring/**/*.yml'
+  'monitoring/**/*.yaml'
+  'scripts/**/*.sh'
+  'scripts/**/*.env'
+  'terraform/**/*.tf'
+  'terraform/**/*.tfvars'
 )
 
-TARGET_FILES=(
-  "${REPO_ROOT}/Caddyfile"
-  "${REPO_ROOT}/docker-compose.yml"
-  "${REPO_ROOT}/terraform/on-prem.tfvars"
-  "${REPO_ROOT}/docs/RUNBOOK-INFRASTRUCTURE-LIFECYCLE.md"
-  "${REPO_ROOT}/scripts/_common/rollback-manager.sh"
-)
+FORBIDDEN_REGEX='kushnir[.]cloud|kushnir[.]local|192[.]168[.]168[.](31|42|56)'
 
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2
+collect_target_files() {
+  git -C "${REPO_ROOT}" ls-files -- "${TARGET_PATTERNS[@]}"
 }
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
+scan_file() {
+  local file="$1"
+  awk -v file="${file}" -v regex="${FORBIDDEN_REGEX}" '
+    /^[[:space:]]*#/ { next }
+    {
+      line = $0
+      sub(/[[:space:]]+#.*$/, "", line)
+      if (line ~ regex) {
+        printf "%s\t%d\t%s\n", file, NR, $0
+      }
+    }
+  ' "${file}"
 }
 
-log_warning() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*"
+json_escape() {
+  local value="$1"
+  value=${value//\\/\\\\}
+  value=${value//\"/\\\"}
+  value=${value//$'\n'/\\n}
+  printf '%s' "${value}"
 }
 
-# Find all hardcoded domain references
-find_hardcoded_domains() {
-  log_info "Scanning for hardcoded domain references..."
-  
-  local violations=()
-  
-  # Scan infrastructure files
-  for file in "${TARGET_FILES[@]}"; do
-    if [[ ! -f "${file}" ]]; then
-      continue
-    fi
-    
-    for reference in "${!REFERENCE_VARS[@]}"; do
-      # Skip if reference is already templated
-      if grep -q "\${.*DOMAIN}" "${file}" 2>/dev/null; then
-        continue
-      fi
-      
-      # Check for hardcoded domain or host reference
-      if grep -q "${reference}" "${file}" 2>/dev/null; then
-        local count=$(grep -c "${reference}" "${file}" 2>/dev/null || echo 0)
-        violations+=("${file}:${reference}:${count}")
-        log_warning "Found ${count} hardcoded references to '${reference}' in ${file}"
-      fi
-    done
-  done
-  
+write_report() {
+  local status="$1"
+  shift
+  local -a violations=("$@")
+
   mkdir -p "$(dirname "${REPORT_FILE}")"
   {
     printf '{\n'
     printf '  "scan_timestamp": "%s",\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    printf '  "status": "%s",\n' "${status}"
     printf '  "violations": [\n'
-    local first_violation="true"
-    for violation in "${violations[@]}"; do
-      IFS=':' read -r file reference count <<< "${violation}"
-      if [[ "${first_violation}" == "false" ]]; then
+
+    local first="true"
+    local entry file line text
+    for entry in "${violations[@]}"; do
+      IFS=$'\t' read -r file line text <<< "${entry}"
+      if [[ "${first}" == "false" ]]; then
         printf ',\n'
       fi
-      first_violation="false"
-      printf '    {"file": "%s", "reference": "%s", "count": %s}' "${file}" "${reference}" "${count}"
+      first="false"
+      printf '    {"file": "%s", "line": %s, "text": "%s"}' \
+        "$(json_escape "${file}")" \
+        "${line}" \
+        "$(json_escape "${text}")"
     done
-    printf '\n  ],\n'
-    if [[ ${#violations[@]} -gt 0 ]]; then
-      printf '  "status": "FOUND_VIOLATIONS"\n'
-    else
-      printf '  "status": "CLEAN"\n'
-    fi
+
+    printf '\n  ]\n'
     printf '}\n'
   } > "${REPORT_FILE}"
-  
-  return $([ ${#violations[@]} -eq 0 ] && echo 0 || echo 1)
 }
 
-# Fix hardcoded domains
-fix_hardcoded_domains() {
-  log_info "Fixing hardcoded domain references..."
-  
-  local files_modified=0
-  
-  for file in "${TARGET_FILES[@]}"; do
-    if [[ ! -f "${file}" ]]; then
-      continue
-    fi
-    
-    local file_modified=0
-    for reference in "${!REFERENCE_VARS[@]}"; do
-      local var="${REFERENCE_VARS[${reference}]}"
-      
-      # Only fix if not already templated
-      if ! grep -q "\${.*DOMAIN}" "${file}" 2>/dev/null; then
-        local before=$(grep -c "${reference}" "${file}" 2>/dev/null || echo 0)
-        if [[ "${before}" -gt 0 ]]; then
-          sed -i "s|${reference}|${var}|g" "${file}"
-          local after=$(grep -c "${reference}" "${file}" 2>/dev/null || echo 0)
-          log_info "Fixed ${reference} in ${file}: ${before} → ${after}"
-          file_modified=1
-        fi
-      fi
-    done
-    
-    if [[ ${file_modified} -eq 1 ]]; then
-      files_modified=$((files_modified + 1))
-    fi
-  done
-  
-  log_info "Fixed domains in ${files_modified} files"
-  return $([ ${files_modified} -eq 0 ] && echo 1 || echo 0)
-}
+find_hardcoded_domains() {
+  log_info "Scanning for hardcoded domain and host references..."
 
-# Validate environment variables exist
-validate_env_vars() {
-  log_info "Validating required environment variables..."
-  
-  local missing_vars=()
-  local required_vars=("APEX_DOMAIN" "IDE_DOMAIN" "AUTH_DOMAIN" "API_DOMAIN" "REGISTRY_DOMAIN" "PRIMARY_HOST" "REPLICA_HOST")
-  
-  for var in "${required_vars[@]}"; do
-    if [[ -z "${!var:-}" ]]; then
-      missing_vars+=("${var}")
-    fi
-  done
-  
-  if [[ ${#missing_vars[@]} -gt 0 ]]; then
-    log_error "Missing required environment variables: ${missing_vars[*]}"
+  local -a violations=()
+  local file match_count=0
+
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    [[ "${file}" == "scripts/ci/domain-variability-enforcer.sh" ]] && continue
+    while IFS=$'\t' read -r path line text; do
+      [[ -z "${path}" ]] && continue
+      violations+=("${path}	${line}	${text}")
+      match_count=$((match_count + 1))
+      log_warning "${path}:${line}: ${text}"
+    done < <(scan_file "${REPO_ROOT}/${file}" || true)
+  done < <(collect_target_files)
+
+  if [[ ${#violations[@]} -gt 0 ]]; then
+    write_report "FOUND_VIOLATIONS" "${violations[@]}"
+    log_error "Found ${match_count} hardcoded domain or host references"
     return 1
   fi
-  
-  log_info "All required environment variables present"
+
+  write_report "CLEAN"
+  log_success "No hardcoded domain or host references found"
   return 0
 }
 
-# Main
+apply_fixes() {
+  log_info "Applying best-effort domain substitutions..."
+
+  local files_modified=0
+  local file
+
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    case "${file}" in
+      *"/Caddyfile"|*"/Caddyfile.example"|"Caddyfile")
+        if grep -q 'kushnir.local, \*\.kushnir.local' "${REPO_ROOT}/${file}" 2>/dev/null; then
+          perl -0pi -e 's/kushnir\.local, \*\.kushnir\.local/{\$APEX_DOMAIN}, *.{\$APEX_DOMAIN}/g' "${REPO_ROOT}/${file}"
+          files_modified=$((files_modified + 1))
+        fi
+        ;;
+      *"docker/oauth2-service.yml")
+        if grep -q 'auth\.kushnir\.cloud\|api\.kushnir\.cloud\|noreply@kushnir\.cloud' "${REPO_ROOT}/${file}" 2>/dev/null; then
+          perl -0pi -e 's#https://auth\.kushnir\.cloud#https://auth.\$\{APEX_DOMAIN\}#g; s#https://api\.kushnir\.cloud#https://api.\$\{APEX_DOMAIN\}#g; s#noreply@kushnir\.cloud#noreply@\$\{APEX_DOMAIN\}#g' "${REPO_ROOT}/${file}"
+          files_modified=$((files_modified + 1))
+        fi
+        ;;
+      *"monitoring/alertmanager.yml")
+        if grep -q 'ops@kushnir\.cloud\|alertmanager@kushnir\.cloud\|smtp\.kushnir\.cloud:587' "${REPO_ROOT}/${file}" 2>/dev/null; then
+          perl -0pi -e 's#ops@kushnir\.cloud#\$\{ALERTMANAGER_EMAIL_TO\}#g; s#alertmanager@kushnir\.cloud#\$\{ALERTMANAGER_EMAIL_FROM\}#g; s#smtp\.kushnir\.cloud:587#\$\{SMTP_HOST\}#g' "${REPO_ROOT}/${file}"
+          files_modified=$((files_modified + 1))
+        fi
+        ;;
+    esac
+  done < <(collect_target_files)
+
+  log_info "Modified ${files_modified} files"
+  return 0
+}
+
 main() {
-  local mode="${1:---check}"
-  
-  case "${mode}" in
+  case "${MODE}" in
     --check)
       find_hardcoded_domains
       ;;
     --fix)
-      validate_env_vars || exit 1
-      fix_hardcoded_domains
+      apply_fixes
+      find_hardcoded_domains
       ;;
     --report)
       find_hardcoded_domains
-      jq '.' "${REPORT_FILE}"
+      if command -v jq >/dev/null 2>&1; then
+        jq '.' "${REPORT_FILE}"
+      else
+        cat "${REPORT_FILE}"
+      fi
       ;;
     *)
-      log_error "Unknown mode: ${mode}"
+      log_error "Unknown mode: ${MODE}"
       echo "Usage: domain-variability-enforcer.sh [--check|--fix|--report]"
       exit 1
       ;;

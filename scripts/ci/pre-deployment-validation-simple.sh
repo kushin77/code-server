@@ -52,8 +52,8 @@ echo "✅ PHASE 5: SECURITY VALIDATION"
 echo ""
 
 echo "✅ PHASE 6: GIT ARTIFACTS"
-[ -f "DEPLOYMENT-MANIFEST.md" ] && echo "   ✓ Deployment manifest exists" && ((PASS++)) || echo "   ✗ Deployment manifest missing" && ((FAIL++))
-[ -f "OPERATIONAL-READINESS-SIGN-OFF.md" ] && echo "   ✓ Operational readiness sign-off exists" && ((PASS++)) || echo "   ✗ Operational readiness missing" && ((FAIL++))
+[ -f "docs/operations/DEPLOYMENT-MANIFEST.md" ] && echo "   ✓ Deployment manifest exists" && ((PASS++)) || echo "   ✗ Deployment manifest missing" && ((FAIL++))
+[ -f "docs/operations/OPERATIONAL-READINESS-SIGN-OFF.md" ] && echo "   ✓ Operational readiness sign-off exists" && ((PASS++)) || echo "   ✗ Operational readiness missing" && ((FAIL++))
 git log --oneline | grep -q "hardening" && echo "   ✓ Hardening commits in git history" && ((PASS++)) || echo "   ✗ Git history verification failed" && ((FAIL++))
 echo ""
 

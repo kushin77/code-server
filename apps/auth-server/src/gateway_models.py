@@ -23,26 +23,26 @@ Base = declarative_base()
 class APIKey(Base):
     """API key for programmatic access"""
     __tablename__ = "api_keys"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    
+
     name = Column(String(255), nullable=False)
-    key_hash = Column(String(255), nullable=False, unique=True, index=True)
-    
+    key_hash = Column(String(255), nullable=False, unique=True)
+
     # Scopes/permissions for this key
     scopes = Column(JSON, default=list)
-    
+
     # Usage tracking
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_used = Column(DateTime, nullable=True)
     revoked_at = Column(DateTime, nullable=True, index=True)
     expires_at = Column(DateTime, nullable=False, index=True)
-    
+
     # Metadata
     ip_whitelist = Column(JSON, nullable=True)  # List of allowed IPs
     user_agent_pattern = Column(String(255), nullable=True)  # Regex pattern for User-Agent
-    
+
     __table_args__ = (
         Index("ix_api_keys_user_id_not_revoked", "user_id"),
     )
@@ -55,25 +55,25 @@ class APIKey(Base):
 class QuotaUsage(Base):
     """Track quota usage"""
     __tablename__ = "quota_usage"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     owner_type = Column(String(32), nullable=False)  # user, team, org
     owner_id = Column(PG_UUID(as_uuid=True), nullable=False, index=True)
-    
+
     resource_type = Column(String(64), nullable=False)  # api_calls, storage, etc
     quota_limit = Column(Integer, nullable=False)
     current_usage = Column(Integer, default=0)
-    
+
     # Billing period
     period_start = Column(DateTime, nullable=False, index=True)
     period_end = Column(DateTime, nullable=False, index=True)
-    
+
     # Alerts
     warning_sent_at = Column(DateTime, nullable=True)  # 80% usage alert
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     __table_args__ = (
         Index("ix_quota_owner_type_id", "owner_type", "owner_id"),
         Index("ix_quota_resource_period", "resource_type", "period_start", "period_end"),
@@ -83,14 +83,14 @@ class QuotaUsage(Base):
 class QuotaWarning(Base):
     """Track quota warnings sent"""
     __tablename__ = "quota_warnings"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     quota_usage_id = Column(PG_UUID(as_uuid=True), ForeignKey("quota_usage.id"), nullable=False)
-    
+
     warning_level = Column(Integer, nullable=False)  # 50, 80, 100
     sent_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     acknowledged_at = Column(DateTime, nullable=True)
-    
+
     __table_args__ = (
         Index("ix_quota_warnings_sent_at", "sent_at"),
     )
@@ -103,24 +103,24 @@ class QuotaWarning(Base):
 class RateLimitRecord(Base):
     """Track rate limit events"""
     __tablename__ = "rate_limit_records"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     api_key_id = Column(PG_UUID(as_uuid=True), ForeignKey("api_keys.id"), nullable=True)
-    
+
     limit_type = Column(String(32), nullable=False)  # user, api_key, ip
     identifier = Column(String(255), nullable=False)
-    
+
     limit = Column(Integer, nullable=False)
     exceeded = Column(Boolean, default=False)
-    
+
     ip_address = Column(String(45))
     user_agent = Column(Text)
     endpoint = Column(String(255))
     method = Column(String(10))  # GET, POST, etc
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    
+
     __table_args__ = (
         Index("ix_rate_limit_user_id_created", "user_id", "created_at"),
     )

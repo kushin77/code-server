@@ -1,0 +1,7 @@
+[2026-04-25T13:08:13Z] [INFO] Bootstrap initialized (source: /mnt/c/code-server-enterprise/scripts/_common/init.sh)
+[2026-04-25T13:08:13Z] [INFO] === P3 #1533 Phase 1: Codebase Hygiene Audit ===
+[2026-04-25T13:08:13Z] [INFO] Repository: /mnt/c/code-server-enterprise
+[2026-04-25T13:08:13Z] [INFO] Timestamp: 2026-04-25T13:08:13Z
+[2026-04-25T13:08:13Z] [INFO] 
+[2026-04-25T13:08:13Z] [INFO] CHECK 1: Direct sourcing of individual _common/* files (should use init.sh)
+[2026-04-25T13:08:14Z] [INFO] CHECK 2: Inline echo logging (should use log_error/log_warn functions)

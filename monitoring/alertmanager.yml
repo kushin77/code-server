@@ -38,9 +38,9 @@ receivers:
 
   - name: warning-email
     email_configs:
-      - to: ops@kushnir.cloud
-        from: alertmanager@kushnir.cloud
-        smarthost: smtp.kushnir.cloud:587
+      - to: ${ALERTMANAGER_EMAIL_TO}
+        from: ${ALERTMANAGER_EMAIL_FROM}
+        smarthost: ${SMTP_HOST}
         send_resolved: true
 
   - name: info-slack

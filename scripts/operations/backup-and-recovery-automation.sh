@@ -71,7 +71,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # Backup configuration
 readonly BACKUP_ROOT="/var/paperclip/backups"
 readonly NAS_BACKUP_ROOT="/nas/cold/paperclip-backups"
-readonly S3_BACKUP_BUCKET="s3://kushnir-cloud-backups/paperclip"
+: "${APEX_DOMAIN:?APEX_DOMAIN must be set}"
+readonly S3_BACKUP_BUCKET="${S3_BACKUP_BUCKET:-s3://${APEX_DOMAIN//./-}-backups/paperclip}"
 readonly BACKUP_RETENTION_DAYS=30
 readonly BACKUP_FREQUENCY_MINUTES=15
 readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)

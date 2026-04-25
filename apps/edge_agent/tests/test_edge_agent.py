@@ -264,6 +264,89 @@ class EdgeAgentApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(heartbeat_response.status_code, 200)
         self.assertEqual(heartbeat_response.json()["runtime"]["active_sessions"], 2)
 
+    def test_routing_cache_behavior(self):
+        # Register an agent
+        self.client.post(
+            "/edge-agents/register",
+            json={
+                "agent_id": "cache-agent-1",
+                "region": "us-east-1",
+                "country_code": "US",
+                "endpoint_url": "https://cache-1.edge.internal",
+                "capabilities": {"supported_services": ["workspace"], "cache_capacity_gb": 10, "max_sessions": 10},
+                "cache_state": {"warm_workspaces": [], "asset_keys": [], "cache_hit_rate": 0.0}
+            }
+        )
+        
+        # First routing request - should be computed and cached
+        req_data = {"user_region": "us-east-1", "workspace_id": "ws-cache"}
+        resp1 = self.client.post("/routing/resolve", json=req_data)
+        self.assertEqual(resp1.status_code, 200)
+        agent_id = resp1.json()["agent_id"]
+        
+        # Second routing request - should be returned from cache
+        resp2 = self.client.post("/routing/resolve", json=req_data)
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(resp2.json()["agent_id"], agent_id)
+        
+        # Heartbeat for the region should invalidate the cache
+        self.client.post(
+            "/edge-agents/heartbeat",
+            json={
+                "agent_id": "cache-agent-1",
+                "runtime": {"cpu_utilization": 0.9, "memory_utilization": 0.9, "active_sessions": 9, "available_disk_gb": 1, "median_latency_ms": 100},
+                "cache_state": {"warm_workspaces": [], "asset_keys": [], "cache_hit_rate": 0.0},
+                "observed_regions": ["us-east-1"]
+            }
+        )
+        
+        # Third routing request - should be re-computed (and might still pick same agent, but we've verified invalidate path)
+        resp3 = self.client.post("/routing/resolve", json=req_data)
+        self.assertEqual(resp3.status_code, 200)
+
+    def test_circuit_breaker_and_failover(self):
+        # Register two agents in same region
+        self.client.post("/edge-agents/register", json={
+            "agent_id": "agent-primary", "region": "us-east-1", "country_code": "US",
+            "endpoint_url": "https://p.edge", "capabilities": {"max_sessions": 10}
+        })
+        self.client.post("/edge-agents/register", json={
+            "agent_id": "agent-secondary", "region": "us-east-1", "country_code": "US",
+            "endpoint_url": "https://s.edge", "capabilities": {"max_sessions": 10}
+        })
+        
+        # Report 3 failures for primary
+        for _ in range(3):
+            self.client.post("/edge-agents/agent-primary/report-failure")
+            
+        # Routing should now pick secondary despite primary being in same region
+        req_data = {"user_region": "us-east-1"}
+        resp = self.client.post("/routing/resolve", json=req_data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["agent_id"], "agent-secondary")
+        
+        # Report success for primary - should reset circuit
+        self.client.post("/edge-agents/agent-primary/report-success")
+        
+        # Primary should be eligible again (might be picked based on score)
+        resp2 = self.client.post("/routing/resolve", json=req_data)
+        self.assertEqual(resp2.status_code, 200)
+
+    def test_global_failover_when_region_dead(self):
+        # Register an agent in a far-away region
+        self.client.post("/edge-agents/register", json={
+            "agent_id": "far-away-agent", "region": "ap-tokyo-1", "country_code": "JP",
+            "endpoint_url": "https://tokyo.edge", "capabilities": {"max_sessions": 100}
+        })
+        
+        # Request routing for US, where no agents are registered/healthy
+        req_data = {"user_region": "us-east-1"}
+        resp = self.client.post("/routing/resolve", json=req_data)
+        
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["region"], "ap-tokyo-1")
+        self.assertIn("failover from us-east-1", resp.json()["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

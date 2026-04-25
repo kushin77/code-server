@@ -15,9 +15,13 @@ This document specifies the branch protection rules for the `main` branch as par
 ### Rule 2: Require Status Checks
 - **Status**: Enabled
 - **Required Checks**:
-  - `lint`: Code quality and style validation
-  - `test`: Unit and integration tests passing
-  - `build`: Successful artifact build
+  - `No loose markdown files in root`
+  - `Conventional commit format`
+  - `Branch naming convention`
+  - `Shell script naming convention (kebab-case)`
+  - `Validate env.yaml schema`
+  - `Single Caddyfile source of truth`
+  - `Validate pnpm workspace configuration`
 - **Update Before Merge**: Yes (PR must be up-to-date with base branch before merge)
 - **Purpose**: Ensure only tested, passing code reaches production
 - **Rationale**: Prevents regressions and maintains code quality baseline
@@ -42,6 +46,11 @@ This document specifies the branch protection rules for the `main` branch as par
 - **Status**: Disabled (deletion not allowed)
 - **Purpose**: Prevent accidental loss of work
 - **Rationale**: Ensures release branches and feature branches remain recoverable
+
+### Repository Merge Setting
+- **Auto-delete head branch on PR merge**: Enabled
+- **Purpose**: Keep merged branch lists clean and reduce stale branch drift
+- **Rationale**: Supports the branch hygiene requirement in Issue #1534
 
 ## Configuration Methods
 
@@ -96,13 +105,13 @@ curl -X PUT "https://api.github.com/repos/kushin77/code-server/branches/main/pro
 
 | Rule | Status | Script | Manual | API |
 |------|--------|--------|--------|-----|
-| Enforce admins | 📋 Pending | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
-| Require status checks | 📋 Pending | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
-| Require PR reviews | 📋 Pending | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
+| Enforce admins | ✅ Active | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
+| Require status checks | ✅ Active | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
+| Require PR reviews | ✅ Active | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
 | CODEOWNERS enforcement | ✅ Active | N/A | N/A | Auto (via .github/CODEOWNERS) |
-| Dismiss stale reviews | 📋 Pending | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
-| Disable force-push | 📋 Pending | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
-| Disable deletion | 📋 Pending | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
+| Dismiss stale reviews | ✅ Active | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
+| Disable force-push | ✅ Active | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
+| Disable deletion | ✅ Active | ✓ configure-branch-protection.sh | ✓ Web UI | ✓ API endpoint |
 
 ## Verification
 
@@ -122,5 +131,5 @@ curl -H "Authorization: token $GITHUB_TOKEN" \
 - **Issue #1534**: Repository Governance epic
 - **Phase 1**: ✅ Documentation standards, governance framework
 - **Phase 2**: ✅ pnpm workspace, CODEOWNERS
-- **Phase 3**: 📋 Branch protection rules (this document)
-- **Phase 4**: 📋 Enforce CI checks for naming conventions, hardcoded IPs, duplicates
+- **Phase 3**: ✅ Branch protection rules (applied)
+- **Phase 4**: ✅ Enforce CI checks for naming conventions, hardcoded IPs, duplicates

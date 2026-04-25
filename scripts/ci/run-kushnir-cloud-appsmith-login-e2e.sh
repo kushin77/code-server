@@ -7,7 +7,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
+APEX_DOMAIN="${APEX_DOMAIN:-}"
+if [[ -z "$APEX_DOMAIN" ]]; then
+        echo "ERROR: APEX_DOMAIN is not set. Domain variability is required by GOV-002." >&2
+        exit 1
+fi
 export PORTAL_URL="${PORTAL_URL:-https://${APEX_DOMAIN}}"
 export BASE_URL="${BASE_URL:-https://ide.${APEX_DOMAIN}}"
 export IDE_URL="${IDE_URL:-https://ide.${APEX_DOMAIN}}"

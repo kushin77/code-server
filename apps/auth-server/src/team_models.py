@@ -50,36 +50,35 @@ class OrganizationPlan(str, Enum):
 class Organization(Base):
     """Organization"""
     __tablename__ = "organizations"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Basic Information
     name = Column(String(255), nullable=False)
-    slug = Column(String(255), nullable=False, unique=True, index=True)  # URL-friendly name
+    slug = Column(String(255), nullable=False, unique=True)  # URL-friendly name
     description = Column(Text, nullable=True)
     logo_url = Column(String(512), nullable=True)
     website_url = Column(String(512), nullable=True)
-    
+
     # Billing & Plan
     plan = Column(String(32), default=OrganizationPlan.FREE)
     max_teams = Column(Integer, default=3)  # Depends on plan
     max_members = Column(Integer, default=5)
-    
+
     # Metadata
     owner_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Settings
     settings = Column(JSON, default=dict)  # Custom organization settings
-    
+
     # Relationships
     owner = relationship("User", foreign_keys=[owner_id])
     teams = relationship("Team", back_populates="organization", cascade="all, delete-orphan")
     members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
-    
+
     __table_args__ = (
-        Index("ix_organizations_slug", "slug"),
         Index("ix_organizations_owner_id", "owner_id"),
     )
 
@@ -87,34 +86,34 @@ class Organization(Base):
 class Team(Base):
     """Team within an organization"""
     __tablename__ = "teams"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Organization reference
     organization_id = Column(PG_UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
-    
+
     # Basic Information
     name = Column(String(255), nullable=False)
     slug = Column(String(255), nullable=False)  # Unique within org
     description = Column(Text, nullable=True)
     avatar_url = Column(String(512), nullable=True)
-    
+
     # Team Status
     status = Column(String(32), default=TeamStatus.ACTIVE)
-    
+
     # Metadata
     owner_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Settings
     settings = Column(JSON, default=dict)
-    
+
     # Relationships
     organization = relationship("Organization", back_populates="teams")
     owner = relationship("User", foreign_keys=[owner_id])
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
-    
+
     __table_args__ = (
         Index("ix_teams_org_id_slug", "organization_id", "slug"),
         Index("ix_teams_owner_id", "owner_id"),
@@ -124,31 +123,31 @@ class Team(Base):
 class TeamMember(Base):
     """Team membership"""
     __tablename__ = "team_members"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # References
     team_id = Column(PG_UUID(as_uuid=True), ForeignKey("teams.id"), nullable=False)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
+
     # Role
     role = Column(String(32), default=MemberRole.DEVELOPER)
-    
+
     # Status
     invited_at = Column(DateTime, default=datetime.utcnow)
     joined_at = Column(DateTime, nullable=True)  # When user accepted invitation
-    
+
     # Permissions (per-member overrides)
     custom_permissions = Column(JSON, default=dict)  # Override default role permissions
-    
+
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     team = relationship("Team", back_populates="members")
     user = relationship("User", back_populates="team_memberships")
-    
+
     __table_args__ = (
         Index("ix_team_members_team_id_user_id", "team_id", "user_id"),
         Index("ix_team_members_user_id", "user_id"),
@@ -158,28 +157,28 @@ class TeamMember(Base):
 class OrganizationMember(Base):
     """Organization-level membership"""
     __tablename__ = "organization_members"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # References
     organization_id = Column(PG_UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
+
     # Role (at org level)
     role = Column(String(32), default=MemberRole.DEVELOPER)
-    
+
     # Status
     invited_at = Column(DateTime, default=datetime.utcnow)
     joined_at = Column(DateTime, nullable=True)
-    
+
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     organization = relationship("Organization", back_populates="members")
     user = relationship("User", back_populates="org_memberships")
-    
+
     __table_args__ = (
         Index("ix_org_members_org_id_user_id", "organization_id", "user_id"),
     )
@@ -188,29 +187,29 @@ class OrganizationMember(Base):
 class TeamInvitation(Base):
     """Pending team invitations"""
     __tablename__ = "team_invitations"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # References
     team_id = Column(PG_UUID(as_uuid=True), ForeignKey("teams.id"), nullable=False)
     invited_by_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
+
     # Invitee
     invitee_email = Column(String(255), nullable=False)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # If user exists
-    
+
     # Role
     role = Column(String(32), default=MemberRole.DEVELOPER)
-    
+
     # Invitation Token
     token = Column(String(256), nullable=False, unique=True)
-    
+
     # Status
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     accepted_at = Column(DateTime, nullable=True)
     declined_at = Column(DateTime, nullable=True)
-    
+
     # Relationships
     team = relationship("Team")
     invited_by = relationship("User", foreign_keys=[invited_by_id])
@@ -251,7 +250,7 @@ class OrganizationResponse(BaseModel):
     owner_id: str
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -275,7 +274,7 @@ class TeamResponse(BaseModel):
     owner_id: str
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -288,7 +287,7 @@ class TeamMemberResponse(BaseModel):
     role: str
     invited_at: datetime
     joined_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -297,7 +296,7 @@ class TeamInvitationCreateRequest(BaseModel):
     """Request to invite user to team"""
     invitee_email: EmailStr
     role: str = Field(default=MemberRole.DEVELOPER)
-    
+
     @validator('role')
     def validate_role(cls, v):
         allowed = [r.value for r in MemberRole]
@@ -315,6 +314,6 @@ class TeamInvitationResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
     accepted_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True

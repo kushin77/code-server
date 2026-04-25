@@ -1,5 +1,27 @@
+# @file        monitoring/alertmanager.yml
+# @module      observability/alertmanager
+# @description Alertmanager routing with severity-based escalation
+# @governance  GOV-002: All secrets/URLs via environment variables — no hardcoded values
+# Issue #1532: Centralized Observability & SLOG
+#
+# Required environment variables (set in .env or GSM before deployment):
+#   ALERTMANAGER_SMTP_HOST       — SMTP relay hostname:port (e.g. smtp.gmail.com:587)
+#   ALERTMANAGER_SMTP_FROM       — From address for email alerts
+#   ALERTMANAGER_OPS_EMAIL       — Operations team email for P1/P2 alerts
+#   ALERTMANAGER_SLACK_WEBHOOK   — Slack incoming webhook URL
+#   ALERTMANAGER_SLACK_CHANNEL   — Slack channel (e.g. #incidents)
+#   ALERTMANAGER_WEBHOOK_URL     — Internal alert-relay webhook base URL
+#
+# Usage:
+#   envsubst < monitoring/alertmanager.yml | docker exec -i alertmanager \
+#     amtool config show --config.file=-
+
 global:
   resolve_timeout: 5m
+  # SMTP global defaults — override per-receiver if needed
+  smtp_smarthost: "${ALERTMANAGER_SMTP_HOST:-smtp.${APEX_DOMAIN:-kushnir.cloud}:587}"
+  smtp_from: "${ALERTMANAGER_SMTP_FROM:-alertmanager@${APEX_DOMAIN:-kushnir.cloud}}"
+  smtp_require_tls: true
 
 route:
   receiver: default-webhook
@@ -12,48 +34,108 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   routes:
+    # P0: Critical — immediate paging via webhook (PagerDuty/OpsGenie relay)
     - matchers:
         - severity="critical"
       receiver: critical-webhook
+      group_wait: 0s
+      repeat_interval: 30m
+      continue: true   # Also notify ops email
+
+    # P0 dead-man's-switch alerts — highest priority, immediate
+    - matchers:
+        - alertname=~"DeadMansSwitch|LokiUnavailable|PromtailStopped|OTelCollectorUnavailable|AlertmanagerUnavailable|TempoUnavailable"
+      receiver: critical-webhook
+      group_wait: 0s
+      repeat_interval: 15m
+
+    # P1: Warning — email + Slack
     - matchers:
         - severity="warning"
-      receiver: warning-email
+      receiver: warning-multi
+      repeat_interval: 2h
+
+    # P2: Info — Slack only
     - matchers:
         - severity="info"
       receiver: info-slack
-    - matchers:
-        - alertname=~"DeadMansSwitch|LokiUnavailable|PromtailStopped|OTelCollectorUnavailable|AlertmanagerUnavailable"
-      receiver: critical-webhook
+      repeat_interval: 24h
 
 receivers:
   - name: default-webhook
     webhook_configs:
-      - url: http://alert-relay:8080/api/alerts/default
+      - url: "${ALERTMANAGER_WEBHOOK_URL:-http://alert-relay:8080}/api/alerts/default"
         send_resolved: true
+        http_config:
+          follow_redirects: true
+        max_alerts: 0
 
   - name: critical-webhook
     webhook_configs:
-      - url: http://alert-relay:8080/api/alerts/critical
+      - url: "${ALERTMANAGER_WEBHOOK_URL:-http://alert-relay:8080}/api/alerts/critical"
         send_resolved: true
-
-  - name: warning-email
+        http_config:
+          follow_redirects: true
     email_configs:
-      - to: ops@kushnir.cloud
-        from: alertmanager@kushnir.cloud
-        smarthost: smtp.kushnir.cloud:587
+      - to: "${ALERTMANAGER_OPS_EMAIL:-ops@kushnir.cloud}"
         send_resolved: true
+        headers:
+          Subject: "[P0 CRITICAL] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service }}"
+        html: |
+          <b>{{ .GroupLabels.alertname }}</b><br>
+          Severity: {{ .GroupLabels.severity }}<br>
+          Service: {{ .GroupLabels.service }}<br>
+          <br>
+          {{ range .Alerts }}
+          <b>{{ .Labels.alertname }}</b>: {{ .Annotations.summary }}<br>
+          {{ end }}
+
+  - name: warning-multi
+    email_configs:
+      - to: "${ALERTMANAGER_OPS_EMAIL:-ops@kushnir.cloud}"
+        send_resolved: true
+        headers:
+          Subject: "[P1 WARNING] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service }}"
+    slack_configs:
+      - api_url: "${ALERTMANAGER_SLACK_WEBHOOK}"
+        channel: "${ALERTMANAGER_SLACK_CHANNEL:-#incidents}"
+        send_resolved: true
+        icon_emoji: ":warning:"
+        title: "{{ .GroupLabels.alertname }}"
+        text: |
+          *Severity*: {{ .GroupLabels.severity }}
+          *Service*: {{ .GroupLabels.service }}
+          {{ range .Alerts }}• {{ .Annotations.summary }}{{ end }}
+        actions:
+          - type: button
+            text: "View in Grafana"
+            url: "http://${GRAFANA_HOST:-grafana.${APEX_DOMAIN:-kushnir.cloud}}/alerting"
 
   - name: info-slack
     slack_configs:
-      - api_url: https://hooks.slack.com/services/REPLACE/ME/IN/DEPLOYMENT
-        channel: "#incidents"
+      - api_url: "${ALERTMANAGER_SLACK_WEBHOOK}"
+        channel: "${ALERTMANAGER_SLACK_CHANNEL:-#incidents}"
         send_resolved: true
+        icon_emoji: ":information_source:"
+        title: "[INFO] {{ .GroupLabels.alertname }}"
+        text: |
+          {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}
 
 inhibit_rules:
+  # Suppress warnings/infos when a critical alert fires for the same service
   - source_matchers:
       - severity = critical
     target_matchers:
       - severity =~ warning|info
+    equal:
+      - alertname
+      - cluster
+      - service
+  # Suppress info when warning fires for same service
+  - source_matchers:
+      - severity = warning
+    target_matchers:
+      - severity = info
     equal:
       - alertname
       - cluster

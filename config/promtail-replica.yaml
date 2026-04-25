@@ -1,0 +1,100 @@
+# @file        config/promtail-replica.yaml
+# @module      observability/promtail
+# @description Promtail configuration for REPLICA host log forwarding to central Loki
+# @governance  GOV-002: Immutable, version-controlled, no hardcoded secrets
+# Issue #1532: Centralized Observability & SLOG — cross-host log forwarding
+#
+# Deploy to replica host:
+#   scp config/promtail-replica.yaml ops@${REPLICA_HOST}:/etc/promtail/config.yml
+#   ssh ops@${REPLICA_HOST} "docker run -d --name promtail-replica \
+#     -v /etc/promtail:/etc/promtail:ro \
+#     -v /var/run/docker.sock:/var/run/docker.sock:ro \
+#     -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
+#     -v /var/lib/promtail:/var/lib/promtail \
+#     -e LOKI_URL=http://${PRIMARY_HOST}:3100 \
+#     grafana/promtail:2.9.4 --config.file=/etc/promtail/config.yml"
+#
+# Required environment variables on replica host:
+#   LOKI_URL        — URL of central Loki on primary (e.g. http://primary.host:3100)
+#   REPLICA_HOST    — Hostname of this replica (used as Loki label)
+#   DEPLOYMENT_MODE — Environment name (production/staging/development)
+
+server:
+  http_listen_port: 3101
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  # Ship logs to central Loki on primary host.
+  # LOKI_URL MUST be set as an environment variable before starting this container.
+  # Example: LOKI_URL=http://loki.primary.host:3100
+  # If PRIMARY_HOST env var is set, URL defaults to: http://${PRIMARY_HOST}:3100
+  - url: "${LOKI_URL:-http://${PRIMARY_HOST:-localhost}:3100}/loki/api/v1/push"
+    batchwait: 1s
+    batchsize: 1048576
+    # Resilient buffering: queue logs locally if Loki is unavailable
+    external_labels:
+      host: "${REPLICA_HOST:-replica}"
+      cluster: "kc-cluster"
+      env: "${DEPLOYMENT_MODE:-production}"
+
+scrape_configs:
+  # ── Docker container logs ──────────────────────────────────────────────────
+  - job_name: docker-containers-replica
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: container
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: compose_project
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: compose_service
+      - source_labels: [__meta_docker_container_log_path]
+        target_label: __path__
+      # Tag all replica logs for filtering in Grafana
+      - target_label: host
+        replacement: "${REPLICA_HOST:-replica}"
+    pipeline_stages:
+      - docker: {}
+
+  # ── SSH auth log (audit tier — 365d retention) ────────────────────────────
+  - job_name: ssh-auth-replica
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: auth
+          host: "${REPLICA_HOST:-replica}"
+          __path__: /var/log/auth.log
+    pipeline_stages:
+      - regex:
+          expression: "^(?P<timestamp>\\S+ \\S+ \\S+) (?P<host>\\S+) sshd\\[(?P<pid>\\d+)\\]: (?P<message>.*)$"
+      - labels:
+          host:
+          job:
+      - timestamp:
+          source: timestamp
+          format: "Jan 2 15:04:05"
+
+  # ── Syslog (infrastructure events — 90d warm retention) ──────────────────
+  - job_name: syslog-replica
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: infrastructure
+          host: "${REPLICA_HOST:-replica}"
+          __path__: /var/log/syslog
+    pipeline_stages:
+      - regex:
+          expression: "^(?P<timestamp>\\S+ \\S+ \\S+) (?P<host>\\S+) (?P<service>[^:]+): (?P<message>.*)$"
+      - labels:
+          host:
+          service:

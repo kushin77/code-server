@@ -234,6 +234,18 @@ jobs:
 
           echo "✓ pnpm workspace validated (all packages resolvable)"
 
+  # ── DNS Service Discovery Audit ───────────────────────────────────────────────
+  dns-service-discovery:
+    name: DNS service discovery (no hardcoded IPs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate DNS service discovery
+        run: bash scripts/ci/validate-dns-service-discovery.sh
+        env:
+          APEX_DOMAIN: kushnir.cloud
+
   # ── Repository Branch Hygiene ────────────────────────────────────────────────
   branch-hygiene:
     name: Repository branch hygiene

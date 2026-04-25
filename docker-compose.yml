@@ -1219,7 +1219,7 @@ services:
   # Receives OTLP traces/metrics/logs from all services; exports to Tempo, Prometheus, Loki
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing (OpenTelemetry)
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.96.0  # TODO: pin SHA256 digest on first pull
+    image: otel/opentelemetry-collector-contrib:0.96.0@sha256:ef20ffeb9ae06d75f94bd031cde7713a1d1bcad20e5ebc0f7dc6c2ee52b8ae4a
     container_name: otel-collector
     user: "65534:65534"  # @security GOV-002 - run as non-root nobody user
     command: ["--config=/etc/otel-collector.yaml"]
@@ -1272,7 +1272,7 @@ services:
   # Distributed tracing backend — stores and queries traces via OTLP
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
   tempo:
-    image: grafana/tempo:2.4.1  # TODO: pin SHA256 digest on first pull
+    image: grafana/tempo:2.4.1@sha256:cf1ed1d5cc671c80d389f7c59cfa491a9e5b99d28a42fccb9d6cbbef0da378e4
     container_name: tempo-traces
     user: "10001:10001"  # @security GOV-002 - run as non-root tempo user
     command: ["-config.file=/etc/tempo.yaml"]

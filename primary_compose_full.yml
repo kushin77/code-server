@@ -17,7 +17,7 @@ services:
       - "8181:8181"
     volumes:
       - ./policies:/policies:ro
-      - ./config/opa-config.yaml:/etc/opa/config.yaml:ro
+      - ./config:/opa-src:ro
     environment:
       - OPA_ADDR=0.0.0.0:8181
       - LOG_LEVEL=info
@@ -107,7 +107,7 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./config/caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
@@ -117,9 +117,8 @@ services:
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:2019/health"
+        - caddy
+        - version
       interval: 30s
       timeout: 5s
       retries: 3
@@ -153,13 +152,14 @@ services:
     container_name: prometheus
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--config.file=/prometheus-config/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=30d"
     ports:
       - "9090:9090"
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config:/prometheus-config:ro
+      - ./monitoring/alerts:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     environment:
       - TZ=UTC
@@ -242,9 +242,9 @@ services:
     user: "10001:10001"  # @security P0 #969 - Run as non-root loki user
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./config/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - ./config/loki:/etc/loki:ro
       - loki_data:/loki
     environment:
       - LOG_LEVEL=info
@@ -277,6 +277,50 @@ services:
           cpus: "0.5"
           memory: 256m
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
+    container_name: alertmanager
+    user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=http://localhost:9093"
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:9093/-/ready"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - services
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+        reservations:
+          cpus: "0.25"
+          memory: 128m
+
   # ========================================================================
   # VECTOR DATABASE & SEARCH
   # ========================================================================
@@ -295,6 +339,12 @@ services:
       - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
       - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
       - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
     networks:
       - services
@@ -364,6 +414,55 @@ services:
     profiles:
       - "ai"
 
+  multimodal-ai:
+    build:
+      context: apps/multimodal-ai
+      dockerfile: Dockerfile
+    container_name: multimodal-ai
+    user: "1000:1000"
+    ports:
+      - "8040:8040"
+    environment:
+      - VISION_BACKEND=${VISION_BACKEND:-ollama}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_VISION_MODEL=${OLLAMA_VISION_MODEL:-llava:13b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3:8b}
+      - DIAGRAM_LLM_BACKEND=${DIAGRAM_LLM_BACKEND:-ollama}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - TTS_BACKEND=${TTS_BACKEND:-gtts}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8040/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "ai"
+    labels:
+      io.elevatediq.component: "multimodal-ai"
+      io.elevatediq.tier: "application"
+
   reputation-engine:
     build:
       context: apps/reputation_engine
@@ -371,9 +470,9 @@ services:
     container_name: reputation-engine
     user: "1001:1001"
     ports:
-      - "8002:8002"
+      - "8002:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres-db:5432/reputation
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - KAFKA_BROKER=redpanda:9092
       - OPA_URL=http://opa:8181
       - LOG_LEVEL=INFO
@@ -406,6 +505,94 @@ services:
     profiles:
       - "ai"
       - "governance"
+
+  agent-runtime:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-runtime
+    user: "1003:1003"  # @security P0 #969 - Run as non-root agent-runtime user
+    ports:
+      - "8020:8020"
+    environment:
+      - AGENT_RUNTIME_PORT=8020
+      - AGENT_RUNTIME_HOST=0.0.0.0
+      - LOG_LEVEL=INFO
+      - OPA_URL=http://opa:8181
+      - REPUTATION_ENGINE_URL=http://reputation-engine:8000
+    depends_on:
+      opa:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8020/health"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          cpus: "0.5"
+          memory: 256m
+    profiles:
+      - "ai"
+      - "governance"
+      - "all"
+
+  env-provisioner:
+    build:
+      context: apps/env-provisioner
+      dockerfile: Dockerfile
+    container_name: env-provisioner
+    user: "1002:1002"
+    ports:
+      - "8050:8050"
+    environment:
+      - LOG_LEVEL=INFO
+      - REPO_ROOT=/app
+    volumes:
+      - ./apps/env-provisioner:/app
+      - ./config:/app/config:ro
+      - ./artifacts:/app/artifacts
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
+    restart: unless-stopped
+    networks:
+      - ingress
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "infrastructure"
+      - "all"
 
   activity-feed:
     build:
@@ -443,6 +630,326 @@ services:
       - "ai"
       - "governance"
 
+  paperclip:
+    build:
+      context: apps/paperclip
+      dockerfile: Dockerfile
+    container_name: paperclip-control-plane
+    user: "1002:1002"
+    ports:
+      - "8010:8010"
+    environment:
+      - OPA_URL=http://opa:8181
+      - REPUTATION_ENGINE_URL=http://reputation-engine:8000
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opa:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+    volumes:
+      - ./apps/paperclip:/app
+    restart: unless-stopped
+    networks:
+      - services
+      - database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8010/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "governance"
+      - "all"
+
+  execution-scheduler:
+    build:
+      context: apps/execution-scheduler
+      dockerfile: Dockerfile
+    container_name: execution-scheduler
+    user: "1003:1003"
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKER=redpanda:9092
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - SCHEDULER_API_KEY=${SCHEDULER_API_KEY:-scheduler-default-key-dev-only}
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    volumes:
+      - ./apps/execution-scheduler:/app
+    restart: unless-stopped
+    networks:
+      - services
+      - database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8080/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "infrastructure"
+      - "all"
+
+  agent-code-reviewer:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-code-reviewer
+    user: "1004:1004"
+    ports:
+      - "9001:9000"
+    environment:
+      - AGENT_TYPE=code-reviewer
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8000
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "agents"
+      - "all"
+
+  agent-incident-responder:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-incident-responder
+    user: "1004:1004"
+    ports:
+      - "9002:9000"
+    environment:
+      - AGENT_TYPE=incident-responder
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8000
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+        reservations:
+          cpus: "1.0"
+          memory: 1g
+    profiles:
+      - "agents"
+      - "all"
+
+  agent-doc-writer:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-doc-writer
+    user: "1004:1004"
+    ports:
+      - "9003:9000"
+    environment:
+      - AGENT_TYPE=doc-writer
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8000
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "agents"
+      - "all"
+
+  agent-test-generator:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-test-generator
+    user: "1004:1004"
+    ports:
+      - "9004:9000"
+    environment:
+      - AGENT_TYPE=test-generator
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8000
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "agents"
+      - "all"
+
   # ========================================================================
   # DATA STORES
   # ========================================================================
@@ -450,7 +957,6 @@ services:
   postgres:
     image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
     container_name: postgres-db
-    user: "999:999"  # @security P0 #969 - Run as non-root postgres user
     ports:
       - "5432:5432"
     environment:
@@ -471,6 +977,7 @@ services:
     restart: unless-stopped
     networks:
       - services
+      - database
     logging:
       driver: "json-file"
       options:
@@ -516,11 +1023,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1g
+          cpus: "2.0"
+          memory: 4g
         reservations:
-          cpus: "0.5"
-          memory: 512m
+          cpus: "1.0"
+          memory: 2g
 
   # ========================================================================
   # EVENT BUS & STREAMING
@@ -534,9 +1041,9 @@ services:
       - redpanda
       - start
       - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
-      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://redpanda:9092
       - --pandaproxy-addr=0.0.0.0:8082
-      - --advertise-pandaproxy-addr=localhost:8082
+      - --advertise-pandaproxy-addr=redpanda:8082
       - --schema-registry-addr=0.0.0.0:8081
       - --rpc-addr=0.0.0.0:33145
       - --advertise-rpc-addr=redpanda:33145
@@ -548,21 +1055,16 @@ services:
       - "33145:33145"    # RPC
     volumes:
       - redpanda_data:/var/lib/redpanda/data
-      - ./config/kafka-topics.yaml:/etc/redpanda/topics.yaml:ro
+      - ./config:/redpanda-src:ro
     environment:
       - REDPANDA_BROKERS=redpanda:9092
       - TZ=UTC
     healthcheck:
-      test:
-        - CMD
-        - redpanda
-        - admin
-        - brokers
-        - list
+      test: ["CMD-SHELL", "(curl -f http://localhost:8081/subjects || exit 1)"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - services
@@ -588,15 +1090,15 @@ services:
     container_name: redpanda-console
     user: "101:101"  # @security P0 #969 - Run as non-root redpanda-console user
     ports:
-      - "8080:8080"
+      - "8085:8080"
     environment:
       - KAFKA_BROKERS=redpanda:9092
       - KAFKA_SCHEMAREGISTRY_ENABLED=true
       - KAFKA_SCHEMAREGISTRY_URLS=http://redpanda:8081
-      - CONSOLE_CONFIG_FILEPATH=/etc/redpanda/config.yaml
+      - CONSOLE_CONFIG_FILEPATH=/etc/redpanda/redpanda-console-config.yaml
       - SERVER_LISTENPORT=8080
     volumes:
-      - ./config/redpanda-console-config.yaml:/etc/redpanda/config.yaml:ro
+      - ./config:/redpanda-console-src:ro
     depends_on:
       - redpanda
     healthcheck:
@@ -604,7 +1106,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://localhost:8080/api/v1/health"
+        - "http://localhost:8080/"
       interval: 30s
       timeout: 5s
       retries: 3
@@ -647,9 +1149,8 @@ services:
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:11434/api/tags"
+        - ollama
+        - --version
       interval: 60s
       timeout: 10s
       retries: 3
@@ -671,29 +1172,164 @@ services:
           cpus: "2"
           memory: "4G"
 
-  ollama-init:
-    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
-    container_name: ollama-init
-    user: "0:0"
-    command:
-      - sh
-      - -lc
-      - mkdir -p /home/ollama/.ollama && chown -R 11434:11434 /home/ollama/.ollama
-    volumes:
-      - ollama_models:/home/ollama/.ollama
-    restart: "no"
+  edge-agent:
+    build:
+      context: apps/edge_agent
+      dockerfile: Dockerfile
+    container_name: edge-agent
+    ports:
+      - "8060:8060"
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
+      - REPLICATION_TOPIC=edge.replication.events
+      - LOG_LEVEL=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8060/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.2"
+          memory: 256m
+    profiles:
+      - "infrastructure"
+      - "all"
+
+  # ── OpenTelemetry Collector ─────────────────────────────────────────────────
+  # Receives OTLP traces/metrics/logs from all services; exports to Tempo, Prometheus, Loki
+  # Issue #1532: Centralized Observability & SLOG — Distributed Tracing (OpenTelemetry)
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0@sha256:ef20ffeb9ae06d75f94bd031cde7713a1d1bcad20e5ebc0f7dc6c2ee52b8ae4a
+    container_name: otel-collector
+    user: "65534:65534"  # @security GOV-002 - run as non-root nobody user
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+      - "8888:8888"    # Prometheus metrics (self)
+      - "13133:13133"  # Health check
+    environment:
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-local}
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:13133/"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - services
+    depends_on:
+      - loki
+      - prometheus
+      - tempo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.1"
+          memory: 128m
+    profiles:
+      - "observability"
+      - "all"
+
+  # ── Grafana Tempo ────────────────────────────────────────────────────────────
+  # Distributed tracing backend — stores and queries traces via OTLP
+  # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
+  tempo:
+    image: grafana/tempo:2.4.1@sha256:cf1ed1d5cc671c80d389f7c59cfa491a9e5b99d28a42fccb9d6cbbef0da378e4
+    container_name: tempo-traces
+    user: "10001:10001"  # @security GOV-002 - run as non-root tempo user
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"    # Tempo HTTP API
+      - "9095:9095"    # Tempo gRPC API
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:3200/ready"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.2"
+          memory: 256m
+    profiles:
+      - "observability"
+      - "all"
 
 # ============================================================================
 # NETWORKS & VOLUMES
 # ============================================================================
 
 networks:
+  ingress:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-ingress
   services:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-services
+  database:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-database
 
 volumes:
   caddy_data:
@@ -706,6 +1342,8 @@ volumes:
     driver: local
   loki_data:
     driver: local
+  alertmanager_data:
+    driver: local
   qdrant_data:
     driver: local
   postgres_data:
@@ -715,4 +1353,6 @@ volumes:
   redpanda_data:
     driver: local
   ollama_models:
+    driver: local
+  tempo_data:
     driver: local

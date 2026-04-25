@@ -210,7 +210,15 @@ main() {
   info "Date: $(date '+%Y-%m-%d %H:%M:%S')"
   info ""
   
-  # Load environment
+  # Load environment from .env.local first (local development), then .env.security
+  if [[ -f "${REPO_DIR}/.env.local" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "${REPO_DIR}/.env.local" 2>/dev/null || true
+    set +a
+  fi
+  
+  # Load security overrides from .env.security
   if [[ -f "${REPO_DIR}/.env.security" ]]; then
     set -a
     # shellcheck disable=SC1091

@@ -420,7 +420,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/reputation
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - KAFKA_BROKER=redpanda:9092
       - OPA_URL=http://opa:8181
       - LOG_LEVEL=INFO

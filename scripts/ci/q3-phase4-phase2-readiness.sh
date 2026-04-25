@@ -157,7 +157,8 @@ validate_monitoring() {
 ################################################################################
 
 generate_report() {
-    cat > "${REPORT_FILE}" <<'REPORT'
+    mkdir -p "${OUTPUT_DIR}"
+    cat > "${REPORT_FILE}" << 'REPORT'
 # Phase 2 Readiness Validation Report
 
 **Generated**: $(date '+%Y-%m-%d %H:%M:%S')  

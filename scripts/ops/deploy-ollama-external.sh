@@ -216,9 +216,9 @@ verify_deployment_connectivity() {
 #!/bin/bash
 set -euo pipefail
 
-MAIN_HOST="${MAIN_HOST:-192.168.168.31}"
+MAIN_HOST="${MAIN_HOST:-${ONPREM_PRIMARY_IP}}"
 MAIN_PORT="${MAIN_PORT:-3100}"
-OLLAMA_HOST="${OLLAMA_HOST:-192.168.168.31}"
+OLLAMA_HOST="${OLLAMA_HOST:-${ONPREM_PRIMARY_IP}}"
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
 
 echo "[CONNECTIVITY] Testing main deployment health..."
@@ -238,7 +238,7 @@ EOFSCRIPT
 )
     
     if ! ssh "${OLLAMA_USER}@${OLLAMA_HOST}" \
-        "MAIN_HOST=192.168.168.31 MAIN_PORT=3100 OLLAMA_HOST=${OLLAMA_HOST} OLLAMA_PORT=${OLLAMA_PORT}" \
+        "MAIN_HOST=${ONPREM_PRIMARY_IP} MAIN_PORT=3100 OLLAMA_HOST=${OLLAMA_HOST} OLLAMA_PORT=${OLLAMA_PORT}" \
         bash -s <<< "$connectivity_check"; then
         log_warn "Connectivity check encountered issues"
         return 1

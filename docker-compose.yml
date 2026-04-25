@@ -461,9 +461,9 @@ services:
     container_name: agent-runtime
     user: "1003:1003"  # @security P0 #969 - Run as non-root agent-runtime user
     ports:
-      - "8004:8004"
+      - "8020:8020"
     environment:
-      - AGENT_RUNTIME_PORT=8004
+      - AGENT_RUNTIME_PORT=8020
       - AGENT_RUNTIME_HOST=0.0.0.0
       - LOG_LEVEL=INFO
       - OPA_URL=http://opa:8181
@@ -480,7 +480,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://localhost:8004/health"
+        - "http://localhost:8020/health"
       interval: 30s
       timeout: 5s
       retries: 3

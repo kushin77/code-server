@@ -15,7 +15,8 @@ COMPOSE_PROFILES=monitoring docker compose up -d
 # With distributed tracing (OTel Collector + Jaeger + Loki + Promtail)
 COMPOSE_PROFILES=tracing docker compose up -d
 
-# With AI assistant (Ollama LLM — requires GPU)
+# With AI assistant (Ollama deployed separately from kushin77/ollama — requires GPU)
+# Set OLLAMA_HOST first: export OLLAMA_HOST=http://192.168.168.31:11434
 COMPOSE_PROFILES=ai docker compose up -d
 
 # Full stack (monitoring + tracing + AI)
@@ -27,7 +28,8 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 - IDE-only: `docker compose up -d`
   Includes KC IDE, oauth2-proxy, caddy, postgres, and redis.
 - IDE + AI: `COMPOSE_PROFILES=ai docker compose up -d`
-  Includes IDE-only plus ollama.
+  Includes IDE-only plus AI services. Requires `OLLAMA_HOST` pointing to an external
+  [kushin77/ollama](https://github.com/kushin77/ollama) deployment.
 - IDE + Observability:
   `COMPOSE_PROFILES=monitoring,tracing docker compose up -d`
   Includes IDE-only plus prometheus, grafana, alertmanager, loki,
@@ -52,7 +54,7 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 | promtail | — | tracing | Log shipping agent |
 | otel-collector | 4317/4318 | tracing | Trace aggregator |
 | jaeger UI | 16686 | tracing | Trace visualiser |
-| ollama (LLM) | 11434 | ai | Local LLM server |
+| ollama (LLM) | 11434 | ai | External — deploy from [kushin77/ollama](https://github.com/kushin77/ollama); set `OLLAMA_HOST` |
 
 ## Local Development
 
@@ -122,6 +124,31 @@ After restore:
 cd code-server-enterprise
 docker compose up -d --force-recreate code-server
 ```
+
+## Repository Architecture
+
+This monorepo follows a 3-repo separation strategy:
+
+| Repo | Purpose | Link |
+|------|---------|------|
+| `kushin77/code-server` | KC IDE platform, infrastructure, IaC | This repo |
+| `kushin77/ollama` | All AI/Ollama workloads (independent deployment) | [kushin77/ollama](https://github.com/kushin77/ollama) |
+| `kushin77/source-control` | GitLab integration code | [kushin77/source-control](https://github.com/kushin77/source-control) |
+
+**AI integration:** Services call Ollama via `$OLLAMA_HOST` env var — no Ollama model weights or
+inference code exist in this repo. Deploy Ollama independently, then set `OLLAMA_HOST`.
+
+```bash
+# Deploy Ollama from its own repo (first time)
+git clone https://github.com/kushin77/ollama && cd ollama
+docker compose --profile ai up -d
+
+# Then start KC IDE pointing to it
+export OLLAMA_HOST=http://192.168.168.31:11434
+COMPOSE_PROFILES=ai docker compose up -d
+```
+
+See [docs/architecture/AI-REPO-SEPARATION.md](docs/architecture/AI-REPO-SEPARATION.md) for full migration guide.
 
 ## Architecture
 

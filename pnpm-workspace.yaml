@@ -1,0 +1,58 @@
+packages:
+  # Application services - core runtime services
+  - "apps/agent-registry"
+  - "apps/agent-runtime"
+  - "apps/api"
+  - "apps/backend"
+  - "apps/control-plane"
+  - "apps/edge-agent"
+  - "apps/env-provisioner"
+  - "apps/execution-scheduler"
+  - "apps/extension-runtime"
+  - "apps/federation"
+  - "apps/knowledge-graph"
+  - "apps/memory-engine"
+  - "apps/multimodal-ai"
+  - "apps/paperclip-control-plane"
+  - "apps/presence-sidecar"
+  - "apps/prompt-gateway"
+  - "apps/replay-engine"
+  - "apps/reputation-engine"
+  - "apps/saas-api"
+  - "apps/self-healing"
+  - "apps/session-broker"
+  - "apps/session-snapshots"
+  - "apps/activity-feed"
+
+  # Frontend applications
+  - "apps/frontend"
+  - "apps/ide-extension"
+
+  # Extension framework
+  - "apps/extensions/*"
+
+  # Shared packages (utilities, types, components)
+  - "packages/shared"
+  - "packages/shared/types"
+  - "packages/shared/utils"
+  - "packages/shared/components"
+  - "packages/shared/hooks"
+
+  # SDK packages for external integrations
+  - "sdk"
+  - "sdk/*"
+
+  # Shared libraries
+  - "lib"
+  - "lib/*"
+
+# Settings applied to all packages
+settings:
+  # Enable strict peer dependency resolution
+  strict-peer-dependencies: true
+  
+  # Shamefully hoist packages (if needed for compatibility)
+  shamefully-hoist: false
+  
+  # Auto-install dependencies
+  auto-install-peers: true

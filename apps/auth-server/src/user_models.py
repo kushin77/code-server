@@ -298,7 +298,7 @@ class UserActivityLog(Base):
     country = Column(String(128), nullable=True)  # GeoIP lookup
     
     # Metadata
-        activity_metadata = Column("metadata", JSON, default=dict)
+    activity_metadata = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     
     __table_args__ = (

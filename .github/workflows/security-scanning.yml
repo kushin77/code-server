@@ -29,7 +29,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
-          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" HEAD)
           if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(apps/auth-server/src/|apps/agent-runtime/|package.json|requirements.txt|Dockerfile|docker-compose.yml|scripts/security/)'; then
             echo "No security-relevant files changed; skipping SAST."
             exit 0
@@ -85,7 +85,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
-          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" HEAD)
           if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(apps/auth-server/src/|apps/agent-runtime/|package.json|requirements.txt|Dockerfile|docker-compose.yml|scripts/security/)'; then
             echo "No security-relevant files changed; skipping SCA."
             exit 0
@@ -143,7 +143,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
-          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" HEAD)
           if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(apps/auth-server/src/|apps/agent-runtime/|package.json|requirements.txt|Dockerfile|docker-compose.yml|scripts/security/)'; then
             echo "No security-relevant files changed; skipping secrets detection."
             exit 0
@@ -180,7 +180,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
-          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" HEAD)
           if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(apps/auth-server/src/|apps/agent-runtime/|package.json|requirements.txt|Dockerfile|docker-compose.yml|scripts/security/)'; then
             echo "No container-relevant files changed; skipping container scan."
             exit 0
@@ -306,11 +306,14 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Skip unrelated pull requests
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
-          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" HEAD)
           if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(apps/auth-server/src/|apps/agent-runtime/|package.json|requirements.txt|Dockerfile|docker-compose.yml|scripts/security/)'; then
             echo "No security-relevant files changed; skipping security report generation."
             exit 0

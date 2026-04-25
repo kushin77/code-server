@@ -20,11 +20,35 @@
 
 export { CopilotMemory } from "./memory.js";
 export {
+  InMemoryPersistenceBackend,
+  RedisPersistenceBackend,
+  PostgresPersistenceBackend,
+  createMemoryPersistenceBackendFromEnv,
+} from "./memory-persistence.js";
+export {
+  MEMORY_SCHEMA_VERSION,
+  validateMemorySnapshot,
+  migrateMemorySnapshot,
+  migrateAndValidateMemorySnapshot,
+} from "./memory-schema.js";
+export {
   cosineSimilarity,
   mockEmbedding,
   embedText,
   setEmbeddingProvider,
   checkForDuplicates,
   detectContradictions,
+  createOllamaEmbeddingProvider,
+  createOpenAIEmbeddingProvider,
+  configureEmbeddingProviderFromEnv,
 } from "./deduplication.js";
+export { correlationId, redact, logEvent } from "./logger.js";
+export {
+  classifyIssue,
+  classifyPullRequest,
+  extractIssuePrLinks,
+  classifyGitHubWork,
+} from "./github-sync.js";
+export { createGitHubScanner } from "./github-scanner.js";
+export { runDedupPreflight, emitDedupMetrics } from "./dedup-middleware.js";
 export { ChatEngine, createEngine } from "./engine.js";

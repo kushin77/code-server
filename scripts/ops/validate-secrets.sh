@@ -45,6 +45,15 @@ success() {
   log "SUCCESS" "$@"
 }
 
+# Remove trailing carriage returns from env-sourced values (CRLF files on Windows).
+normalize_secret_value() {
+  local var_name="$1"
+  local current_value="${!var_name:-}"
+  # Strip all literal carriage-return characters from sourced values.
+  current_value="${current_value//$'\r'/}"
+  printf -v "${var_name}" '%s' "${current_value}"
+}
+
 # ============================================================================
 # CRITICAL SECRETS VALIDATION (P0 Issues)
 # ============================================================================
@@ -99,12 +108,23 @@ validate_p0_968_cookie_secret() {
     return 1
   fi
   
-  if [[ "${OAUTH2_COOKIE_SECRET}" == *"secret734"* ]] || \
-     [[ "${OAUTH2_COOKIE_SECRET}" == "changeme" ]] || \
-     [[ "${OAUTH2_COOKIE_SECRET}" == "default" ]]; then
+    local normalized_secret
+    normalized_secret="$(printf '%s' "${OAUTH2_COOKIE_SECRET}" | tr '[:upper:]' '[:lower:]')"
+
+    if [[ "${normalized_secret}" =~ ^secret[0-9]{3,}$ ]] || \
+      [[ "${normalized_secret}" == "changeme" ]] || \
+      [[ "${normalized_secret}" == "password123" ]] || \
+      [[ "${normalized_secret}" == "default" ]]; then
     error "P0 #968 FAILED: OAUTH2_COOKIE_SECRET is hardcoded/default value"
-    error "  -> Current: ${OAUTH2_COOKIE_SECRET}"
+    error "  -> Current: [REDACTED]"
     error "  -> Fix: Use GSM secret, not hardcoded value"
+    return 1
+  fi
+
+  if [[ ${#OAUTH2_COOKIE_SECRET} -lt 32 ]]; then
+    error "P0 #968 FAILED: OAUTH2_COOKIE_SECRET too short"
+    error "  -> Current length: ${#OAUTH2_COOKIE_SECRET} chars"
+    error "  -> Required: 32+ chars (cryptographically random)"
     return 1
   fi
   
@@ -149,8 +169,15 @@ validate_p0_971_redis_password() {
   
   if [[ "${REDIS_PASSWORD}" == "changeme" ]] || [[ -z "${REDIS_PASSWORD}" ]]; then
     error "P0 #971 FAILED: REDIS_PASSWORD is default/empty"
-    error "  -> Current: ${REDIS_PASSWORD}"
+    error "  -> Current: [REDACTED]"
     error "  -> Fix: Use GSM secret, not default"
+    return 1
+  fi
+
+  if [[ ${#REDIS_PASSWORD} -lt 32 ]]; then
+    error "P0 #971 FAILED: REDIS_PASSWORD too short"
+    error "  -> Current length: ${#REDIS_PASSWORD} chars"
+    error "  -> Required: 32+ chars (cryptographically random)"
     return 1
   fi
   
@@ -170,10 +197,10 @@ validate_p0_998_no_hardcoded_fallback() {
     warn "  -> Recommended: Remove fallbacks (:-default), require explicit env vars"
   fi
   
-  # Check for specific hardcoded secrets
-  if grep -q 'secret734\|changeme\|password123' "${compose_file}"; then
+  # Check for obvious hardcoded weak secrets
+  if grep -qEi 'secret[0-9]{3,}|changeme|password123|default_secret' "${compose_file}"; then
     error "P0 #998 FAILED: Hardcoded secrets found in docker-compose.yml"
-    error "  -> Found hardcoded values: secret734, changeme, password123"
+    error "  -> Found hardcoded weak-secret patterns"
     error "  -> Fix: Remove all hardcoded fallbacks"
     return 1
   fi
@@ -225,6 +252,10 @@ main() {
     source "${REPO_DIR}/.env.security" 2>/dev/null || true
     set +a
   fi
+
+  # Normalize key env vars to avoid CRLF-induced false length failures.
+  normalize_secret_value "OAUTH2_COOKIE_SECRET"
+  normalize_secret_value "REDIS_PASSWORD"
   
   # Run all validations
   validate_p0_968_cookie_secret || true

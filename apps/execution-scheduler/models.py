@@ -4,6 +4,7 @@
 @governance GOV-002
 """
 
+import os
 from typing import List, Dict, Optional, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -139,7 +140,9 @@ class TaskExecution(BaseModel):
 class SchedulerConfig(BaseModel):
     """Scheduler configuration from env.yaml."""
     mode: Literal["local_only", "ci_only", "hybrid", "edge_burst"] = "hybrid"
-    local_gpu_host: str = "192.168.168.31"
+    local_gpu_host: str = Field(
+        default_factory=lambda: os.getenv("LOCAL_GPU_HOST", "ollama.internal")
+    )
     local_gpu_available: bool = True
     local_gpu_type: str = "A100"
     ci_provider: str = "github"

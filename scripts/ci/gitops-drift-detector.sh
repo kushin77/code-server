@@ -163,6 +163,11 @@ generate_drift_alert() {
 
 **Time:** $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
+  if ! command -v jq &>/dev/null; then
+    log_warning "jq not available — skipping GitHub drift alert payload generation"
+    return 0
+  fi
+
   local issue_payload
   issue_payload=$(jq -n \
     --arg title "${issue_title}" \
@@ -184,22 +189,37 @@ generate_report() {
   
   mkdir -p "$(dirname "${DRIFT_REPORT}")"
   
-  jq -n \
-    --arg timestamp "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-    --arg status "${status}" \
-    --argjson compose_drift "${compose_drift}" \
-    --argjson terraform_drift "${terraform_drift}" \
-    --argjson caddy_drift "${caddy_drift}" \
-    '{
-      timestamp: $timestamp,
-      status: $status,
-      total_drift_items: ($compose_drift + $terraform_drift + $caddy_drift),
-      details: {
-        docker_compose: $compose_drift,
-        terraform: $terraform_drift,
-        caddy: $caddy_drift
-      }
-    }' > "${DRIFT_REPORT}"
+  if command -v jq &>/dev/null; then
+    jq -n \
+      --arg timestamp "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      --arg status "${status}" \
+      --argjson compose_drift "${compose_drift}" \
+      --argjson terraform_drift "${terraform_drift}" \
+      --argjson caddy_drift "${caddy_drift}" \
+      '{
+        timestamp: $timestamp,
+        status: $status,
+        total_drift_items: ($compose_drift + $terraform_drift + $caddy_drift),
+        details: {
+          docker_compose: $compose_drift,
+          terraform: $terraform_drift,
+          caddy: $caddy_drift
+        }
+      }' > "${DRIFT_REPORT}"
+  else
+    cat > "${DRIFT_REPORT}" <<EOF
+{
+  "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+  "status": "${status}",
+  "total_drift_items": ${total_drift},
+  "details": {
+    "docker_compose": ${compose_drift},
+    "terraform": ${terraform_drift},
+    "caddy": ${caddy_drift}
+  }
+}
+EOF
+  fi
   
   log_info "Drift report saved to ${DRIFT_REPORT}"
 }

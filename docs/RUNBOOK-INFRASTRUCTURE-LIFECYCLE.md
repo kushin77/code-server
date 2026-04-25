@@ -111,10 +111,10 @@ DRIFT_AUTO_REMEDIATE=false              # Manual remediation required
 
 ### Enforcement Points
 
-1. **Pre-Commit Hook** (`scripts/ci/check-github-api-governance.sh`)
-   - Validates no hardcoded credentials
-   - Checks for floating tags
-   - Ensures PR references
+1. **Repository-managed local hooks** (`pnpm hooks:install`, `pnpm validate:hooks`)
+   - Installs and validates local pre-push enforcement for branch hygiene
+   - Ensures required hook assets remain executable and wired correctly
+   - Enforces merged-branch cleanup checks before pushing to main
 
 2. **CI Pipeline** (`.github/workflows/gitops-drift-detection.yml`)
    - Daily drift detection

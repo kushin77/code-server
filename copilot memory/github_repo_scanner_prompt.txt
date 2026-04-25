@@ -1,0 +1,582 @@
+# GitHub Repository Scanner → Memory Ingestion Prompt
+
+## SYSTEM CONTEXT
+
+You are a GitHub audit agent. Your job is to scan ALL repositories, issues (open + closed), pull requests, milestones, and project boards to extract:
+
+1. **Completed work** (merged PRs, closed issues, milestones achieved)
+2. **In-progress work** (open PRs, active issues, draft PRs)
+3. **Blocked/stalled work** (issues with no activity >30 days, PRs waiting for review)
+4. **Technical debt** (TODOs in code, deprecated patterns, security flags)
+5. **Roadmap gaps** (issues closed without PRs, missing implementations, architectural decisions deferred)
+
+Then synthesize this into **decision-locked goals** that feed directly into the copilot's intent map.
+
+---
+
+## SCANNING WORKFLOW
+
+### Phase 1: Repository Enumeration
+```
+INPUT: GitHub org/user, token
+OUTPUT: List of all repos with:
+  - name, description, language, stars, last_updated
+  - main branch, protected branch rules
+  - code owner patterns
+```
+
+### Phase 2: Issue Triage
+For EVERY issue (open + closed):
+```
+Extract:
+  - Issue ID, title, body, state (open/closed)
+  - Labels (feature, bug, tech-debt, blocked, security, etc.)
+  - Assignee, creator, created_at, updated_at, closed_at
+  - Milestone (if any)
+  - Related PRs (linked via #ID in body or automated link)
+  - Comment thread (last 3 comments for context)
+  - Priority (inferred from labels or urgency in description)
+
+Classify as:
+  - COMPLETED: closed, has merged PR
+  - IN_PROGRESS: open, has linked open PR or recent activity
+  - BLOCKED: open, no activity >30 days OR labeled "blocked"
+  - DEFERRED: closed without linked PR (decision made to skip)
+  - REJECTED: closed with "wontfix" or "duplicate" label
+```
+
+### Phase 3: Pull Request Deep Dive
+For EVERY PR (merged + open):
+```
+Extract:
+  - PR ID, title, body, state (open/merged/closed)
+  - Target branch, source branch
+  - Commits, files changed, +/- lines
+  - Reviews (approvals, requested changes)
+  - Merge status (merged_at, mergedBy, or still open)
+  - Labels (ci/cd, refactor, feature, breaking, docs, etc.)
+  - Related issues (via "Closes #ID")
+
+Classify as:
+  - SHIPPED: merged, in main
+  - STALLED: open >14 days, awaiting review
+  - DRAFT: marked as draft
+  - ABANDONED: closed without merge, no recent activity
+```
+
+### Phase 4: Code Scanning (Fast Parse)
+For EVERY repository:
+```
+Quick scan (don't clone everything, use GitHub API):
+  - Count of TODO/FIXME comments (via search API: "TODO" in:file language:js repo:owner/repo)
+  - Deprecated dependencies (package.json, requirements.txt, go.mod parsing via API)
+  - Security flags (secrets scanning alerts, dependabot warnings)
+  - Test coverage (if available in CI logs or coverage badges)
+  - Build status (latest CI run: passed/failed)
+```
+
+### Phase 5: Synthesize into Memory
+Aggregate findings into the copilot's intent map structure:
+
+```json
+{
+  "github_snapshot": {
+    "scanned_at": "ISO timestamp",
+    "org_or_user": "string",
+    "total_repos": "number",
+    "repos": [
+      {
+        "name": "repo_name",
+        "domain": "code|infra|sales|product",
+        "description": "...",
+        "status": "active|maintenance|archived",
+        "language": "string",
+        "last_commit_date": "ISO",
+        "last_updated": "ISO",
+        
+        "goals_completed": [
+          {
+            "issue_id": "#123",
+            "title": "Build conflict resolver for GitPeak",
+            "closed_date": "ISO",
+            "merged_pr": "#456",
+            "effort_estimate": "inferred from commits/changes"
+          }
+        ],
+        
+        "goals_in_progress": [
+          {
+            "issue_id": "#789",
+            "title": "Add multi-tenant job queue",
+            "status": "open",
+            "pr_id": "#890",
+            "pr_status": "awaiting_review",
+            "days_open": "number",
+            "last_activity": "ISO",
+            "blockers": ["dependency X not released", "design review pending"]
+          }
+        ],
+        
+        "goals_blocked": [
+          {
+            "issue_id": "#234",
+            "title": "Kubernetes Helm auto-scaling",
+            "days_stalled": "45",
+            "reason": "Waiting on ECS migration completion (in ElevatedIQ.ai)",
+            "assignee": "string or null"
+          }
+        ],
+        
+        "goals_deferred": [
+          {
+            "issue_id": "#567",
+            "title": "Windows runner optimization",
+            "closed_date": "ISO",
+            "decision": "Marked as 'wontfix' — prioritizing Linux first",
+            "cross_ref": "See #200 for rationale"
+          }
+        ],
+        
+        "technical_debt": [
+          {
+            "type": "todo|deprecated_dependency|security_flag|test_gap",
+            "description": "...",
+            "severity": "low|medium|high|critical",
+            "issue_ref": "#XYZ (if exists) or null",
+            "effort_to_fix": "estimate"
+          }
+        ],
+        
+        "roadmap_gaps": [
+          {
+            "theme": "e.g., 'Multi-tenancy', 'Security hardening'",
+            "missing_work": "description",
+            "related_issues": ["#100", "#101"],
+            "cross_repo_dependency": "other_repo (if any)"
+          }
+        ]
+      }
+    ],
+    
+    "cross_repo_patterns": {
+      "shared_blockers": [
+        {
+          "blocker": "ECS migration incomplete",
+          "affects_repos": ["FlowCI", "ElevatedIQ.ai", "VaultOS"],
+          "estimated_resolution": "date or 'unknown'"
+        }
+      ],
+      "duplicate_tech_debt": [
+        {
+          "debt": "Legacy Auth.js patterns",
+          "repos": ["Portal A", "Portal B", "Portal C"],
+          "consolidation_opportunity": "Extract shared auth lib"
+        }
+      ],
+      "feature_parity_gaps": [
+        {
+          "feature": "RBAC tier × role × scope model",
+          "implemented_in": ["FlowCI"],
+          "needed_in": ["ElevatedIQ.ai", "VaultOS"],
+          "effort": "estimate per repo"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## COPILOT INTENT MAP INTEGRATION
+
+After scanning, update the main intent map:
+
+```json
+{
+  "session_goals": [
+    // Goals inferred from GitHub (auto-populated)
+    {
+      "id": "goal_github_flowci_multitenant",
+      "domain": "code",
+      "intent": "Complete multi-tenant job queue for FlowCI CI/CD runners",
+      "status": "in_progress",
+      "github_issue": "#789",
+      "github_pr": "#890",
+      "created_at": "ISO",
+      "last_referenced": "ISO",
+      "decisions_made": [
+        {
+          "decision": "Use Redis for job queue, Kafka for event streaming",
+          "locked_at": "ISO (from PR review comments or commit msg)"
+        }
+      ],
+      "blockers": ["API rate limiting from GitHub runner provisioning"],
+      "effort_status": "20 commits, 45KB changed, 3 approvals needed",
+      "dependency_repos": ["NexusShield (auth)"]
+    },
+    
+    {
+      "id": "goal_github_elevatediq_iam",
+      "domain": "infra",
+      "intent": "Implement Terraform + Kubernetes/Helm infrastructure for ElevatedIQ.ai",
+      "status": "completed",
+      "github_issue": "#234",
+      "github_pr": "#567",
+      "created_at": "ISO",
+      "completed_at": "ISO (from merged PR date)",
+      "decisions_made": [
+        {
+          "decision": "Use Helm charts for deployment, Terraform for provisioning",
+          "locked_at": "ISO"
+        }
+      ]
+    },
+    
+    // Technical debt goals (auto-generated)
+    {
+      "id": "goal_debt_legacy_auth",
+      "domain": "code",
+      "intent": "Consolidate Auth.js patterns across portals (FlowCI, ElevatedIQ, VaultOS)",
+      "status": "deferred",
+      "severity": "medium",
+      "affected_repos": ["FlowCI", "ElevatedIQ.ai", "VaultOS"],
+      "estimated_effort": "40 hours",
+      "reason_deferred": "Feature parity more urgent; consolidation phase 2"
+    },
+    
+    // Cross-repo dependency tracking
+    {
+      "id": "goal_blocker_ecs_migration",
+      "domain": "infra",
+      "intent": "Complete ECS migration (blocking FlowCI, ElevatedIQ, VaultOS work)",
+      "status": "in_progress",
+      "blocking_repos": ["FlowCI", "ElevatedIQ.ai", "VaultOS"],
+      "blocking_issues": ["FlowCI#789", "ElevatedIQ#456", "VaultOS#123"],
+      "estimated_resolution": "2026-05-15 (based on milestone dates)"
+    }
+  ],
+  
+  "active_context": {
+    "current_domain": null,
+    "current_task": null,
+    "blockers": [
+      "ECS migration blocking 3+ repos",
+      "GitHub API rate limits on large org scan"
+    ],
+    "assumptions": [
+      "All repos are on GitHub (not GitLab, Gitea, etc.)",
+      "Issue labels follow convention: feature, bug, tech-debt, blocked, security",
+      "PRs are linked to issues via 'Closes #ID' pattern"
+    ]
+  },
+  
+  "github_refresh_schedule": {
+    "next_scan": "2026-04-26T00:00:00Z (daily at 00:00 UTC)",
+    "last_scan": "2026-04-25T14:32:00Z",
+    "scan_duration": "4.2 minutes",
+    "repos_scanned": 24,
+    "issues_processed": 347,
+    "prs_processed": 89
+  }
+}
+```
+
+---
+
+## API CALLS (Implementation)
+
+Use GitHub GraphQL API (far more efficient than REST):
+
+### Query 1: Repos + Issues (Paginated)
+```graphql
+query($owner: String!, $after: String) {
+  repositoryOwner(login: $owner) {
+    repositories(first: 100, after: $after) {
+      pageInfo { hasNextPage, endCursor }
+      nodes {
+        name
+        description
+        url
+        primaryLanguage { name }
+        isArchived
+        pushedAt
+        defaultBranchRef {
+          name
+          target { oid }
+        }
+        issues(first: 50, after: null, states: [OPEN, CLOSED]) {
+          pageInfo { hasNextPage }
+          nodes {
+            number
+            title
+            body
+            state
+            createdAt
+            updatedAt
+            closedAt
+            labels(first: 10) { nodes { name } }
+            assignees(first: 5) { nodes { login } }
+            milestone { title, dueOn }
+            timelineItems(first: 20, itemTypes: [PullRequestLinkedEvent, ClosedEvent]) {
+              nodes {
+                __typename
+                ... on PullRequestLinkedEvent { pullRequest { number, state } }
+                ... on ClosedEvent { closer { __typename } }
+              }
+            }
+          }
+        }
+        pullRequests(first: 50, after: null, states: [OPEN, MERGED, CLOSED]) {
+          pageInfo { hasNextPage }
+          nodes {
+            number
+            title
+            state
+            createdAt
+            mergedAt
+            reviews(first: 10) { nodes { state } }
+            commits(first: 20) { totalCount }
+            additions
+            deletions
+            labels(first: 10) { nodes { name } }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Query 2: Code Scanning (Search for TODOs)
+```graphql
+query($owner: String!, $repo: String!) {
+  search(query: "TODO in:file repo:$owner/$repo", type: CODE, first: 50) {
+    nodes {
+      ... on CodeSearchResultItem {
+        path
+        repository { name }
+      }
+    }
+  }
+}
+```
+
+### Query 3: Security Alerts
+```graphql
+query($owner: String!, $repo: String!) {
+  repository(owner: $owner, name: $repo) {
+    dependencyGraphManifests(first: 10) {
+      nodes { blobPath, dependencies(first: 100) { nodes { packageName, requirements, vulnerabilities(first: 10) { nodes { severity } } } } }
+    }
+  }
+}
+```
+
+---
+
+## COPILOT USAGE AFTER SCAN
+
+Once GitHub data is ingested, your copilot gains **context** for every turn:
+
+**Before (blind):**
+```
+YOU: "What should I prioritize next?"
+COPILOT: [No GitHub context] "That depends on your goals..."
+```
+
+**After (GitHub-aware):**
+```
+YOU: "What should I prioritize next?"
+COPILOT: [Memory loaded from GitHub scan]
+You have 3 in-progress goals:
+  1. FlowCI multi-tenant queue (#789) — 3 approvals needed, 6 days stalled
+  2. ElevatedIQ Terraform/Helm (#234) — merged, closed ✓
+  3. VaultOS storage placement engine — blocked by ECS migration (#123 in ElevatedIQ)
+
+Cross-repo blocker: ECS migration is holding up FlowCI + ElevatedIQ + VaultOS.
+
+My recommendation: Either (A) unblock ECS migration, OR (B) pivot to 
+technical debt consolidation (Auth.js refactor across 3 repos).
+
+What's your priority?
+```
+
+---
+
+## IMPLEMENTATION ARCHITECTURE
+
+### Service 1: GitHub Scanner (Cron Job)
+```javascript
+// Runs daily at 00:00 UTC
+async function scanGitHubAndUpdateMemory(org, githubToken) {
+  // 1. Enumerate repos
+  const repos = await fetchAllRepos(org, githubToken);
+  
+  // 2. For each repo, fetch issues + PRs
+  const snapshot = await scanRepos(repos, githubToken);
+  
+  // 3. Synthesize into memory structure
+  const memoryGoals = await synthesizeIntoGoals(snapshot);
+  
+  // 4. Update memory store (Redis or DB)
+  await memory.importFromGitHub(memoryGoals);
+  
+  // 5. Log scan stats
+  logScanMetrics(snapshot);
+}
+```
+
+### Service 2: Dedup Engine (Enhanced)
+```javascript
+// Before each copilot turn, ALSO check against GitHub context
+async function checkForDuplicates(userMessage, memory) {
+  // Existing in-memory dedup
+  const memDup = await deduplicateCheck(userMessage, memory);
+  if (memDup.isDuplicate) return memDup;
+  
+  // NEW: Check against GitHub issues/PRs
+  // "How should I structure conflict resolution?" 
+  //   → semantic search GitHub issues for similar titles
+  // "What about multi-tenancy?"
+  //   → find #789 in GitHub (already logged in goals)
+  const githubDup = await searchGitHubForSimilar(userMessage, memory.github_snapshot);
+  if (githubDup.found) {
+    return {
+      isDuplicate: true,
+      source: "github",
+      issue: githubDup.issue,
+      message: `I see you've been working on this. GitHub issue #${githubDup.issue.number}: "${githubDup.issue.title}" 
+                was ${githubDup.issue.state} on ${githubDup.issue.updated_at}. 
+                Current status: ${githubDup.issue.status}. Shall we dive into it?`
+    };
+  }
+  
+  return { isDuplicate: false };
+}
+```
+
+### Service 3: Copilot System Prompt (Enhanced)
+```
+[EXISTING SYSTEM PROMPT]
+
+ADDITION: GitHub-Aware Reasoning
+---
+
+You now have access to a comprehensive GitHub snapshot of all repositories:
+- Completed goals (merged PRs, closed issues)
+- In-progress work (open PRs, active issues, days stalled)
+- Blockers (issues waiting on external dependencies)
+- Technical debt (TODOs, deprecated patterns, security flags)
+- Roadmap gaps (missing implementations, deferred decisions)
+
+When the user asks about priorities, progress, or roadmap:
+1. Reference specific GitHub issue/PR numbers
+2. Check cross-repo blockers (e.g., "FlowCI blocked on ECS migration")
+3. Surface technical debt opportunities (e.g., "Auth consolidation could unblock 3 repos")
+4. Respect deferred decisions logged in GitHub (e.g., "Marked wontfix for X reason")
+
+Example trigger phrases that should activate GitHub context:
+- "What should I prioritize next?"
+- "Where are we blocked?"
+- "What's the status of X?"
+- "Any quick wins?"
+- "What's been completed?"
+- "Show me the roadmap"
+```
+
+---
+
+## VALIDATION & REFRESH
+
+**Daily scan (cron):**
+- 00:00 UTC: Full GitHub scan
+- Update memory store
+- Log scan metrics (repos scanned, issues processed, scan time)
+
+**On-demand scan (user-initiated):**
+```
+YOU: "Refresh GitHub status"
+COPILOT: [Immediate scan triggered]
+Scanning 24 repos... (progress bar)
+Found 3 new issues, 5 new PRs, 2 resolved blockers.
+Updated memory snapshot.
+Last scan: 42 seconds ago.
+```
+
+**Metrics to track:**
+- Scan duration (target: <5 min for org with 20+ repos)
+- API call count (optimize to stay under GitHub rate limits)
+- Memory snapshot size (goal: <10MB for org with 300+ issues)
+- Accuracy of cross-repo dependency detection
+
+---
+
+## DEPLOYMENT CHECKLIST
+
+- [ ] Add GitHub GraphQL endpoint to copilot env
+- [ ] Wire GitHub token (use fine-grained PAT with repo read-only + issues/PRs)
+- [ ] Implement daily cron job for full scans
+- [ ] Build on-demand refresh trigger (user says "refresh GitHub status")
+- [ ] Update dedup engine to search GitHub snapshot
+- [ ] Enhance system prompt with GitHub-aware reasoning blocks
+- [ ] Test on 3-5 repos first, scale to full org
+- [ ] Monitor API rate limits (GitHub allows 5K points/hour for GraphQL)
+- [ ] Log all scan metrics for auditing
+- [ ] Set up alerts if scan takes >10 min (indicates rate limit hit)
+
+---
+
+## SUCCESS METRICS
+
+After GitHub scanning is live, you should see:
+
+✅ **Copilot knows your roadmap** — references specific issues/PRs without you re-explaining  
+✅ **No duplicate work suggestions** — checks GitHub before recommending new work  
+✅ **Blocker visibility** — surfaces cross-repo dependencies automatically  
+✅ **Technical debt tracking** — logs TODOs, deprecated patterns, security flags  
+✅ **Memory persists across sessions** — GitHub snapshot is durable and refreshed daily  
+✅ **Copilot respects deferred decisions** — never suggests wontfix items unless you ask  
+
+---
+
+## EXAMPLE: Full Interaction Loop (After GitHub Integration)
+
+**Scenario:** You ask about multi-tenancy:
+
+```
+YOU: "Should we use Redis or Kafka for the job queue?"
+
+COPILOT: [GitHub context loaded]
+I found this in your repos — FlowCI #789 (in progress, 6 days stalled):
+  Title: "Add multi-tenant job queue"
+  PR: #890 (awaiting 3 approvals)
+  Recent comment: "Redis for atomic ops, Kafka for event streaming — need decision"
+
+You haven't made this call yet. Let me compare both:
+
+REDIS:
+  ✓ Atomic operations (ZSET for priority)
+  ✓ Simple to scale per-tenant (namespace keys)
+  ✓ Faster for low-latency ack/dequeue
+  ✗ Not great for long-term event replay
+
+KAFKA:
+  ✓ Event sourcing (full replay capability)
+  ✓ Fan-out to multiple consumers (audit, analytics)
+  ✗ Overkill if you don't need replays
+  ✗ Operational complexity (cluster management)
+
+HYBRID (my recommendation):
+  Redis for real-time queue + immediate dequeue
+  Kafka as optional side-car for event replay (phase 2)
+  
+This decision locks to goal_github_flowci_multitenant.
+Once locked, all future FlowCI work respects this choice.
+
+Should I mark this as locked?
+```
+
+You say "yes" → Copilot locks the decision → Next turn, it never contradicts this choice.
+
+This is the full loop: **GitHub awareness + memory locking = no Alzheimer's, no duplicate work, no contradictions.**

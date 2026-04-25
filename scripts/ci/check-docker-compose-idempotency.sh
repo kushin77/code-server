@@ -9,8 +9,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-readonly COMPOSE_FILE="${COMPOSE_FILE:-${REPO_ROOT}/docker-compose.yml}"
-readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/compose-idempotency-report.txt}"
+readonly DEFAULT_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
+readonly DEFAULT_REPORT_FILE="${REPO_ROOT}/artifacts/compose-idempotency-report.txt"
+COMPOSE_FILE="${COMPOSE_FILE:-${DEFAULT_COMPOSE_FILE}}"
+REPORT_FILE="${REPORT_FILE:-${DEFAULT_REPORT_FILE}}"
 
 # Load network configuration SSOT
 source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {

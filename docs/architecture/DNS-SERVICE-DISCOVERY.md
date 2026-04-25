@@ -92,10 +92,10 @@ environment:
 
 ```yaml
 environment:
-  - OLLAMA_HOST=http://ollama:11434
+  - OLLAMA_HOST=http://localhost:11434
 ```
 
-✅ Uses service name `ollama` (resolved via Docker DNS)  
+✅ Uses external endpoint via `OLLAMA_HOST` (deploy from kushin77/ollama)  
 ✅ No hardcoded IP
 
 #### Grafana Tempo Tracing Reference

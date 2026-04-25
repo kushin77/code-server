@@ -15,6 +15,11 @@ TEST_REPORT="${REPO_ROOT}/artifacts/deployment-test-report.json"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 mkdir -p "${ARTIFACTS_DIR}"
 
+# Load network SSOT defaults when available for downstream validators.
+source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+  echo "Warning: Network configuration SSOT not found, using host defaults"
+}
+
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*" | tee -a "${TEST_LOG}"
 }
@@ -46,6 +51,9 @@ test_infrastructure_validation() {
   
   log_info "  - Validating configuration SSOT..."
   "${REPO_ROOT}/scripts/ci/validate-config-ssot.sh" > /dev/null || return 1
+
+  log_info "  - Validating strict Caddy env usage (no fallback defaults)..."
+  "${REPO_ROOT}/scripts/ci/validate-caddy-strict-env.sh" > /dev/null || return 1
   
   log_success "Phase 1 PASSED: All infrastructure validation checks successful"
   return 0
@@ -56,10 +64,17 @@ test_gitops_drift() {
   log_info "Test Phase 2: GitOps Drift Detection"
   
   log_info "  - Running drift detection (check only)..."
-  "${REPO_ROOT}/scripts/ci/gitops-drift-detector.sh" --check 2>/dev/null || true
+  local primary_host="${PRIMARY_HOST:-${ONPREM_PRIMARY_IP:-192.168.168.31}}"
+  local replica_host="${REPLICA_HOST:-${ONPREM_SECONDARY_IP:-192.168.168.42}}"
+
+  if PRIMARY_HOST="${primary_host}" REPLICA_HOST="${replica_host}" \
+    "${REPO_ROOT}/scripts/ci/gitops-drift-detector.sh" --check >> "${TEST_LOG}" 2>&1; then
+    log_success "Phase 2 PASSED: Drift detection executed successfully"
+    return 0
+  fi
   
-  log_success "Phase 2 PASSED: Drift detection executed successfully"
-  return 0
+  log_error "Phase 2 FAILED: Drift detection found drift or failed"
+  return 1
 }
 
 # Test Phase 3: Deployment simulation (dry-run)

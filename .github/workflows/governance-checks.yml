@@ -246,6 +246,46 @@ jobs:
         env:
           REPO_ROOT: ${{ github.workspace }}
 
+      - name: Validate strict Caddy environment usage
+        run: bash scripts/ci/validate-caddy-strict-env.sh
+
+  # ── Secret Scanning Governance Gate ─────────────────────────────────────────
+  secret-scanning-governance:
+    name: Secret scanning governance gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog scanner
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+      - name: Install git-secrets
+        run: |
+          git clone https://github.com/awslabs/git-secrets.git /tmp/git-secrets
+          cd /tmp/git-secrets
+          sudo make install
+
+      - name: Configure and run git-secrets
+        run: |
+          git secrets --install
+          git secrets --register-aws
+          if [ -f .gitignore_secret_patterns ]; then
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              case "$line" in
+                \#*) continue ;;
+              esac
+              git secrets --add --allowed "$line"
+            done < .gitignore_secret_patterns
+          fi
+          git secrets --scan
+
   # ── DNS Service Discovery Audit ───────────────────────────────────────────────
   dns-service-discovery:
     name: DNS service discovery (no hardcoded IPs)
@@ -259,6 +299,16 @@ jobs:
           APEX_DOMAIN: kushnir.cloud
 
   # ── Repository Branch Hygiene ────────────────────────────────────────────────
+  local-hook-integrity:
+    name: Local git hook integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate local git hook integrity
+        run: bash scripts/ci/check-local-git-hook-integrity.sh
+
+  # ── Repository Branch Hygiene ────────────────────────────────────────────────
   branch-hygiene:
     name: Repository branch hygiene
     runs-on: ubuntu-latest
@@ -268,22 +318,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check branch count and health
-        run: |
-          # Count remote branches (should be minimal)
-          BRANCH_COUNT=$(git branch -r | wc -l)
-          echo "Remote branches: $BRANCH_COUNT"
-
-          if [ "$BRANCH_COUNT" -gt 10 ]; then
-            echo "⚠️  Repository has $BRANCH_COUNT remote branches (consider cleanup: git branch -d <branch>)"
-          fi
-
-          # Verify main branch is always the latest
-          MAIN_REMOTE=$(git rev-parse origin/main)
-          MAIN_LOCAL=$(git rev-parse main)
-
-          if [ "$MAIN_REMOTE" != "$MAIN_LOCAL" ]; then
-            echo "⚠️  Local main differs from origin/main (run: git pull origin main)"
-          fi
-
-          echo "✓ Branch hygiene check complete ($BRANCH_COUNT remote branches)"
+      - name: Enforce merged branch cleanup SLA
+        run: bash scripts/ci/check-merged-branch-cleanup.sh
+        env:
+          BRANCH_CLEANUP_GRACE_HOURS: "24"

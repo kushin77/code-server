@@ -1,0 +1,322 @@
+# Code Server Copilot Profile - Deployment Checklist
+
+## Phase 1: Local Development & Testing (Your Machine)
+
+### Week 1: Build & Package
+- [ ] Clone repo & run `npm install`
+- [ ] Compile TypeScript: `npm run compile`
+- [ ] Create VSIX package: `npm run package`
+- [ ] Test in Code Server locally:
+  ```bash
+  code-server --install-extension ./copilot-memory-github-profile-1.0.0.vsix
+  ```
+- [ ] Verify all commands work:
+  - [ ] Ctrl+Shift+C opens chat
+  - [ ] Ctrl+Shift+G scans GitHub
+  - [ ] Commands all available in palette
+- [ ] Test memory persistence:
+  - [ ] Chat with copilot → send message
+  - [ ] Stop Code Server, restart
+  - [ ] Verify memory is still there (if using Redis/PostgreSQL)
+  - [ ] OR verify message is in export (if in-memory)
+- [ ] Test GitHub scanning:
+  - [ ] Run "Copilot: Refresh GitHub Status"
+  - [ ] Verify repos/issues appear in GitHub Status panel
+  - [ ] Verify memory goals are imported
+
+### Week 1: Test All Backends
+- [ ] **In-Memory** (default):
+  - [ ] Chat works
+  - [ ] Memory survives session
+  - [ ] Export/import works
+  
+- [ ] **Redis** (optional):
+  - [ ] Install Redis locally: `brew install redis` (macOS)
+  - [ ] Set `copilot-memory.memoryBackend = "redis"`
+  - [ ] Verify memory syncs to Redis
+  - [ ] Kill Code Server, restart, verify memory persists
+  
+- [ ] **PostgreSQL** (optional):
+  - [ ] Create database: `createdb copilot_memory`
+  - [ ] Set `copilot-memory.memoryBackend = "postgresql"`
+  - [ ] Verify memory syncs to DB
+  - [ ] Query DB directly: `SELECT * FROM goals;`
+
+---
+
+## Phase 2: GitHub Prep & First Release
+
+### Week 2: Repository Setup
+- [ ] Create GitHub repo: `your-org/copilot-memory-profile`
+- [ ] Clone locally & add files:
+  ```bash
+  git clone https://github.com/your-org/copilot-memory-profile.git
+  cd copilot-memory-profile
+  
+  # Copy from artifacts:
+  # - package.json
+  # - src/extension.ts
+  # - README.md
+  # - LICENSE (MIT)
+  ```
+- [ ] Add CI/CD:
+  - [ ] Create `.github/workflows/build-and-release.yml` (from distribution guide)
+  - [ ] Test workflow (push to main, verify it runs)
+- [ ] Add documentation:
+  - [ ] README with installation + usage
+  - [ ] CHANGELOG.md (v1.0.0 initial release)
+  - [ ] docs/CONTRIBUTING.md (contribution guidelines)
+- [ ] Add community files:
+  - [ ] .github/ISSUE_TEMPLATE/bug_report.md
+  - [ ] .github/ISSUE_TEMPLATE/feature_request.md
+  - [ ] CODE_OF_CONDUCT.md
+  - [ ] SUPPORT.md
+- [ ] Configure repository:
+  - [ ] Enable Discussions (Settings > Features)
+  - [ ] Enable GitHub Pages (Settings > Pages, deploy from docs/)
+  - [ ] Add branch protection: require PR review before merge
+
+### Week 2: First Release
+- [ ] Final testing of all features locally
+- [ ] Update version: `npm version minor` (1.0.0)
+- [ ] Update CHANGELOG.md
+- [ ] Commit & push:
+  ```bash
+  git add .
+  git commit -m "v1.0.0: Initial release"
+  git push origin main
+  ```
+- [ ] Create tag:
+  ```bash
+  git tag v1.0.0
+  git push origin v1.0.0
+  ```
+- [ ] Verify GitHub Actions runs:
+  - [ ] Check Actions tab → build-and-release workflow
+  - [ ] Verify VSIX is created
+  - [ ] Check Releases tab → v1.0.0 with VSIX download
+
+---
+
+## Phase 3: Marketplace Registration
+
+### Week 3: Code Server Marketplace
+- [ ] Register on Code Server Marketplace:
+  - [ ] Go to [registry.coder.com](https://registry.coder.com)
+  - [ ] Sign in with GitHub
+  - [ ] Click "Publish Extension"
+  - [ ] Fill in metadata (name, description, repo, icon, categories, keywords)
+- [ ] Upload first version:
+  ```bash
+  npm install -g @coder/code-server-marketplace-cli
+  coder-marketplace login --github-token $GITHUB_TOKEN
+  coder-marketplace publish \
+    --path ./copilot-memory-github-profile-1.0.0.vsix \
+    --version 1.0.0
+  ```
+- [ ] Verify listing appears on marketplace
+- [ ] Test installation from marketplace:
+  - [ ] Open Code Server
+  - [ ] Extensions > search "Copilot Memory"
+  - [ ] Click Install
+  - [ ] Verify it installs & works
+
+---
+
+## Phase 4: Marketing & Community
+
+### Week 3-4: Announce
+- [ ] Create landing page:
+  - [ ] Add docs/index.html with features & quick-start
+  - [ ] Enable GitHub Pages (deploy from docs/)
+  - [ ] Test: visit `https://your-org.github.io/copilot-memory-profile`
+- [ ] Write blog post:
+  - [ ] Title: "Introducing Copilot Memory: Self-Cleaning AI Assistant for Code Server"
+  - [ ] Cover: problem (context loss), solution (memory), benefits (never repeats, GitHub-aware)
+  - [ ] Include screenshots of chat panel + memory state
+  - [ ] Link to: GitHub repo, marketplace, documentation
+- [ ] Social announcements:
+  - [ ] **LinkedIn**: Technical post about why memory matters for AI copilots
+  - [ ] **Twitter**: Quick announcement with GitHub link
+  - [ ] **Reddit** (r/codeserver, r/programming): "Show HN" style post
+  - [ ] **Hacker News**: Submit GitHub link (if it gains traction)
+  - [ ] **Discord** (Code Server, Anthropic communities): Share link
+- [ ] Submit to directories:
+  - [ ] [awesome-code-server](https://github.com/coder/awesome-code-server) — submit PR
+  - [ ] [awesome-ai-tools](https://github.com/imaurer/awesome-ai-tools) — submit PR
+- [ ] Email announcement:
+  - [ ] If you have newsletter, announce to subscribers
+  - [ ] Post in Code Server discussions/forums
+
+---
+
+## Phase 5: Team/Enterprise Deployment
+
+### Week 4+: Enable Team Sharing
+
+**Option A: Shared Redis Backend**
+- [ ] Deploy Redis to team infrastructure:
+  ```bash
+  docker run -d -p 6379:6379 --name copilot-redis redis:latest
+  ```
+- [ ] Share connection string with team:
+  ```json
+  {
+    "copilot-memory.memoryBackend": "redis",
+    "copilot-memory.redisUrl": "redis://shared-redis-host:6379"
+  }
+  ```
+- [ ] All team members now share memory, GitHub context, decisions
+
+**Option B: Shared PostgreSQL Backend** (Enterprise)
+- [ ] Deploy PostgreSQL:
+  ```bash
+  docker run -d -e POSTGRES_DB=copilot_memory \
+    -e POSTGRES_PASSWORD=secure -p 5432:5432 \
+    --name copilot-postgres postgres:latest
+  ```
+- [ ] Create roles for different teams:
+  ```sql
+  CREATE ROLE team_a WITH LOGIN PASSWORD 'xxx';
+  GRANT SELECT, INSERT ON goals TO team_a;
+  ```
+- [ ] Distribute connection strings by team
+
+**Option C: Docker Compose (All-in-One)**
+- [ ] Create `docker-compose.yml` (from distribution guide)
+- [ ] Deploy to your infrastructure:
+  ```bash
+  docker-compose up -d
+  ```
+- [ ] Share Code Server URL with team
+- [ ] All users access same instance + memory + GitHub context
+- [ ] Add backup cron job:
+  ```bash
+  # Daily 2 AM backup
+  0 2 * * * docker exec copilot-postgres pg_dump -U postgres copilot_memory > backup-$(date +%Y%m%d).sql
+  ```
+
+---
+
+## Phase 6: Ongoing Maintenance
+
+### Monthly Tasks
+- [ ] Monitor GitHub Issues
+- [ ] Respond to bug reports within 24h
+- [ ] Triage feature requests
+- [ ] Review community PRs
+- [ ] Update dependencies: `npm update`
+- [ ] Test on latest Code Server version
+- [ ] Security audit (check for CVEs in dependencies)
+
+### Release Cycle (Monthly)
+- [ ] Pick 3-5 issues to fix/implement
+- [ ] Create feature branch: `git checkout -b feat/description`
+- [ ] Implement & test locally
+- [ ] Create PR, get review from team
+- [ ] Merge to main
+- [ ] Release:
+  ```bash
+  npm version patch    # or minor for features
+  npm run package
+  git push origin main --follow-tags
+  ```
+- [ ] GitHub Actions auto-publishes to marketplace
+- [ ] Post release notes in Discussions
+- [ ] Announce on social (optional)
+
+### Quarterly (Big Updates)
+- [ ] Roadmap review (what's next for copilot?)
+- [ ] Major feature planning
+- [ ] Performance audit
+- [ ] Documentation review/updates
+- [ ] Community feedback synthesis
+- [ ] Plan v2.0 or next major version
+
+---
+
+## Quick Verification Checklist (Before Any Release)
+
+Before shipping any version:
+
+- [ ] `npm run compile` succeeds (no TypeScript errors)
+- [ ] `npm run package` creates .vsix without warnings
+- [ ] Chat works (send message, get response)
+- [ ] Memory persists (kill Code Server, restart, message still there)
+- [ ] GitHub scan works (Ctrl+Shift+G, repos imported as goals)
+- [ ] Dedup works (send same message twice, second time flagged)
+- [ ] Decision locking works (accept suggestion, future advice respects it)
+- [ ] Export/import works (export to file, import in new session, all data there)
+- [ ] All shortcuts work (Ctrl+Shift+C, Ctrl+Shift+G)
+- [ ] All commands available in palette (search "Copilot")
+- [ ] Settings page has all config options
+- [ ] README accurate (installation steps match reality)
+- [ ] No console errors or warnings
+
+---
+
+## Timeline Summary
+
+| Phase | Duration | Deliverable |
+|-------|----------|-------------|
+| **1. Dev & Testing** | Week 1 | Working extension, all features tested locally |
+| **2. GitHub Setup** | Week 2 | Repo public, v1.0.0 released, CI/CD working |
+| **3. Marketplace** | Week 3 | Listed on Code Server Marketplace, installable by users |
+| **4. Marketing** | Week 3-4 | Landing page, blog post, announced on social |
+| **5. Team Deployment** | Week 4+ | Teams can install & use shared memory backends |
+| **6. Maintenance** | Ongoing | Monthly updates, community engagement |
+
+---
+
+## Success Metrics (6 Months Post-Launch)
+
+- [ ] **GitHub**:
+  - [ ] ≥50 stars
+  - [ ] ≥10 GitHub Issues (feature requests + bug reports)
+  - [ ] ≥5 Pull Requests (community contributions)
+  - [ ] ≥3 Discussion threads (support + ideas)
+
+- [ ] **Marketplace**:
+  - [ ] ≥500 installs
+  - [ ] ≥4.5 star rating (from user reviews)
+  - [ ] Trending in "AI" category
+
+- [ ] **Community**:
+  - [ ] ≥100 Twitter mentions/retweets
+  - [ ] ≥10 teams using shared Redis/PostgreSQL backends
+  - [ ] ≥1 community blog post or tutorial
+
+- [ ] **Product**:
+  - [ ] 0 critical bugs reported
+  - [ ] Monthly release cadence maintained
+  - [ ] v1.1.0 or v2.0 roadmap published
+
+---
+
+## When You Hit Problems
+
+**"Code Server won't install the VSIX"**
+- Check: Is Code Server version ≥4.0?
+- Check: Is VSIX path correct?
+- Try: `code-server --help | grep extension`
+
+**"GitHub scan takes >10 minutes"**
+- You might be hitting rate limits (5000 points/hour)
+- Solution: Increase scan interval (`copilot-memory.scanSchedule = "0 0 * * *"`)
+- Or split into smaller orgs if you have many repos
+
+**"Memory not syncing across users"**
+- Check: Are they using same Redis/PostgreSQL connection?
+- Check: Do connection strings match exactly?
+- Try: Test Redis/PostgreSQL directly: `redis-cli` or `psql`
+
+**"Claude responses are generic/not memory-aware"**
+- Check: Memory goals showing in "Memory State" panel?
+- Check: Run "Show Memory State" — is data there?
+- Try: Clear memory & reimport from GitHub
+
+---
+
+**You're ready to ship! 🚀**
+
+Follow this checklist, and your copilot will be live for other users within 4 weeks.

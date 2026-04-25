@@ -109,8 +109,7 @@ jobs:
             -v \
             --tb=short \
             -x \
-            --junit-xml=test-results/integration/results.xml \
-            2>&1 || true  # Allow failures when services not running (CI smoke mode)
+            --junit-xml=test-results/integration/results.xml
         env:
           ENV_PROVISIONER_URL: http://localhost:8080
           REPUTATION_ENGINE_URL: http://localhost:8081
@@ -141,11 +140,9 @@ jobs:
 
       - name: Terraform version pins validation
         run: bash scripts/ci/validate-terraform-version-pins.sh
-        continue-on-error: true
 
       - name: Config SSOT validation
         run: bash scripts/ci/validate-config-ssot.sh
-        continue-on-error: true
 
   # ── Test Summary ─────────────────────────────────────────────────────────────
   test-summary:

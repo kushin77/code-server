@@ -293,16 +293,18 @@ pnpm list --depth=-1
 
 ## CI Enforcement Checks (Phase 2)
 
-### Pre-commit Hooks
+### Repository-managed Git Hooks
 
 ```bash
-# .git/hooks/pre-commit
-#!/bin/bash
-# Check for:
-# 1. No markdown files in root (except README.md, CHANGELOG.md)
-# 2. No hardcoded IPs in scripts (except comments)
-# 3. Script names are kebab-case
-# 4. No duplicate config files
+# Install repository-managed hooks once per clone
+pnpm hooks:install
+
+# Validate hook integrity locally
+pnpm validate:hooks
+
+# Behavior
+# - pre-push to main: enforces merged-branch cleanup policy
+# - pre-push to non-main branches: skips branch cleanup gate
 ```
 
 ### GitHub Actions Validation

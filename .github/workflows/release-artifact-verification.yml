@@ -1,0 +1,27 @@
+name: Release Artifact Verification
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-artifacts:
+    name: Verify release artifacts and checksums
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure verification script is executable
+        run: chmod +x scripts/ci/verify-release-artifacts.sh
+
+      - name: Verify published release artifacts
+        run: bash scripts/ci/verify-release-artifacts.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}

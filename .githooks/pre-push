@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Repository-managed pre-push gate for branch hygiene.
+exec bash scripts/hooks/pre-push-branch-hygiene.sh "$@"

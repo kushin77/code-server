@@ -65,6 +65,146 @@ export function mockEmbedding(text) {
 }
 
 /**
+ * Create an Ollama embedding provider.
+ * @param {{url?: string, model?: string, fetchFn?: typeof fetch}} [options]
+ */
+export function createOllamaEmbeddingProvider(options = {}) {
+  const {
+    url = process.env.OLLAMA_EMBEDDING_URL ?? "http://localhost:11434/api/embeddings",
+    model = process.env.OLLAMA_EMBEDDING_MODEL ?? "nomic-embed-text",
+    fetchFn = globalThis.fetch,
+  } = options;
+
+  return async (text) => {
+    if (typeof fetchFn !== "function") {
+      throw new Error("fetch is required for Ollama embedding provider");
+    }
+
+    const res = await fetchFn(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, prompt: text }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ollama embedding HTTP ${res.status}`);
+    }
+
+    const payload = await res.json();
+    if (!Array.isArray(payload?.embedding)) {
+      throw new Error("Ollama response missing embedding array");
+    }
+    return payload.embedding;
+  };
+}
+
+/**
+ * Create an OpenAI embedding provider.
+ * @param {{apiKey?: string, model?: string, url?: string, fetchFn?: typeof fetch}} [options]
+ */
+export function createOpenAIEmbeddingProvider(options = {}) {
+  const {
+    apiKey = process.env.OPENAI_API_KEY,
+    model = process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
+    url = process.env.OPENAI_EMBEDDING_URL ?? "https://api.openai.com/v1/embeddings",
+    fetchFn = globalThis.fetch,
+  } = options;
+
+  return async (text) => {
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY not set for OpenAI embedding provider");
+    }
+    if (typeof fetchFn !== "function") {
+      throw new Error("fetch is required for OpenAI embedding provider");
+    }
+
+    const res = await fetchFn(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model, input: text }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`OpenAI embedding HTTP ${res.status}`);
+    }
+
+    const payload = await res.json();
+    const embedding = payload?.data?.[0]?.embedding;
+    if (!Array.isArray(embedding)) {
+      throw new Error("OpenAI response missing embedding array");
+    }
+    return embedding;
+  };
+}
+
+/**
+ * Configure provider from env with automatic fallback handling.
+ *
+ * EMBEDDING_PROVIDER values:
+ * - mock   -> mockEmbedding
+ * - ollama -> Ollama provider, fallback to mock if EMBEDDING_FALLBACK_TO_MOCK=true
+ * - openai -> OpenAI provider, fallback to mock if EMBEDDING_FALLBACK_TO_MOCK=true
+ * - auto   -> try ollama, then openai, then mock (default)
+ */
+export function configureEmbeddingProviderFromEnv() {
+  const provider = (process.env.EMBEDDING_PROVIDER ?? "auto").toLowerCase();
+  const fallbackToMock =
+    (process.env.EMBEDDING_FALLBACK_TO_MOCK ?? "true").toLowerCase() !==
+    "false";
+
+  const ollama = createOllamaEmbeddingProvider();
+  const openai = createOpenAIEmbeddingProvider();
+
+  if (provider === "mock") {
+    setEmbeddingProvider(async (text) => mockEmbedding(text));
+    return;
+  }
+
+  if (provider === "ollama") {
+    setEmbeddingProvider(async (text) => {
+      try {
+        return await ollama(text);
+      } catch (error) {
+        if (!fallbackToMock) throw error;
+        return mockEmbedding(text);
+      }
+    });
+    return;
+  }
+
+  if (provider === "openai") {
+    setEmbeddingProvider(async (text) => {
+      try {
+        return await openai(text);
+      } catch (error) {
+        if (!fallbackToMock) throw error;
+        return mockEmbedding(text);
+      }
+    });
+    return;
+  }
+
+  // auto: ollama -> openai -> mock
+  setEmbeddingProvider(async (text) => {
+    try {
+      return await ollama(text);
+    } catch {
+      try {
+        return await openai(text);
+      } catch {
+        if (!fallbackToMock) {
+          throw new Error("No embedding provider available in auto mode");
+        }
+        return mockEmbedding(text);
+      }
+    }
+  });
+}
+
+/**
  * Pluggable embedding function.
  * Override by calling `setEmbeddingProvider(yourFn)` before first use.
  */
@@ -88,6 +228,7 @@ export async function embedText(text) {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_DEDUP_THRESHOLD = 0.85;
+const DEFAULT_LOOKUP_LATENCY_TARGET_MS = 150;
 
 /**
  * Check whether `userMessage` is semantically similar to any prior suggestion.
@@ -100,8 +241,12 @@ const DEFAULT_DEDUP_THRESHOLD = 0.85;
 export async function checkForDuplicates(
   userMessage,
   memory,
-  threshold = DEFAULT_DEDUP_THRESHOLD
+  threshold = DEFAULT_DEDUP_THRESHOLD,
+  latencyTargetMs = Number(
+    process.env.DEDUP_LOOKUP_LATENCY_TARGET_MS ?? DEFAULT_LOOKUP_LATENCY_TARGET_MS
+  )
 ) {
+  const startedAt = Date.now();
   const currentEmbedding = await embedText(userMessage);
 
   let bestMatch = null;
@@ -117,15 +262,28 @@ export async function checkForDuplicates(
     }
   }
 
+  const lookupLatencyMs = Date.now() - startedAt;
+  const withinLatencyTarget = lookupLatencyMs <= latencyTargetMs;
+
   if (bestMatch && bestSimilarity >= threshold) {
     return {
       isDuplicate: true,
       prior: bestMatch,
       similarity: bestSimilarity,
+      lookup_latency_ms: lookupLatencyMs,
+      lookup_latency_target_ms: latencyTargetMs,
+      lookup_within_target: withinLatencyTarget,
     };
   }
 
-  return { isDuplicate: false, prior: null, similarity: bestSimilarity };
+  return {
+    isDuplicate: false,
+    prior: null,
+    similarity: bestSimilarity,
+    lookup_latency_ms: lookupLatencyMs,
+    lookup_latency_target_ms: latencyTargetMs,
+    lookup_within_target: withinLatencyTarget,
+  };
 }
 
 // ---------------------------------------------------------------------------

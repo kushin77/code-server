@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: git-secrets-scan
+        name: git-secrets staged scan
+        entry: bash -lc 'if ! command -v git-secrets >/dev/null 2>&1; then echo "git-secrets is not installed. Install: https://github.com/awslabs/git-secrets"; exit 1; fi; git secrets --scan --cached'
+        language: system
+        pass_filenames: false
+      - id: prevent-dotenv-commit
+        name: prevent accidental .env commit
+        entry: bash -lc 'git diff --cached --name-only | grep -E "(^|/)\.env(\.|$)" >/dev/null && { echo "Refusing commit: .env files are not allowed."; exit 1; } || exit 0'
+        language: system
+        pass_filenames: false

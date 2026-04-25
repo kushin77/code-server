@@ -72,6 +72,55 @@ adjust subsequent responses accordingly.
 
 ---
 
+## Git Workflow Mandate (branch sprawl prevention)
+
+After every completed task or issue, follow this sequence without skipping steps.
+
+Canonical mirror policy: [repo/copilot/rules/instructions/branch-lifecycle-mandate.instructions.md](../repo/copilot/rules/instructions/branch-lifecycle-mandate.instructions.md)
+
+### Mandatory completion flow
+
+1. Verify task completion and run relevant checks/tests.
+2. Commit immediately with a clear task/issue-scoped message.
+3. Push the commit to remote.
+4. Merge to `main` (or update/open PR and complete merge as the only active integration path).
+5. Redeploy from `main` after merge.
+6. Clean up both local and remote working branches used for the task.
+
+### Branch lifecycle rules
+
+- One active branch per task/issue; no stacked or long-lived feature branches.
+- Start branch cleanup immediately after merge and redeploy confirmation.
+- Do not start the next task until the previous task branch is deleted locally and remotely.
+- If cleanup cannot be completed, explicitly report blocker and owner in status output.
+
+### Required completion status output
+
+Every completion response must include:
+- Commit SHA
+- Remote push confirmation
+- Main merge confirmation
+- Redeploy confirmation
+- Local branch cleanup confirmation
+- Remote branch cleanup confirmation
+
+### Forbidden behaviors
+
+- Leaving merged branches undeleted (local or remote)
+- Accumulating multiple active branches for parallel unfinished work without explicit approval
+- Deferring commit/push/merge/redeploy/cleanup to a later session
+
+### Deterministic enforcement
+
+- Session completion evidence hook: `.github/hooks/completion-evidence-enforcer.json`
+- Hook validator script: `scripts/hooks/enforce-completion-evidence.py`
+- Remote merged-branch cleanup CI gate: `scripts/ci/check-merged-branch-cleanup.sh`
+- GitHub Actions enforcement job: `.github/workflows/governance-checks.yml` (`branch-hygiene`)
+- Local git pre-push gate for main: `.githooks/pre-push` via `scripts/hooks/pre-push-branch-hygiene.sh`
+- Local hook installer: `scripts/hooks/install-local-git-hooks.sh` (`pnpm hooks:install`)
+
+---
+
 ## Architecture (`apps/copilot-engine`)
 
 ```

@@ -1,0 +1,568 @@
+# Distribution Guide: Sharing Your Copilot Profile
+
+> **How to package, publish, and share your self-cleaning copilot extension with other Code Server users.**
+
+---
+
+## 1. GitHub Setup (Primary Distribution)
+
+### Step 1.1: Create Repository
+```bash
+# Create repo on GitHub: your-org/copilot-memory-profile
+git clone https://github.com/your-org/copilot-memory-profile.git
+cd copilot-memory-profile
+
+# Initialize with structure:
+mkdir -p src/{engines,webviews}
+mkdir -p dist
+
+# Add files:
+# - package.json (from artifact 1)
+# - src/extension.ts (from artifact 2)
+# - README.md (from artifact 3)
+# - LICENSE (MIT)
+# - .github/workflows/
+```
+
+### Step 1.2: Add CI/CD Workflow (GitHub Actions)
+
+Create `.github/workflows/build-and-release.yml`:
+
+```yaml
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      
+      - run: npm install
+      - run: npm run compile
+      - run: npm run package
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.vsix"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Step 1.3: Release Process
+```bash
+# When ready to release:
+npm version patch  # Bumps version in package.json
+git push origin main --follow-tags
+
+# GitHub Actions automatically:
+# 1. Builds the extension
+# 2. Packages as .vsix
+# 3. Creates GitHub Release with VSIX download
+```
+
+---
+
+## 2. Code Server Marketplace (Official Registry)
+
+### Step 2.1: Register for Marketplace
+
+1. Go to [registry.coder.com](https://registry.coder.com)
+2. Sign in with GitHub
+3. Click **"Publish Extension"**
+4. Fill in metadata:
+   - **ID**: `copilot-memory-github-profile`
+   - **Name**: `Self-Cleaning Copilot with GitHub Memory`
+   - **Description**: "Enterprise copilot with persistent memory, deduplication, and GitHub awareness"
+   - **Repository URL**: `https://github.com/your-org/copilot-memory-profile`
+   - **License**: MIT
+   - **Categories**: `[Other, AI]`
+   - **Keywords**: `copilot, memory, github, ai, code-server`
+
+### Step 2.2: Add Marketplace Metadata to `package.json`
+
+```json
+{
+  "publisher": "your-org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/copilot-memory-profile"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/copilot-memory-profile/issues"
+  },
+  "homepage": "https://github.com/your-org/copilot-memory-profile",
+  "icon": "icon.png",
+  "keywords": [
+    "copilot",
+    "ai",
+    "memory",
+    "github",
+    "code-server",
+    "claude",
+    "deduplication"
+  ],
+  "categories": ["Other", "AI"]
+}
+```
+
+### Step 2.3: Upload to Marketplace
+
+```bash
+# Install marketplace CLI
+npm install -g @coder/code-server-marketplace-cli
+
+# Authenticate
+coder-marketplace login --github-token $GITHUB_TOKEN
+
+# Publish version
+coder-marketplace publish \
+  --path ./copilot-memory-github-profile-1.0.0.vsix \
+  --version 1.0.0
+
+# Check status
+coder-marketplace info copilot-memory-github-profile
+```
+
+---
+
+## 3. Direct Distribution (Self-Hosted Option)
+
+### Option A: GitHub Releases
+Users can install directly from GitHub releases:
+```bash
+# In Code Server, paste this in Extensions > Install from VSIX:
+https://github.com/your-org/copilot-memory-profile/releases/download/v1.0.0/copilot-memory-github-profile-1.0.0.vsix
+```
+
+### Option B: Self-Hosted Marketplace
+If you run your own Code Server registry:
+
+```bash
+# 1. Setup extension registry (HTTP server)
+npm install -g serve
+serve ./dist
+
+# 2. Point Code Server to your registry
+# Settings > extensions.marketplace = "http://your-registry.com"
+
+# 3. Users can install from your marketplace
+```
+
+### Option C: NPM Registry (For Developers)
+Publish to npm for programmatic installation:
+
+```bash
+# Update package.json
+npm version patch
+npm publish
+
+# Users can install:
+npm install -g @your-org/copilot-memory-github-profile
+```
+
+---
+
+## 4. Docker Distribution (Team/Enterprise)
+
+### Step 4.1: Create Dockerfile
+
+```dockerfile
+FROM codercom/code-server:latest
+
+# Install Node dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    python3 \
+    build-essential
+
+# Copy extension
+COPY copilot-memory-github-profile-*.vsix /tmp/
+
+# Pre-install extension
+RUN code-server --install-extension /tmp/copilot-memory-github-profile-*.vsix
+
+# Expose port
+EXPOSE 8080
+
+CMD ["code-server"]
+```
+
+### Step 4.2: Docker Compose (Team Setup)
+
+```yaml
+version: "3.8"
+services:
+  code-server:
+    image: your-org/code-server-with-copilot:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - code-data:/home/coder/.local
+      - code-projects:/home/coder/project
+    environment:
+      - PASSWORD=your-secure-password
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  code-data:
+  code-projects:
+  redis-data:
+```
+
+Deploy for entire team:
+```bash
+docker-compose up -d
+# All team members access: http://localhost:8080
+# All share same Redis backend for memory
+```
+
+---
+
+## 5. Marketing & Documentation
+
+### Step 5.1: Create Landing Page
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Copilot Memory - Self-Cleaning AI Assistant for Code Server</title>
+  <meta name="description" content="Enterprise copilot with persistent memory, GitHub integration, and decision locking. For Code Server.">
+</head>
+<body>
+  <h1>🤖 Copilot Memory</h1>
+  <p>Never lose context. Never repeat yourself. Never contradict a decision.</p>
+  
+  <h2>Features</h2>
+  <ul>
+    <li>✅ Persistent memory across sessions</li>
+    <li>✅ Semantic deduplication (no repeated suggestions)</li>
+    <li>✅ GitHub repo/issue awareness</li>
+    <li>✅ Decision locking (respects commitments)</li>
+    <li>✅ Multi-backend support (memory, Redis, PostgreSQL)</li>
+    <li>✅ Team collaboration ready</li>
+  </ul>
+  
+  <h2>Quick Start</h2>
+  <pre>
+    1. Install from Code Server Marketplace
+    2. Set API keys: Settings > copilot-memory
+    3. Press Ctrl+Shift+C to open chat
+    4. Start talking to your copilot
+  </pre>
+  
+  <h2>Links</h2>
+  <ul>
+    <li><a href="https://github.com/your-org/copilot-memory-profile">GitHub</a></li>
+    <li><a href="https://registry.coder.com/extensions/your-org/copilot-memory-github-profile">Code Server Marketplace</a></li>
+    <li><a href="https://your-org/docs/copilot-memory">Documentation</a></li>
+  </ul>
+</body>
+</html>
+```
+
+Host on GitHub Pages:
+```bash
+# Add to repo: docs/index.html
+git add docs/
+git commit -m "Add landing page"
+git push
+
+# Enable in GitHub: Settings > Pages > Deploy from docs/
+# Access: https://your-org.github.io/copilot-memory-profile
+```
+
+### Step 5.2: Social/Community Posts
+
+**LinkedIn:**
+```
+🤖 Excited to share: Copilot Memory — a self-cleaning AI assistant for Code Server that never forgets, never repeats, and always respects your decisions.
+
+Key features:
+✅ Persistent memory across sessions (no Alzheimer's)
+✅ GitHub-aware (scans all your repos daily)
+✅ Semantic deduplication (no duplicate suggestions)
+✅ Decision locking (respects commitments)
+✅ Team-ready (Redis/PostgreSQL backends)
+
+Install from Code Server Marketplace or GitHub. Open source, MIT license.
+
+[Link to repo]
+```
+
+**Hacker News / Product Hunt:**
+```
+Copilot Memory: Self-cleaning AI assistant with persistent memory + GitHub integration for Code Server
+
+An enterprise copilot that:
+- Remembers your goals and decisions (no context loss)
+- Never repeats suggestions (>85% semantic dedup)
+- Knows your entire GitHub roadmap (scans daily)
+- Locks decisions (respects commitments)
+- Works offline or with Redis/PostgreSQL
+
+Open source, works with Code Server. Built with Claude + GitHub API.
+```
+
+---
+
+## 6. Version & Update Management
+
+### Step 6.1: Semantic Versioning
+
+```bash
+# Patch (bugfix)
+npm version patch  # 1.0.0 → 1.0.1
+
+# Minor (feature)
+npm version minor  # 1.0.0 → 1.1.0
+
+# Major (breaking)
+npm version major  # 1.0.0 → 2.0.0
+```
+
+### Step 6.2: Changelog Format
+
+Create `CHANGELOG.md`:
+
+```markdown
+# Changelog
+
+## [1.1.0] - 2026-04-26
+
+### Added
+- Support for PostgreSQL backend (team collaboration)
+- Memory export/import command
+- GitHub PR blocking detection
+- Keyboard shortcut Ctrl+Shift+G for GitHub scan
+
+### Fixed
+- Rate limiting on large org scans
+- Memory corruption on concurrent updates
+
+### Changed
+- Improved dedup threshold from 0.80 → 0.85
+- Updated Claude model to Sonnet 4.1
+
+## [1.0.0] - 2026-04-20
+
+### Added
+- Initial release
+- Memory engine with deduplication
+- GitHub scanning integration
+- Code Server activity bar views
+```
+
+---
+
+## 7. User Analytics & Feedback
+
+### Step 7.1: Optional Telemetry (Privacy-Respecting)
+
+```typescript
+// Optional, user can disable in settings
+if (config.get("copilot-memory.enableTelemetry")) {
+  analytics.track("copilot.chat_sent", {
+    domain: userDomain,
+    suggestions_count: suggestionsInHistory,
+    memory_size: memoryGoalsCount,
+    github_repos_scanned: githubReposCount
+  });
+}
+```
+
+### Step 7.2: Feedback Collection
+
+Add "Send Feedback" button in chat:
+```html
+<button onclick="sendFeedback()">Send Feedback</button>
+<script>
+  function sendFeedback() {
+    vscode.postMessage({
+      command: "feedback",
+      message: "This suggestion was useful",
+      issue: "#789"
+    });
+    // POSTs to: feedback.your-org.com/copilot
+  }
+</script>
+```
+
+---
+
+## 8. Support & Community
+
+### Step 8.1: Issue Templates
+
+Create `.github/ISSUE_TEMPLATE/bug_report.md`:
+
+```markdown
+## Bug Report
+
+### Description
+Brief description of the issue.
+
+### Steps to Reproduce
+1. ...
+2. ...
+3. ...
+
+### Expected Behavior
+What should happen.
+
+### Actual Behavior
+What actually happens.
+
+### Environment
+- Code Server version: 4.x
+- Copilot Memory version: 1.0.0
+- Memory backend: memory|redis|postgresql
+- OS: macOS/Linux/Windows
+
+### Logs
+Paste any relevant logs from the extension output.
+```
+
+### Step 8.2: Discussions Forum
+
+Enable GitHub Discussions in your repo settings, post:
+- **Welcome** — Intro post for new users
+- **FAQ** — Common questions
+- **Feature Requests** — Users propose ideas
+- **Showcase** — Users share their setups
+
+---
+
+## 9. Enterprise/Commercial Options
+
+### Option A: Premium Support
+```markdown
+## Premium Support
+
+For teams wanting dedicated support:
+- Priority issue response (24h SLA)
+- Custom memory backends (Vault, S3, etc.)
+- SAML/SSO integration
+- Compliance reporting (audit logs, encryption)
+
+Contact: enterprise@your-org.com
+```
+
+### Option B: Self-Hosted Enterprise Edition
+```markdown
+## Enterprise Edition
+
+For on-premises deployments:
+- PostgreSQL RBAC (role-based access)
+- Audit logging & compliance
+- Memory encryption at rest
+- Custom model selection (OpenAI, local Ollama)
+- SLA & support
+
+License: Commercial (contact sales@your-org.com)
+```
+
+---
+
+## 10. Long-Term Maintenance
+
+### Release Schedule
+- **Minor releases** (features): Monthly
+- **Patch releases** (bugfixes): As needed
+- **Major releases** (breaking): Quarterly
+
+### Testing Before Release
+```bash
+npm run test
+npm run lint
+npm run build
+
+# Test in real Code Server
+code-server --install-extension ./dist/copilot-memory-github-profile-*.vsix
+
+# Verify: chat works, GitHub scan works, memory persists
+```
+
+### Deprecation Policy
+Document breaking changes in advance:
+```markdown
+## Deprecation Notice
+
+As of v1.2.0, the `memory` backend is deprecated.
+Please migrate to `redis` or `postgresql`.
+
+Recommended timeline: Update before v2.0.0 (Q3 2026).
+Migration guide: [link to docs]
+```
+
+---
+
+## Checklist: Launch Your Profile
+
+- [ ] GitHub repo created & public
+- [ ] README, LICENSE, package.json in place
+- [ ] CI/CD workflow (.github/workflows/) configured
+- [ ] Tag first release: `git tag v1.0.0 && git push --tags`
+- [ ] Build & test VSIX locally
+- [ ] Register on Code Server Marketplace
+- [ ] Create landing page (GitHub Pages or custom)
+- [ ] Announce on social (LinkedIn, HN, Reddit, Discord)
+- [ ] Add to awesome-code-server list
+- [ ] Monitor issues & feedback
+- [ ] Ship improvements & minor releases
+
+---
+
+## Example: Full Release Workflow
+
+```bash
+# 1. Develop on feature branch
+git checkout -b feat/memory-export
+# ... implement feature ...
+git commit -am "Add memory export/import"
+git push origin feat/memory-export
+
+# 2. Create PR, get review
+# GitHub: Open PR, peer review, merge
+
+# 3. Release version
+git checkout main && git pull
+npm version minor  # Updates package.json, creates tag
+# ... update CHANGELOG.md ...
+git push origin main --follow-tags
+
+# 4. GitHub Actions automatically:
+#    - Builds extension
+#    - Packages as VSIX
+#    - Creates Release with download
+
+# 5. Marketplace updates (within 1 hour)
+
+# 6. Announce
+#    - Post release notes to Discussions
+#    - Tweet/LinkedIn
+#    - Update website
+```
+
+---
+
+**You're now ready to share your copilot with the world!** 🚀

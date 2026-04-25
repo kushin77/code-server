@@ -102,10 +102,24 @@ validate_env_var_pattern() {
   fi
   
   for var in "${required_vars[@]}"; do
-    if git -C "${REPO_ROOT}" grep -nE "\${${var}}" -- "${search_paths[@]}" 2>/dev/null | grep -q .; then
+    local pattern
+    case "${var}" in
+      PRIMARY_HOST)
+        pattern='\$\{(PRIMARY_HOST|ONPREM_PRIMARY_IP)(:-[^}]*)?\}|\{\$(PRIMARY_HOST|ONPREM_PRIMARY_IP)(:[^}]*)?\}'
+        ;;
+      REPLICA_HOST)
+        pattern='\$\{(REPLICA_HOST|ONPREM_SECONDARY_IP)(:-[^}]*)?\}|\{\$(REPLICA_HOST|ONPREM_SECONDARY_IP)(:[^}]*)?\}'
+        ;;
+      *)
+        # Accept both shell style (${VAR}, ${VAR:-default}) and Caddy style ({$VAR}, {$VAR:default})
+        pattern="\\$\\{${var}(:-[^}]*)?\\}|\\{\\$${var}(:[^}]*)?\\}"
+        ;;
+    esac
+
+    if git -C "${REPO_ROOT}" grep -nE "${pattern}" -- "${search_paths[@]}" 2>/dev/null | grep -q .; then
       log_success "Variable referenced: ${var}"
     else
-      log_warning "Environment variable not referenced in infrastructure: ${var}"
+      log_info "Optional environment variable not referenced in this snapshot: ${var}"
     fi
   done
   

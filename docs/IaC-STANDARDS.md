@@ -541,19 +541,19 @@ jobs:
         run: bash scripts/ci/validate-iac-compliance.sh
 ```
 
-### Pre-Commit Hook
+### Repository-managed Hook Workflow
 
-Local validation before commit:
+Local validation and branch-hygiene enforcement:
 
 ```bash
-#!/bin/bash
-# Save as .git/hooks/pre-commit and chmod +x
+# Install repository-managed hooks
+pnpm hooks:install
 
-echo "Running IaC compliance check..."
-bash scripts/ci/validate-iac-compliance.sh || {
-    echo "IaC compliance check failed. Commit aborted."
-    exit 1
-}
+# Validate hook integrity
+pnpm validate:hooks
+
+# Optional: run IaC compliance directly
+bash scripts/ci/validate-iac-compliance.sh
 ```
 
 ---

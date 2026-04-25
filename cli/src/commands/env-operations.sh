@@ -89,9 +89,17 @@ env_offline() {
   log_info "Pre-pulling all container images..."
   docker-compose pull --quiet
   
-  log_info "Pre-loading Ollama models..."
-  # This would pre-load LLM models for offline use
-  docker-compose exec -T ollama ollama pull llama3:8b 2>/dev/null || true
+  local ollama_host="${OLLAMA_HOST:-http://localhost:11434}"
+  log_info "Checking external Ollama endpoint: ${ollama_host}"
+  if curl -fsS "${ollama_host}/api/tags" >/dev/null 2>&1; then
+    log_info "Pre-loading Ollama model via external API..."
+    # Best-effort preload using Ollama HTTP API to avoid local container coupling.
+    curl -fsS -X POST "${ollama_host}/api/pull" \
+      -H "Content-Type: application/json" \
+      -d '{"name":"llama3:8b","stream":false}' >/dev/null 2>&1 || true
+  else
+    log_info "External Ollama not reachable; skipping model preload"
+  fi
   
   log_info "Syncing data to local storage..."
   # Sync database dumps and cache to local storage

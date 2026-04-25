@@ -17,10 +17,12 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  checkForDuplicates,
   detectContradictions,
   embedText,
+  configureEmbeddingProviderFromEnv,
 } from "./deduplication.js";
+import { correlationId, logEvent, redact } from "./logger.js";
+import { runDedupPreflight } from "./dedup-middleware.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -119,6 +121,13 @@ export class ChatEngine {
   constructor(memory, options = {}) {
     this.memory = memory;
     this.log = options.logger ?? console;
+    if (options.configureEmbeddingProvider !== false) {
+      configureEmbeddingProviderFromEnv();
+    }
+    this.dedupStats = {
+      checks: 0,
+      hits: 0,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -134,7 +143,20 @@ export class ChatEngine {
    * @returns {Promise<ChatResult>}
    */
   async chat(userMessage, options = {}) {
-    const { domain, assumptions = [] } = options;
+    const { domain, assumptions = [], correlation_id, scanner_interaction = null } = options;
+    const cid = correlationId(correlation_id);
+
+    logEvent(
+      "info",
+      "turn_started",
+      {
+        correlation_id: cid,
+        domain: domain ?? null,
+        assumptions_count: assumptions.length,
+        message_preview: userMessage.slice(0, 160),
+      },
+      this.log
+    );
 
     // ------------------------------------------------------------------
     // 1. Domain switch detection
@@ -142,9 +164,15 @@ export class ChatEngine {
     if (domain) {
       const prev = this.memory.setDomain(domain);
       if (prev && prev !== domain) {
-        this.log.warn(
-          `[copilot-engine] Domain switch: ${prev} → ${domain}. ` +
-            `Active goals in prior domain may still be open.`
+        logEvent(
+          "warn",
+          "domain_switched",
+          {
+            correlation_id: cid,
+            previous_domain: prev,
+            new_domain: domain,
+          },
+          this.log
         );
       }
     }
@@ -156,29 +184,43 @@ export class ChatEngine {
       this.memory.addAssumption(assumption);
     }
 
+    if (scanner_interaction) {
+      logEvent(
+        "info",
+        "scanner_interaction",
+        {
+          correlation_id: cid,
+          scanner_interaction,
+        },
+        this.log
+      );
+    }
+
     // ------------------------------------------------------------------
     // 3. Pre-flight deduplication check (Layer 2)
     // ------------------------------------------------------------------
-    this.log.info("[copilot-engine] Checking for duplicates…");
-    const dupResult = await checkForDuplicates(userMessage, this.memory);
-    if (dupResult.isDuplicate) {
-      const pct = (dupResult.similarity * 100).toFixed(1);
-      this.log.warn(
-        `[copilot-engine] Duplicate detected (${pct}% similarity). ` +
-          `Prior suggestion from ${dupResult.prior.timestamp}`
+    const duplicateResponse = await runDedupPreflight({
+      message: userMessage,
+      correlationId: cid,
+      memory: this.memory,
+      logger: this.log,
+      stats: this.dedupStats,
+    });
+
+    if (duplicateResponse) {
+      const result = duplicateResponse;
+      logEvent(
+        "info",
+        "turn_completed",
+        {
+          correlation_id: cid,
+          result_type: result.type,
+          scanner_interaction: scanner_interaction,
+        },
+        this.log
       );
-      return {
-        type: "duplicate_flag",
-        similarity: dupResult.similarity,
-        prior_suggestion: dupResult.prior.content,
-        prior_timestamp: dupResult.prior.timestamp,
-        message:
-          `I already addressed something very similar at ${dupResult.prior.timestamp} ` +
-          `(${pct}% semantic overlap). Would you like me to expand on that, ` +
-          `or should we take a different angle?`,
-      };
+      return result;
     }
-    this.log.info("[copilot-engine] No duplicates found.");
 
     // ------------------------------------------------------------------
     // 4. Contradiction detection
@@ -192,8 +234,14 @@ export class ChatEngine {
       contradictionNote =
         `\n\n⚠️  Possible conflict with locked decision(s): ${summary}. ` +
         `Please surface this in your response and ask for permission to revisit.`;
-      this.log.warn(
-        `[copilot-engine] Potential contradiction with: ${summary}`
+      logEvent(
+        "warn",
+        "contradiction_detected",
+        {
+          correlation_id: cid,
+          conflicts: conflicts,
+        },
+        this.log
       );
     }
 
@@ -205,7 +253,17 @@ export class ChatEngine {
     // ------------------------------------------------------------------
     // 6. Call Claude Sonnet 4
     // ------------------------------------------------------------------
-    this.log.info(`[copilot-engine] Calling ${MODEL}…`);
+    logEvent(
+      "info",
+      "llm_call_started",
+      {
+        correlation_id: cid,
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
+      },
+      this.log
+    );
     const response = await getClient().messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
@@ -223,6 +281,16 @@ export class ChatEngine {
     const assistantText =
       response.content.find((b) => b.type === "text")?.text ?? "";
 
+    logEvent(
+      "info",
+      "llm_call_completed",
+      {
+        correlation_id: cid,
+        response_preview: assistantText.slice(0, 160),
+      },
+      this.log
+    );
+
     // ------------------------------------------------------------------
     // 7. Post-flight: record everything
     // ------------------------------------------------------------------
@@ -238,13 +306,40 @@ export class ChatEngine {
 
     this.memory.pruneResolvedGoals();
 
-    return {
+    logEvent(
+      "info",
+      "memory_updated",
+      {
+        correlation_id: cid,
+        suggestion_id: suggestionId,
+        conversation_turns: this.memory.conversationHistory.length,
+        suggestion_history_size: this.memory.suggestionHistory.length,
+      },
+      this.log
+    );
+
+    const result = {
       type: "response",
+      correlation_id: cid,
       suggestion_id: suggestionId,
       message: assistantText,
-      memory_snapshot: this.memory.exportSnapshot(),
+      memory_snapshot: redact(this.memory.exportSnapshot()),
       conflicts_detected: conflicts.length > 0 ? conflicts : null,
     };
+
+    logEvent(
+      "info",
+      "turn_completed",
+      {
+        correlation_id: cid,
+        result_type: result.type,
+        suggestion_id: suggestionId,
+        scanner_interaction: scanner_interaction,
+      },
+      this.log
+    );
+
+    return result;
   }
 }
 

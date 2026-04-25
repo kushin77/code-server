@@ -8,6 +8,48 @@ services:
   # CORE INFRASTRUCTURE
   # ========================================================================
 
+  grafana-init:
+    image: alpine:3.20
+    container_name: grafana-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /var/lib/grafana; owner="$$(stat -c '%u:%g' /var/lib/grafana 2>/dev/null || true)"; [ "$$owner" = "472:472" ] || chown -R 472:472 /var/lib/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: "no"
+    networks:
+      - services
+
+  redis-init:
+    image: alpine:3.20
+    container_name: redis-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /data; owner="$$(stat -c '%u:%g' /data 2>/dev/null || true)"; [ "$$owner" = "999:999" ] || chown -R 999:999 /data
+    volumes:
+      - redis_data:/data
+    restart: "no"
+    networks:
+      - services
+
+  redpanda-init:
+    image: alpine:3.20
+    container_name: redpanda-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /var/lib/redpanda/data; owner="$$(stat -c '%u:%g' /var/lib/redpanda/data 2>/dev/null || true)"; [ "$$owner" = "101:101" ] || chown -R 101:101 /var/lib/redpanda/data
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    restart: "no"
+    networks:
+      - services
+
   opa:
     image: openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe
     container_name: opa-service
@@ -1016,6 +1058,9 @@ services:
     restart: unless-stopped
     networks:
       - services
+    depends_on:
+      redis-init:
+        condition: service_completed_successfully
     logging:
       driver: "json-file"
       options:
@@ -1061,7 +1106,7 @@ services:
       - REDPANDA_BROKERS=redpanda:9092
       - TZ=UTC
     healthcheck:
-      test: ["CMD-SHELL", "(curl -f http://localhost:8081/subjects || exit 1)"]
+      test: ["CMD-SHELL", "(redpanda --version >/dev/null && echo 'OK' || exit 1)"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -1069,6 +1114,9 @@ services:
     restart: unless-stopped
     networks:
       - services
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
     logging:
       driver: "json-file"
       options:

@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# @file        scripts/ci/q2-2026-completion-audit.sh
-# @module      governance/q2-completion-audit
-# @description Q2 2026 Roadmap completion audit and Q3 readiness assessment
-# @governance  GOV-002: Immutable, version-controlled, IaC-compliant
-# Issue #1560: Q2 Completion & Q3 Planning
+# @governance: Q2 completion audit — validate delivery and plan Q3
+# Purpose: Q2 2026 Roadmap completion audit and Q3 readiness assessment
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1560 (Q2 Completion & Q3 Planning)
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 source "${REPO_ROOT}/scripts/_common/logging.sh"
 
-# ── Configuration ─────────────────────────────────────────────────────────────
-AUDIT_DATE=$(date -u +%Y-%m-%d)
+# ── Configuration (env-var driven) ────────────────────────────────────────────
 AUDIT_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 AUDIT_DIR="${REPO_ROOT}/artifacts/q2-completion-audit"
 AUDIT_REPORT="${AUDIT_DIR}/Q2-COMPLETION-AUDIT-${AUDIT_DATE}.md"

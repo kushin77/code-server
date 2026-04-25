@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# @file        scripts/ci/q2-2026-final-closure.sh
-# @description Q2 2026 Final Closure - 456 commits, 3 phases complete, Q3 ready
-# @type        IaC-compliant, immutable, idempotent
+# @governance: Q2 closure — finalize delivery and plan Q3 initiatives
+# Purpose: Q2 2026 Final Closure - validate completion of all 3 phases
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1560 (Q2 Completion & Q3 Planning)
 
 set -euo pipefail
 
-REPORT_DATE=$(date -u +%Y-%m-%d)
-REPORT_TIME=$(date -u +%H:%M:%SZ)
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CLOSURE_DIR="${REPO_ROOT}/artifacts/q2-closure"
-CLOSURE_REPORT="${CLOSURE_DIR}/Q2-FINAL-CLOSURE-${REPORT_DATE}.md"
+readonly REPORT_TIMESTAMP="${REPORT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+readonly CLOSURE_DIR="${CLOSURE_DIR:-${REPO_ROOT}/artifacts/q2-closure}"
+readonly CLOSURE_REPORT="${CLOSURE_REPORT:-${CLOSURE_DIR}/Q2-FINAL-CLOSURE-$(date -u +%Y-%m-%d).md}"
 
 mkdir -p "${CLOSURE_DIR}"
 

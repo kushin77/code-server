@@ -1,11 +1,11 @@
 #!/bin/bash
 
 ###
-# @file fix-codebase-deduplication.sh
-# @module scripts/ci/fix-codebase-deduplication.sh
-# @description P3 #1533 Phase 2: Apply codebase deduplication fixes identified by audit
-# @governance GOV-002: Preserve logging, configuration, and sourcing consistency across scripts
-# @usage fix-codebase-deduplication.sh
+# @governance: Codebase deduplication fixes — eliminate redundant logic
+# Purpose: P3 #1533 Phase 2 - Apply codebase deduplication fixes identified by audit
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1533 (Deduplication)
 ###
 
 set -euo pipefail
@@ -14,8 +14,9 @@ set -euo pipefail
 # Source initialization and logging
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DEDUP_REPORT_DIR="${DEDUP_REPORT_DIR:-${PROJECT_ROOT}/artifacts/reports}"
 
 # Source common functions
 if [[ ! -f "${PROJECT_ROOT}/scripts/_common/init.sh" ]]; then

@@ -21,6 +21,8 @@ OUTPUT_DIR="${1:-.}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="${OUTPUT_DIR}/resource-limits-validation-${TIMESTAMP}.txt"
 
+mkdir -p "${OUTPUT_DIR}"
+
 echo "🧪 Starting Resource Limits Validation (Phase 3)..."
 echo "📝 Report: ${REPORT_FILE}"
 echo ""

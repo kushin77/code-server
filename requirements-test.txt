@@ -4,7 +4,7 @@
 # ============================================================================
 
 # Core Testing Framework
-pytest==7.4.3
+pytest==9.0.3
 pytest-cov==4.1.0
 pytest-asyncio==0.21.1
 pytest-mock==3.12.0
@@ -29,7 +29,7 @@ psycopg2-binary==2.9.9
 alembic==1.12.1
 
 # Environment Management
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 
 # Logging & Debugging
 loguru==0.7.2
@@ -46,7 +46,7 @@ bandit==1.7.5
 safety==2.3.5
 
 # Code Formatting & Linting (Optional)
-black==23.12.0
+black==26.3.1
 flake8==6.1.0
 pylint==3.0.3
 isort==5.13.2

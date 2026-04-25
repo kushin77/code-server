@@ -188,9 +188,9 @@ check_for_updates() {
     return 2
   fi
   
-  # Compare commits
+  # Compare commits — use FETCH_HEAD which is always populated after git fetch
   local current_commit=$(git rev-parse HEAD)
-  local remote_commit=$(git rev-parse "$GIT_BRANCH" 2>/dev/null || git rev-parse FETCH_HEAD)
+  local remote_commit=$(git rev-parse FETCH_HEAD)
   
   log_info "Current commit: $current_commit"
   log_info "Remote commit:  $remote_commit"
@@ -219,7 +219,7 @@ pull_updates() {
     log_warn "Not on main/master branch, proceeding anyway"
   fi
   
-  # Pull with timeout
+  # Pull with timeout — reset to FETCH_HEAD (already fetched in check_for_updates)
   local branch_name="${GIT_BRANCH#origin/}"
   if timeout $MAX_SYNC_TIME git pull origin "$branch_name" >/dev/null 2>&1; then
     log_success "Git pull completed successfully"

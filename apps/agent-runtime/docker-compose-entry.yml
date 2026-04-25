@@ -1,0 +1,32 @@
+# Agent Runtime Docker Compose Service Definition
+# Add this to the main docker-compose.yml file
+
+agent-runtime:
+  build:
+    context: apps/agent-runtime
+    dockerfile: Dockerfile
+  container_name: agent-runtime
+  ports:
+    - "8020:8020"
+  environment:
+    LOG_LEVEL: INFO
+    PAPERCLIP_URL: http://paperclip-control-plane:8010
+    OIDC_CLIENT_ID: agent-runtime
+    OIDC_TOKEN_ENDPOINT: http://oauth2-proxy:4180/oauth2/token
+  depends_on:
+    - paperclip-control-plane
+    - oauth2-proxy
+  volumes:
+    - ./apps/agent-runtime:/app
+  networks:
+    - paperclip
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 15s
+  restart: unless-stopped
+  labels:
+    component: "runtime"
+    version: "1.0"

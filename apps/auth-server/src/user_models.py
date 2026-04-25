@@ -11,7 +11,6 @@ from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Inde
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from pydantic import BaseModel, EmailStr, Field, validator
-from src.advanced_models import EmailChangeRequest
 from src.models import Base
 
 

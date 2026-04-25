@@ -63,21 +63,19 @@ def engine():
             poolclass=StaticPool,
         )
     
-    # Create all tables from Base
-    from src.models import Base as OAuth2Base
-    from src.user_models import Base as UserBase
-    from src.team_models import Base as TeamBase
-    from src.advanced_models import Base as AdvancedBase
-    from src.gateway_models import Base as GatewayBase
-    
-    for base in [OAuth2Base, UserBase, TeamBase, AdvancedBase, GatewayBase]:
-        base.metadata.create_all(bind=engine)
+    # Import model modules so their tables are registered on the shared metadata.
+    from src.models import Base
+    import src.user_models  # noqa: F401
+    import src.team_models  # noqa: F401
+    import src.advanced_models  # noqa: F401
+    import src.gateway_models  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
     
     yield engine
     
-    # Drop all tables after tests
-    for base in [OAuth2Base, UserBase, TeamBase, AdvancedBase, GatewayBase]:
-        base.metadata.drop_all(bind=engine)
+    # Drop all tables after tests.
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture

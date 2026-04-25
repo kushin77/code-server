@@ -68,6 +68,8 @@ HARDCODED_IN_SOURCE=$(
     grep -v '\.md:' | \
     grep -v '^\s*#' | \
     grep -v ': *#' | \
+    grep -v '_epic-1536-network-config\.env:' | \
+    grep -v 'epic-1536-phase1-eliminate-hardcoding\.sh:' | \
     grep -v 'audit-network-hardcoding\.sh:' || true
 )
 

@@ -230,7 +230,7 @@ class OAuthAuditLog(Base):
     
     # Result
     error_message = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    audit_metadata = Column("metadata", JSON, nullable=True)
     
     # Timestamp
     created_at = Column(DateTime, default=datetime.utcnow, index=True)

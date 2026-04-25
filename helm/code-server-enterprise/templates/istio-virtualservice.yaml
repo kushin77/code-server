@@ -1,0 +1,59 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: ISTIO_VIRTUALSERVICE_TEMPLATE
+# PURPOSE: Istio VirtualService for traffic management and routing
+# PATTERN: One VirtualService per microservice with load balancing
+
+{{- $root := . -}}
+{{- if and $root.Values.istio.enabled (gt (len $root.Values.services) 0) }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if and $serviceConfig.enabled (not (has $serviceName (list "postgres" "redis" "prometheus" "grafana" "loki"))) }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  hosts:
+  - {{ $serviceConfig.name }}.{{ $root.Release.Namespace }}.svc.cluster.local
+  - {{ $serviceConfig.name }}-{{ $root.Release.Namespace }}.local
+  http:
+  - match:
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}.{{ $root.Release.Namespace }}.svc.cluster.local
+        port:
+          number: {{ $serviceConfig.port }}
+      weight: 100
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+    fault:
+      delay:
+        percentage: 0.1
+        fixedDelay: 5ms
+      abort:
+        percentage: 0.0
+        grpcStatus: "UNAVAILABLE"
+  tcp:
+  - match:
+    - port: {{ $serviceConfig.port }}
+    route:
+    - destination:
+        host: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}.{{ $root.Release.Namespace }}.svc.cluster.local
+        port:
+          number: {{ $serviceConfig.port }}
+      weight: 100
+  exportTo:
+  - "*"
+{{- end }}
+{{- end }}
+{{- end }}

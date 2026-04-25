@@ -1,0 +1,112 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: ISTIO_GATEWAY_TEMPLATE
+# PURPOSE: Istio Gateway for ingress traffic management
+# PATTERN: TLS termination, SNI routing, multi-domain support
+
+{{- $root := . -}}
+{{- if $root.Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-gateway
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  # HTTP redirect to HTTPS
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "{{ $root.Values.global.domain }}"
+    - "*.{{ $root.Values.global.domain }}"
+  # HTTPS with TLS
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: {{ include "code-server-enterprise.fullname" $root }}-tls-cert
+    hosts:
+    - "{{ $root.Values.global.domain }}"
+    - "*.{{ $root.Values.global.domain }}"
+    - "api.{{ $root.Values.global.domain }}"
+    - "ide.{{ $root.Values.global.domain }}"
+    - "grafana.{{ $root.Values.global.domain }}"
+  # gRPC for inter-service communication
+  - port:
+      number: 50051
+      name: grpc
+      protocol: GRPC
+    hosts:
+    - "{{ $root.Release.Namespace }}.svc.cluster.local"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-gateway-routes
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  hosts:
+  - "{{ $root.Values.global.domain }}"
+  - "*.{{ $root.Values.global.domain }}"
+  gateways:
+  - {{ include "code-server-enterprise.fullname" $root }}-gateway
+  http:
+  # HTTP redirect to HTTPS
+  - match:
+    - port: 80
+    redirect:
+      scheme: https
+      port: 443
+  # API routing
+  - match:
+    - uri:
+        prefix: "/api"
+    route:
+    - destination:
+        host: api.{{ $root.Release.Namespace }}.svc.cluster.local
+        port:
+          number: 3100
+      weight: 100
+  # IDE routing
+  - match:
+    - authority:
+        prefix: "ide."
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: frontend.{{ $root.Release.Namespace }}.svc.cluster.local
+        port:
+          number: 3000
+      weight: 100
+  # Grafana monitoring
+  - match:
+    - authority:
+        prefix: "grafana."
+    route:
+    - destination:
+        host: grafana.{{ $root.Release.Namespace }}.svc.cluster.local
+        port:
+          number: 3000
+      weight: 100
+  # Catch-all to frontend
+  - route:
+    - destination:
+        host: frontend.{{ $root.Release.Namespace }}.svc.cluster.local
+        port:
+          number: 3000
+      weight: 100
+{{- end }}

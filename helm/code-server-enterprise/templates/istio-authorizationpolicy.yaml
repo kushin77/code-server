@@ -1,0 +1,98 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: ISTIO_AUTHORIZATIONPOLICY_TEMPLATE
+# PURPOSE: Istio AuthorizationPolicy for fine-grained access control
+# PATTERN: Zero-trust network - deny all, explicitly allow
+
+{{- $root := . -}}
+{{- if $root.Values.istio.enabled }}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-default-deny
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "code-server-enterprise.name" $root }}
+  {}  # Empty policy = deny all
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-ingress-allow
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  selector:
+    matchLabels:
+      component: ingress
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE"]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-api-allow
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  rules:
+  # Allow from ingress gateway
+  - from:
+    - source:
+        principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        ports: ["3100"]
+  # Allow from reputation-engine
+  - from:
+    - source:
+        principals: ["cluster.local/ns/{{ $root.Release.Namespace }}/sa/default"]
+        namespaces: ["{{ $root.Release.Namespace }}"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/reputation/*"]
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-postgres-allow
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: postgres
+  rules:
+  # Allow from any pod with database-access label
+  - from:
+    - source:
+        principals: ["cluster.local/ns/{{ $root.Release.Namespace }}/sa/default"]
+        namespaces: ["{{ $root.Release.Namespace }}"]
+    to:
+    - operation:
+        ports: ["5432"]
+{{- end }}

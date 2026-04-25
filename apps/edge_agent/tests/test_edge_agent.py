@@ -27,7 +27,7 @@ from service import (
 )
 
 
-class EdgeAgentRegistryTests(unittest.TestCase):
+class EdgeAgentRegistryTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.service = EdgeAgentRegistryService(heartbeat_ttl_seconds=90)
 
@@ -185,8 +185,8 @@ class EdgeAgentRegistryTests(unittest.TestCase):
         self.assertEqual({action.target_region for action in plan.actions}, {"eu-west-1", "ap-south-1"})
         self.assertEqual(plan.missing_regions, [])
 
-    def test_replication_job_lifecycle(self):
-        job = self.service.create_replication_job(
+    async def test_replication_job_lifecycle(self):
+        job = await self.service.create_replication_job(
             workspace_id="ws-1",
             source_agent_id="source-1",
             target_agent_id="target-1",
@@ -196,8 +196,9 @@ class EdgeAgentRegistryTests(unittest.TestCase):
 
         self.assertEqual(job.status, ReplicationJobStatus.PENDING)
         self.assertEqual(job.workspace_id, "ws-1")
+        self.assertEqual(len(self.service._event_log), 1)
 
-        updated = self.service.update_replication_status(
+        updated = await self.service.update_replication_status(
             job.job_id,
             status=ReplicationJobStatus.COMPLETED,
             now=datetime(2026, 4, 24, 18, 5, tzinfo=timezone.utc),
@@ -205,9 +206,11 @@ class EdgeAgentRegistryTests(unittest.TestCase):
 
         self.assertEqual(updated.status, ReplicationJobStatus.COMPLETED)
         self.assertEqual(len(self.service.list_replication_jobs(workspace_id="ws-1")), 1)
+        self.assertEqual(len(self.service._event_log), 2)
+        self.assertEqual(self.service._event_log[1].type, "replication_status_changed")
 
 
-class EdgeAgentApiTests(unittest.TestCase):
+class EdgeAgentApiTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         registry_service.reset()
         self.client = TestClient(app)

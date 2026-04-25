@@ -14,10 +14,11 @@ from service import (
     EdgeAgentRecord,
     EdgeAgentRegistrationRequest,
     EdgeAgentRegistryService,
-    ReplicationPlanRequest,
-    ReplicationPlanResponse,
+    ReplicationEvent,
     ReplicationJob,
     ReplicationJobStatus,
+    ReplicationPlanRequest,
+    ReplicationPlanResponse,
     RoutingDecision,
     RoutingRequest,
 )
@@ -105,11 +106,16 @@ async def update_replication_job(
     job_id: str, status: ReplicationJobStatus, error_message: Optional[str] = None
 ) -> ReplicationJob:
     try:
-        return registry_service.update_replication_status(
+        return await registry_service.update_replication_status(
             job_id, status, error_message=error_message
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/events", response_model=list[ReplicationEvent])
+async def list_events() -> list[ReplicationEvent]:
+    return registry_service._event_log
 
 
 if __name__ == "__main__":

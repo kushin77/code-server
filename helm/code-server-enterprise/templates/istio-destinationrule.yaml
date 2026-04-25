@@ -1,0 +1,57 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: ISTIO_DESTINATIONRULE_TEMPLATE
+# PURPOSE: Istio DestinationRule for load balancing policy and connection pooling
+# PATTERN: One DestinationRule per microservice with circuit breaker config
+
+{{- $root := . -}}
+{{- if and $root.Values.istio.enabled (gt (len $root.Values.services) 0) }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if and $serviceConfig.enabled (not (has $serviceName (list "postgres" "redis" "prometheus" "grafana" "loki"))) }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  host: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}.{{ $root.Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+        h2UpgradePolicy: UPGRADE
+        maxRequestsPerConnection: 2
+      tcp:
+        maxConnections: 200
+    loadBalancer:
+      simple: ROUND_ROBIN
+      consistentHash:
+        httpCookie:
+          name: "session-cookie"
+          ttl: 3600s
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minRequestVolume: 5
+      splitExternalLocalOriginErrors: true
+    tls:
+      mode: ISTIO_MUTUAL
+      sni: {{ $serviceConfig.name }}.{{ $root.Release.Namespace }}.svc.cluster.local
+  subsets:
+  - name: "stable"
+    labels:
+      version: "stable"
+  - name: "canary"
+    labels:
+      version: "canary"
+{{- end }}
+{{- end }}
+{{- end }}

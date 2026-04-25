@@ -1,0 +1,88 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: KUBERNETES_HPA_TEMPLATE
+# PURPOSE: Horizontal Pod Autoscaler for custom metrics-based scaling
+# PATTERN: CPU/Memory thresholds with custom metrics support
+
+{{- $root := . -}}
+{{- if and $root.Values.autoscaling.enabled (gt (len $root.Values.services) 0) }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if and $serviceConfig.enabled (not (has $serviceName (list "postgres" "redis"))) }}
+{{- $autoscaling := $serviceConfig.autoscaling | default $root.Values.autoscaling.default }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    governance/policy: "GOV-002"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  minReplicas: {{ $autoscaling.minReplicas | default 2 }}
+  maxReplicas: {{ $autoscaling.maxReplicas | default 10 }}
+  metrics:
+  # CPU utilization metric
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $autoscaling.targetCpuUtilizationPercentage | default 70 }}
+  # Memory utilization metric
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ $autoscaling.targetMemoryUtilizationPercentage | default 80 }}
+  {{- if and $autoscaling.customMetrics $autoscaling.customMetrics.enabled }}
+  # Custom metrics for advanced scaling
+  - type: Pods
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "1000"
+  - type: Object
+    object:
+      metric:
+        name: pending_tasks
+      describedObject:
+        apiVersion: batch/v1
+        kind: Job
+        name: {{ $serviceConfig.name }}
+      target:
+        type: Value
+        value: "30"
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
+{{- end }}
+{{- end }}
+{{- end }}

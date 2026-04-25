@@ -120,6 +120,79 @@ async function router(req, res) {
     return;
   }
 
+  // POST /finetuning/prepare-dataset — prepare dataset for fine-tuning
+  if (method === "POST" && url === "/finetuning/prepare-dataset") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 16_384) {
+        req.destroy();
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Payload too large" }));
+      }
+    });
+
+    req.on("end", async () => {
+      try {
+        const { FineTuningManager } = await import("./finetuning.js");
+        const manager = new FineTuningManager();
+        const dataset = await manager.prepareDataset();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(dataset.metadata));
+      } catch (err) {
+        console.error("[copilot-engine] Finetuning prepare error:", err.message);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /finetuning/submit-job — submit a fine-tuning job
+  if (method === "POST" && url === "/finetuning/submit-job") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 16_384) {
+        req.destroy();
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Payload too large" }));
+      }
+    });
+
+    req.on("end", async () => {
+      try {
+        const parsed = JSON.parse(body);
+        const { FineTuningManager } = await import("./finetuning.js");
+        const manager = new FineTuningManager();
+        const job = manager.submitJob(`job-${Date.now()}`, parsed);
+        res.writeHead(201, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(job));
+      } catch (err) {
+        console.error("[copilot-engine] Finetuning submit error:", err.message);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // GET /finetuning/metrics — export fine-tuning metrics
+  if (method === "GET" && url === "/finetuning/metrics") {
+    try {
+      const { FineTuningManager } = await import("./finetuning.js");
+      const manager = new FineTuningManager();
+      const metrics = manager.exportMetrics();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(metrics));
+    } catch (err) {
+      console.error("[copilot-engine] Metrics export error:", err.message);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
   // 404 fallback
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));

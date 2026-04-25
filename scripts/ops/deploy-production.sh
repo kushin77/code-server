@@ -6,14 +6,20 @@
 
 set -euo pipefail
 
-# Source common utilities
+# Source common utilities and network configuration SSOT
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+# Load network configuration SSOT
+source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 # Deployment configuration (all env-var driven)
-readonly TARGET_HOST="${DEPLOY_HOST:-192.168.168.31}"
+readonly TARGET_HOST="${DEPLOY_HOST:-${ONPREM_PRIMARY_IP}}"
 readonly TARGET_USER="${DEPLOY_USER:-admin}"
-readonly REPO_URL="${GIT_REPO_URL:-https://github.com/kushin77/code-server.git}"
+readonly REPO_URL="${GIT_REPO_URL:-https://github.com/${GIT_REPO_OWNER}/code-server.git}"
 readonly DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 readonly DEPLOY_TIMEOUT_SECONDS="${DEPLOY_TIMEOUT:-600}"
 readonly HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-30}"

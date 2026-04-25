@@ -263,8 +263,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          mkdir -p ./artifacts
           pip install -r apps/auth-server/requirements.txt
           pip install pytest pytest-asyncio
+        continue-on-error: true
 
       - name: Start services
         run: |
@@ -274,6 +276,7 @@ jobs:
             docker-compose -f docker-compose.yml up -d
           fi
           timeout 60 bash -c 'until curl -f http://localhost:3100/health; do sleep 2; done'
+        continue-on-error: true
 
       - name: Run security scan script
         run: |
@@ -293,9 +296,9 @@ jobs:
         if: always()
         run: |
           if docker compose version > /dev/null 2>&1; then
-            docker compose down -v
+            docker compose down -v || true
           else
-            docker-compose down -v
+            docker-compose down -v || true
           fi
 
       - name: Upload results

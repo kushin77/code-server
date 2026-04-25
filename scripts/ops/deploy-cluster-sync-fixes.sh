@@ -3,6 +3,7 @@
 # Deployment script for Cluster Sync Fixes
 # Deploys Fix #1, #2, #3 to replica nodes
 # Usage: bash scripts/ops/deploy-cluster-sync-fixes.sh [--target REPLICA_HOST] [--branch BRANCH_NAME] [--dry-run]
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # GOV-002 Compliant: Deterministic, Audited, Immutable, Idempotent, Ephemeral
 #
@@ -18,7 +19,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
 . "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env"
 
 # Configuration
-REPLICA_HOST="${REPLICA_HOST:-${ONPREM_REPLICA_IP}}"
+REPLICA_HOST="${REPLICA_HOST:-${ONPREM_SECONDARY_IP}}"
 BRANCH_NAME="${BRANCH_NAME:-feat/cluster-sync-fixes}"
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"
@@ -64,12 +65,13 @@ log() {
 validate_prerequisites() {
   log INFO "Validating deployment prerequisites..."
   
-  # Check SSH connectivity
-  if ! ssh -o ConnectTimeout=5 "root@${REPLICA_HOST}" "echo 'SSH OK'" &>/dev/null; then
-    log ERROR "Cannot reach replica at ${REPLICA_HOST} via SSH"
+  # Check SSH connectivity to replica (ONPREM_SECONDARY_IP)
+  if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "root@${REPLICA_HOST}" "echo 'SSH OK'" &>/dev/null; then
+    log ERROR "Cannot reach replica at ${REPLICA_HOST} via SSH (configured as ONPREM_SECONDARY_IP)"
+    log ERROR "Set REPLICA_HOST or ensure ONPREM_SECONDARY_IP is configured in _epic-1536-network-config.env"
     return 1
   fi
-  log SUCCESS "SSH connectivity verified"
+  log SUCCESS "SSH connectivity verified to replica (${REPLICA_HOST})"
   
   # Check git on primary
   if ! command -v git &>/dev/null; then
@@ -95,8 +97,9 @@ validate_prerequisites() {
 #========================================================================
 
 deploy_pull_updates() {
-  log INFO "Step 1/5: Pulling latest code on replica..."
+  log INFO "Step 1/5: Pulling latest code on replica (ONPREM_SECONDARY_IP)..."
   
+  # Immutable: Git pull is deterministic - same commit always produces same state
   local cmd="cd /code-server-enterprise && git fetch origin && git checkout ${BRANCH_NAME} && git pull origin ${BRANCH_NAME}"
   
   if [ "$DRY_RUN" == "true" ]; then

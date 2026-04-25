@@ -58,7 +58,11 @@ jobs:
 
       - name: Start Docker Compose services
         run: |
-          docker-compose -f docker-compose.yml up -d
+          if docker compose version > /dev/null 2>&1; then
+            docker compose -f docker-compose.yml up -d
+          else
+            docker-compose -f docker-compose.yml up -d
+          fi
           timeout 60 bash -c 'until curl -f http://localhost:3100/health; do sleep 2; done'
 
       - name: Run all chaos scenarios
@@ -73,7 +77,11 @@ jobs:
         if: always()
         run: |
           mkdir -p ./artifacts/chaos-testing
-          docker-compose logs > ./artifacts/chaos-testing/docker-compose.log
+          if docker compose version > /dev/null 2>&1; then
+            docker compose logs > ./artifacts/chaos-testing/docker-compose.log
+          else
+            docker-compose logs > ./artifacts/chaos-testing/docker-compose.log
+          fi
           docker stats --no-stream > ./artifacts/chaos-testing/docker-stats.txt
 
       - name: Generate chaos test report
@@ -122,4 +130,9 @@ jobs:
 
       - name: Stop services
         if: always()
-        run: docker-compose down -v
+        run: |
+          if docker compose version > /dev/null 2>&1; then
+            docker compose down -v || true
+          else
+            docker-compose down -v || true
+          fi

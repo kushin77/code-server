@@ -17,6 +17,11 @@ log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
 }
 
+# Load network configuration SSOT
+source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Warning: Network configuration SSOT not found, using defaults"
+}
+
 log_error() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2
 }

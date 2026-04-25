@@ -58,11 +58,17 @@ jobs:
 
       - name: Start Docker Compose services
         run: |
+          COMPOSE_CMD=""
           if docker compose version > /dev/null 2>&1; then
-            docker compose -f docker-compose.yml up -d
+            COMPOSE_CMD="docker compose"
+          elif command -v docker-compose > /dev/null 2>&1; then
+            COMPOSE_CMD="docker-compose"
           else
-            docker-compose -f docker-compose.yml up -d
+            echo "❌ No Docker Compose command found on runner"
+            exit 1
           fi
+
+          ${COMPOSE_CMD} -f docker-compose.yml up -d
           timeout 60 bash -c 'until curl -f http://localhost:3100/health; do sleep 2; done'
 
       - name: Run all chaos scenarios
@@ -77,12 +83,16 @@ jobs:
         if: always()
         run: |
           mkdir -p ./artifacts/chaos-testing
+
           if docker compose version > /dev/null 2>&1; then
-            docker compose logs > ./artifacts/chaos-testing/docker-compose.log
+            docker compose logs > ./artifacts/chaos-testing/docker-compose.log || true
+          elif command -v docker-compose > /dev/null 2>&1; then
+            docker-compose logs > ./artifacts/chaos-testing/docker-compose.log || true
           else
-            docker-compose logs > ./artifacts/chaos-testing/docker-compose.log
+            echo "Docker Compose unavailable on runner" > ./artifacts/chaos-testing/docker-compose.log
           fi
-          docker stats --no-stream > ./artifacts/chaos-testing/docker-stats.txt
+
+          docker stats --no-stream > ./artifacts/chaos-testing/docker-stats.txt || true
 
       - name: Generate chaos test report
         if: always()
@@ -133,6 +143,6 @@ jobs:
         run: |
           if docker compose version > /dev/null 2>&1; then
             docker compose down -v || true
-          else
+          elif command -v docker-compose > /dev/null 2>&1; then
             docker-compose down -v || true
           fi

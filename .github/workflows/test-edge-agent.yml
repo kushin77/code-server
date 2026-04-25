@@ -84,7 +84,7 @@ jobs:
       - name: Validate shell scripts
         run: |
           sudo apt-get install -y shellcheck
-          shellcheck scripts/edge-agent/*.sh
+          shellcheck --severity=error scripts/edge-agent/*.sh
 
       - name: Run Python tests
         run: |

@@ -37,19 +37,6 @@ annotations:
   governance/policy: "GOV-002"
   governance/compliance: "required"
 
-# Service account and pod security defaults
-serviceAccount:
-  create: true
-  name: ""
-  annotations: {}
-
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
-  seccompProfile:
-    type: RuntimeDefault
-
 # Service definitions for 20 microservices
 services:
   # Core API & Gateway

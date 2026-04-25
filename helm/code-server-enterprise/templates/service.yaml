@@ -1,33 +1,31 @@
 # GOV-002: Enterprise Governance Header
 # METADATA: SERVICE_TEMPLATE
-# PURPOSE: Kubernetes Service template for microservices exposure
-# PATTERN: Load-balanced service for each deployed microservice
+# PURPOSE: Kubernetes Service template for internal and external communication
+# PATTERN: ClusterIP for internal, LoadBalancer for API gateway
 
-{{- $root := . -}}
-{{- if $root.Values.services }}
-{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if .Values.services }}
+{{- range $serviceName, $serviceConfig := .Values.services }}
 {{- if $serviceConfig.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
-  namespace: {{ $root.Release.Namespace | quote }}
+  name: {{ include "code-server-enterprise.fullname" . }}-{{ $serviceConfig.name }}
   labels:
-    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
     app.kubernetes.io/component: {{ $serviceConfig.name }}
   annotations:
-    {{- toYaml $root.Values.annotations | nindent 4 }}
+    {{- toYaml .Values.annotations | nindent 4 }}
 spec:
-  type: ClusterIP
-  selector:
-    {{- include "code-server-enterprise.selectorLabels" $root | nindent 4 }}
-    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  type: {{ if eq $serviceConfig.name "api" }}LoadBalancer{{ else }}ClusterIP{{ end }}
   ports:
   - port: {{ $serviceConfig.port }}
     targetPort: http
     protocol: TCP
     name: http
+  selector:
+    {{- include "code-server-enterprise.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
 {{- end }}
 {{- end }}
 {{- end }}

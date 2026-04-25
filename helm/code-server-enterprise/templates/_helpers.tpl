@@ -1,3 +1,8 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: HELPER_TEMPLATES
+# PURPOSE: Reusable template functions for consistent resource naming and labeling
+# PATTERN: DRY principle for Helm templates
+
 {{/*
 Expand the name of the chart.
 */}}
@@ -63,14 +68,25 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Pod security context
+*/}}
+{{- define "code-server-enterprise.podSecurityContext" -}}
+runAsNonRoot: true
+runAsUser: 1000
+fsGroup: 1000
+seccompProfile:
+  type: RuntimeDefault
+{{- end }}
+
+{{/*
 Container security context
 */}}
 {{- define "code-server-enterprise.securityContext" -}}
 allowPrivilegeEscalation: false
-capabilities:
-  drop:
-    - ALL
 readOnlyRootFilesystem: true
 runAsNonRoot: true
 runAsUser: 1000
+capabilities:
+  drop:
+  - ALL
 {{- end }}

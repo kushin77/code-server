@@ -3,20 +3,19 @@
 # PURPOSE: Base Kubernetes Deployment template for microservices
 # PATTERN: Used by all application services
 
-{{- $root := . -}}
-{{- if $root.Values.services }}
-{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if .Values.services }}
+{{- range $serviceName, $serviceConfig := .Values.services }}
 {{- if $serviceConfig.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  name: {{ include "code-server-enterprise.fullname" . }}-{{ $serviceConfig.name }}
   labels:
-    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
     app.kubernetes.io/component: {{ $serviceConfig.name }}
   annotations:
-    {{- toYaml $root.Values.annotations | nindent 4 }}
+    {{- toYaml .Values.annotations | nindent 4 }}
 spec:
   replicas: {{ $serviceConfig.replicas | default 1 }}
   strategy:
@@ -26,38 +25,36 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      {{- include "code-server-enterprise.selectorLabels" $root | nindent 6 }}
+      {{- include "code-server-enterprise.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: {{ $serviceConfig.name }}
   template:
     metadata:
       labels:
-        {{- include "code-server-enterprise.selectorLabels" $root | nindent 8 }}
+        {{- include "code-server-enterprise.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: {{ $serviceConfig.name }}
       annotations:
-        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
-        {{- toYaml $root.Values.annotations | nindent 8 }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- toYaml .Values.annotations | nindent 8 }}
     spec:
-      {{- with $root.Values.podSecurityContext }}
+      {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "code-server-enterprise.serviceAccountName" $root }}
+      serviceAccountName: {{ include "code-server-enterprise.serviceAccountName" . }}
       containers:
       - name: {{ $serviceConfig.name }}
-        securityContext:
-          {{- include "code-server-enterprise.securityContext" $root | nindent 10 }}
-        image: "{{ $root.Values.global.imageRegistry }}/{{ $serviceConfig.image }}"
-        imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+        image: "{{ .Values.global.imageRegistry }}/{{ $serviceConfig.image }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:
         - name: http
           containerPort: {{ $serviceConfig.port }}
           protocol: TCP
         env:
         - name: LOG_LEVEL
-          value: {{ $root.Values.global.logLevel | quote }}
+          value: {{ .Values.global.logLevel | quote }}
         - name: SERVICE_NAME
           value: {{ $serviceConfig.name | quote }}
-        {{- range $key, $value := $root.Values.environment }}
+        {{- range $key, $value := .Values.environment }}
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
@@ -78,7 +75,7 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 2
         resources:
-          {{- toYaml ($serviceConfig.resources | default $root.Values.global.resources) | nindent 12 }}
+          {{- toYaml ($serviceConfig.resources | default .Values.global.resources) | nindent 12 }}
         volumeMounts:
         - name: config
           mountPath: /etc/config
@@ -86,7 +83,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: {{ include "code-server-enterprise.fullname" $root }}-config
+          name: {{ include "code-server-enterprise.fullname" . }}-config
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

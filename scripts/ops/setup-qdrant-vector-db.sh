@@ -7,10 +7,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-QDRANT_DATA_PATH="${REPO_ROOT}/data/qdrant"
-QDRANT_CONFIG="${REPO_ROOT}/config/qdrant-config.yaml"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly QDRANT_DATA_PATH="${QDRANT_DATA_PATH:-${REPO_ROOT}/data/qdrant}"
+readonly QDRANT_CONFIG="${QDRANT_CONFIG:-${REPO_ROOT}/config/qdrant-config.yaml}"
+readonly QDRANT_PORT="${QDRANT_PORT:-6333}"
+readonly QDRANT_HEALTH_CHECK_ATTEMPTS="${QDRANT_HEALTH_CHECK_ATTEMPTS:-30}"
 
 mkdir -p "${QDRANT_DATA_PATH}" "$(dirname "${QDRANT_CONFIG}")"
 
@@ -27,11 +29,11 @@ log_success() {
 }
 
 wait_for_qdrant_health() {
-  local max_attempts=30
+  local max_attempts="${QDRANT_HEALTH_CHECK_ATTEMPTS}"
   local attempt=0
 
   while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if curl -sf http://localhost:6333/readyz > /dev/null 2>&1; then
+    if curl -sf "http://localhost:${QDRANT_PORT}/readyz" > /dev/null 2>&1; then
       return 0
     fi
 

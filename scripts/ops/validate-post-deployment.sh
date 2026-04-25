@@ -6,8 +6,14 @@
 
 set -euo pipefail
 
+# Load network configuration SSOT
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 # Deployment target (all env-var driven)
-readonly TARGET_HOST="${DEPLOY_HOST:-192.168.168.31}"
+readonly TARGET_HOST="${DEPLOY_HOST:-${ONPREM_PRIMARY_IP}}"
 readonly TARGET_USER="${DEPLOY_USER:-admin}"
 readonly REPO_PATH="${REPO_PATH:-/root/code-server-enterprise}"
 readonly VALIDATION_TIMEOUT="${VALIDATION_TIMEOUT:-60}"

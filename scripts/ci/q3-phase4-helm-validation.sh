@@ -359,14 +359,14 @@ helm upgrade code-server-enterprise helm/code-server-enterprise/ \
 - Used for: Production HA deployment
 - Replicas: Multiple for HA (3+)
 - Resources: Full production limits
-- Storage: Production NAS (192.168.168.56)
+- Storage: Production NAS (${ONPREM_NAS_IP})
 - High availability: Enabled
 - PodDisruptionBudget: Configured
 
 ### values.phase4-k8s.yaml (K8s Migration)
 - Used for: Q3 Phase 4 Kubernetes deployment
 - Kubernetes-specific settings
-- VRRP virtual IP: 192.168.168.100
+- VRRP virtual IP: ${ONPREM_VRRP_VIP}
 - Ingress configuration
 - Network policies enabled
 - Resource quotas enforced

@@ -129,12 +129,15 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        continue-on-error: true
         uses: codecov/codecov-action@v5.5.4
         with:
           files: ./apps/auth-server/coverage.xml
           flags: auth-server
           name: auth-server-coverage
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Archive coverage report
         if: always()
@@ -156,6 +159,7 @@ jobs:
 
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -113,6 +113,21 @@ services:
         cpu: "250m"
         memory: "256Mi"
   
+  # Agent Runtime - Autonomous Agent Execution
+  agent_runtime:
+    enabled: true
+    name: "agent-runtime"
+    replicas: 2
+    image: "code-server-enterprise-agent-runtime:latest"
+    port: 8004
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "512Mi"
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+  
   # Infrastructure services (managed separately)
   postgres:
     enabled: true

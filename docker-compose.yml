@@ -421,6 +421,58 @@ services:
       - "ai"
       - "governance"
 
+  agent-runtime:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-runtime
+    user: "1003:1003"  # @security P0 #969 - Run as non-root agent-runtime user
+    ports:
+      - "8004:8004"
+    environment:
+      - AGENT_RUNTIME_PORT=8004
+      - AGENT_RUNTIME_HOST=0.0.0.0
+      - LOG_LEVEL=INFO
+      - OPA_URL=http://opa:8181
+      - REPUTATION_ENGINE_URL=http://reputation-engine:8002
+    depends_on:
+      opa:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8004/health"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          cpus: "0.5"
+          memory: 256m
+    profiles:
+      - "ai"
+      - "governance"
+      - "all"
+
   env-provisioner:
     build:
       context: apps/env-provisioner
@@ -595,6 +647,222 @@ services:
           memory: 512m
     profiles:
       - "infrastructure"
+      - "all"
+
+  agent-code-reviewer:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-code-reviewer
+    user: "1004:1004"
+    ports:
+      - "9001:9000"
+    environment:
+      - AGENT_TYPE=code-reviewer
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8002
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "agents"
+      - "all"
+
+  agent-incident-responder:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-incident-responder
+    user: "1004:1004"
+    ports:
+      - "9002:9000"
+    environment:
+      - AGENT_TYPE=incident-responder
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8002
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+        reservations:
+          cpus: "1.0"
+          memory: 1g
+    profiles:
+      - "agents"
+      - "all"
+
+  agent-doc-writer:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-doc-writer
+    user: "1004:1004"
+    ports:
+      - "9003:9000"
+    environment:
+      - AGENT_TYPE=doc-writer
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8002
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "agents"
+      - "all"
+
+  agent-test-generator:
+    build:
+      context: apps/agent-runtime
+      dockerfile: Dockerfile
+    container_name: agent-test-generator
+    user: "1004:1004"
+    ports:
+      - "9004:9000"
+    environment:
+      - AGENT_TYPE=test-generator
+      - PAPERCLIP_URL=http://paperclip-control-plane:8010
+      - REPUTATION_URL=http://reputation-engine:8002
+      - SCHEDULER_URL=http://execution-scheduler:8080
+      - OIDC_ISSUER=https://auth.internal
+      - LOG_LEVEL=INFO
+    depends_on:
+      paperclip:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+      execution-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./apps/agent-runtime:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:9000/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "agents"
       - "all"
 
   # ========================================================================

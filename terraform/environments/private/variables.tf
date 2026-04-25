@@ -3,12 +3,12 @@
 
 variable "apex_domain" {
   type        = string
-  description = "Organization's apex domain (e.g., kushnir.cloud)"
+  description = "Organization's apex domain"
 }
 
 variable "primary_host" {
   type        = string
-  description = "Primary deployment host IP"
+  description = "Primary deployment host address"
 }
 
 variable "replica_host" {
@@ -20,7 +20,7 @@ variable "replica_host" {
 variable "nas_host" {
   type        = string
   default     = ""
-  description = "NAS/storage host IP (optional)"
+  description = "NAS/storage host address (optional)"
 }
 
 variable "admin_email" {

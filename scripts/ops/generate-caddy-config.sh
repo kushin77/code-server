@@ -87,24 +87,19 @@ generate_from_template() {
     cp "$OUTPUT_FILE" "$BACKUP_FILE"
   fi
   
-  # Perform variable substitution
-  local temp_file=$(mktemp)
-  
-  # Use envsubst to replace variables, or fallback to sed if envsubst not available
-  if command -v envsubst &> /dev/null; then
-    envsubst < "$TEMPLATE_FILE" > "$temp_file"
-  else
-    log_info "envsubst not available, using sed for substitution"
-    
+  # Perform variable substitution using the template tokens used by Caddyfile.tpl.
+  local temp_file
+  temp_file=$(mktemp)
+
+    # Use sed to replace variables with the repo's brace placeholder convention.
     sed \
-      -e "s|{APEX_DOMAIN}|${APEX_DOMAIN}|g" \
-      -e "s|{IDE_DOMAIN}|${IDE_DOMAIN}|g" \
-      -e "s|{API_DOMAIN}|${API_DOMAIN}|g" \
-      -e "s|{AUTH_DOMAIN}|${AUTH_DOMAIN}|g" \
-      -e "s|{ADMIN_EMAIL}|${ADMIN_EMAIL}|g" \
-      -e "s|{PRIMARY_HOST}|${PRIMARY_HOST}|g" \
+      -e 's|{APEX_DOMAIN}|'"${APEX_DOMAIN}"'|g' \
+      -e 's|{IDE_DOMAIN}|'"${IDE_DOMAIN}"'|g' \
+      -e 's|{API_DOMAIN}|'"${API_DOMAIN}"'|g' \
+      -e 's|{AUTH_DOMAIN}|'"${AUTH_DOMAIN}"'|g' \
+      -e 's|{ADMIN_EMAIL}|'"${ADMIN_EMAIL}"'|g' \
+      -e 's|{PRIMARY_HOST}|'"${PRIMARY_HOST}"'|g' \
       "$TEMPLATE_FILE" > "$temp_file"
-  fi
   
   # Validate generated configuration
   if ! validate_caddy_syntax "$temp_file"; then

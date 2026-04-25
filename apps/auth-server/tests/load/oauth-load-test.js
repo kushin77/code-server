@@ -24,7 +24,7 @@ export const options = {
 };
 
 export default function () {
-  const baseUrl = 'http://localhost:3100';
+  const baseUrl = process.env.API_BASE_URL || 'http://localhost:8001';
 
   // 1. Authorization Request
   group('OAuth - Authorization Request', () => {

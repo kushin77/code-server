@@ -1,135 +1,174 @@
-# @file Caddyfile
-# @module config/caddy
-# @description Caddy reverse proxy configuration with OPA policy integration
-# @governance GOV-002 - All requests validated by OPA
+# @file        config/caddy/Caddyfile.tpl
+# @description Caddy reverse proxy gateway configuration template
+# @governance  GOV-002 - All domains are variables, no hardcoding
+# @automation  Generated from template using scripts/ops/generate-caddy-config.sh
+# @requirements APEX_DOMAIN, IDE_DOMAIN, API_DOMAIN, AUTH_DOMAIN, PRIMARY_HOST
 
-# Global options
 {
+	admin off
+	http_port 80
+	https_port 443
 	log {
 		format json
-		output stdout
+		output file /var/log/caddy/access.log {
+			roll_size 100mb
+			roll_keep 5
+			roll_keep_for 720h
+		}
 	}
-	storage file_system /data
 }
 
-# Development environment (kushnir.local)
-kushnir.local, *.kushnir.local {
-	log {
-		level debug
+https://{APEX_DOMAIN} {
+	respond /health "OK" 200
+
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host {APEX_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
 	}
 
-	# Health check endpoint
-	handle /health {
-		respond "OK" 200
-	}
-
-	# Protected API endpoints - require OPA authorization
 	handle /api/* {
-		# Step 1: Verify OPA policy allows request
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
+		forward_auth http://oauth2-proxy:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email Authorization
+			handle_errors 401 403 {
+				redir /oauth2/sign_in?rd={http.request.uri} 302
+			}
 		}
 
-		# Step 2: Route to backend service
-		reverse_proxy http://backend:8000 {
-			header_up X-Forwarded-For {http.request.remote}
-			header_up X-Forwarded-Proto {http.request.proto}
-			header_up X-User-ID {http.request.header.User-ID}
-		}
-	}
-
-	# Admin endpoints - stricter policy checks
-	handle /admin/* {
-		# Require device trust and reputation checks
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://admin-service:9000 {
-			header_up X-User-ID {http.request.header.User-ID}
-			header_up X-Audit-ID {uuid}
+		uri strip_prefix /api
+		reverse_proxy backend:8000 {
+			header_up Host {APEX_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
 		}
 	}
 
-	# AI Model endpoints - model allowlist and budget checks
-	handle /models/* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://model-gateway:8080 {
-			header_up X-Model-Name {model_param}
-			header_up X-User-ID {user_id}
-		}
-	}
-
-	# Public endpoints - no auth required
-	handle / {
-		respond "ElevatedIQ DevOS v1.0" 200
-	}
-
-	# Catch-all: deny by default
 	handle {
-		respond "Endpoint not found" 404
-	}
+		forward_auth http://oauth2-proxy:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email Authorization
+			handle_errors 401 403 {
+				redir /oauth2/sign_in?rd={http.request.uri} 302
+			}
+		}
 
-	# Error handling
-	handle_errors {
-		respond "Internal error" 500
+		root * /etc/caddy/portal
+		try_files {path} /index.html
+		file_server
 	}
 }
 
-# Production domain with ACME/Let's Encrypt
-{$APEX_DOMAIN} {
-	tls {$TLS_EMAIL} {
-	}
-
-	log {
-		level info
-		format json
-	}
-
-	# Health check
-	handle /.well-known/health {
-		respond "OK" 200
-	}
-
-	# API routes with full policy enforcement
-	handle /api/* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://backend:8000 {
-			header_up X-Forwarded-For {http.request.remote}
-			header_up X-Forwarded-Proto {http.request.proto}
-			header_up X-Audit-ID {uuid}
-		}
-	}
-
-	# IDE endpoints
-	handle /ide* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://code-server:8443 {
-			header_up X-Real-IP {http.request.remote}
-		}
-	}
-
-# Metrics endpoint
-handle /metrics* {
-	reverse_proxy http://prometheus:9090
+http://{APEX_DOMAIN} {
+	redir https://{APEX_DOMAIN}{uri} permanent
 }
 
-handle / {
-	root * /srv
-	file_server browse
+https://{IDE_DOMAIN} {
+	respond /health "OK" 200
+
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host {IDE_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle {
+		forward_auth http://oauth2-proxy:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email Authorization
+			handle_errors 401 403 {
+				redir /oauth2/sign_in?rd={http.request.uri} 302
+			}
+		}
+
+		reverse_proxy code-server:8443 {
+			header_up Host {IDE_DOMAIN}
+			header_up X-Forwarded-Host {http.request.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
 }
+
+http://{IDE_DOMAIN} {
+	redir https://{IDE_DOMAIN}{uri} permanent
+}
+
+https://{API_DOMAIN} {
+	respond /health "OK" 200
+
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host {API_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle /docs* {
+		forward_auth http://oauth2-proxy:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email Authorization
+			handle_errors 401 403 {
+				redir /oauth2/sign_in?rd={http.request.uri} 302
+			}
+		}
+
+		reverse_proxy backend:8000 {
+			header_up Host {API_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle {
+		forward_auth http://oauth2-proxy:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email Authorization
+			handle_errors 401 403 {
+				redir /oauth2/sign_in?rd={http.request.uri} 302
+			}
+		}
+
+		reverse_proxy backend:8000 {
+			header_up Host {API_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+}
+
+http://{API_DOMAIN} {
+	redir https://{API_DOMAIN}{uri} permanent
+}
+
+https://{AUTH_DOMAIN} {
+	respond /health "OK" 200
+
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host {AUTH_DOMAIN}
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle {
+		redir /oauth2/sign_in 302
+	}
+}
+
+http://{AUTH_DOMAIN} {
+	redir https://{AUTH_DOMAIN}{uri} permanent
 }

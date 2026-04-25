@@ -13,8 +13,8 @@
 	storage file_system /data
 }
 
-# Development environment (kushnir.local)
-kushnir.local, *.kushnir.local {
+# Development environment (env-driven)
+{$APEX_DOMAIN}, *.{$APEX_DOMAIN} {
 	log {
 		level debug
 	}

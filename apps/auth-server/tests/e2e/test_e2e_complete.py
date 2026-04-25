@@ -14,13 +14,14 @@ Coverage:
 import pytest
 import httpx
 import asyncio
+import os
 from datetime import datetime, timedelta
 import time
 import uuid
 from typing import Optional, Dict, Any
 
 # Configuration
-API_BASE_URL = "http://localhost:3100"
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8001")
 OAUTH_REDIRECT_URI = "http://localhost:3000/oauth/callback"
 TEST_TIMEOUT = 30
 

@@ -3,17 +3,17 @@
 # Core framework
 fastapi==0.124.0
 uvicorn==0.24.0
-pydantic==2.5.3
+pydantic==2.10.6
 pydantic-settings==2.1.0
 
 # Database & ORM
 sqlalchemy==2.0.25
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.12
 alembic==1.13.0
 
 # HTTP & Async
 httpx==0.25.2
-aiohttp==3.9.5
+aiohttp==3.13.5
 requests==2.32.3
 
 # Security & Authentication

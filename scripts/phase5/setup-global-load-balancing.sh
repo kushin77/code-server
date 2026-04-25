@@ -8,6 +8,20 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/glb-$(date +%Y%m%d-%H%M%S).log"
+readonly APEX_DOMAIN="${APEX_DOMAIN:?APEX_DOMAIN must be set}"
+readonly API_DOMAIN="${API_DOMAIN:-api.${APEX_DOMAIN}}"
+readonly US_EAST_DOMAIN="${US_EAST_DOMAIN:-us-east.${APEX_DOMAIN}}"
+readonly US_WEST_DOMAIN="${US_WEST_DOMAIN:-us-west.${APEX_DOMAIN}}"
+readonly EU_CENTRAL_DOMAIN="${EU_CENTRAL_DOMAIN:-eu-central.${APEX_DOMAIN}}"
+readonly APAC_SG_DOMAIN="${APAC_SG_DOMAIN:-apac-sg.${APEX_DOMAIN}}"
+readonly APAC_JP_DOMAIN="${APAC_JP_DOMAIN:-apac-jp.${APEX_DOMAIN}}"
+readonly BR_SOUTH_DOMAIN="${BR_SOUTH_DOMAIN:-br-south.${APEX_DOMAIN}}"
+readonly US_EAST_IP="${US_EAST_IP:-18.211.50.23}"
+readonly US_WEST_IP="${US_WEST_IP:-54.153.120.45}"
+readonly EU_CENTRAL_IP="${EU_CENTRAL_IP:-52.47.220.100}"
+readonly APAC_SG_IP="${APAC_SG_IP:-13.215.180.90}"
+readonly APAC_JP_IP="${APAC_JP_IP:-18.181.142.45}"
+readonly BR_SOUTH_IP="${BR_SOUTH_IP:-177.71.150.60}"
 readonly CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
 readonly CLOUDFLARE_ZONE_ID="${CLOUDFLARE_ZONE_ID:-}"
 readonly CADDY_CONFIG_DIR="/etc/caddy"
@@ -45,16 +59,14 @@ setup_cloudflare_dns() {
     exit 1
   fi
   
-  local domain="code-server.ai"
-  
   # Create DNS records for edge locations
   local edge_locations=(
-    "us-east.code-server.ai:18.211.50.23"      # N. Virginia
-    "us-west.code-server.ai:54.153.120.45"     # N. California
-    "eu-central.code-server.ai:52.47.220.100"  # Frankfurt
-    "apac-sg.code-server.ai:13.215.180.90"     # Singapore
-    "apac-jp.code-server.ai:18.181.142.45"     # Tokyo
-    "br-south.code-server.ai:177.71.150.60"    # São Paulo
+    "${US_EAST_DOMAIN}:${US_EAST_IP}"      # N. Virginia
+    "${US_WEST_DOMAIN}:${US_WEST_IP}"     # N. California
+    "${EU_CENTRAL_DOMAIN}:${EU_CENTRAL_IP}"  # Frankfurt
+    "${APAC_SG_DOMAIN}:${APAC_SG_IP}"     # Singapore
+    "${APAC_JP_DOMAIN}:${APAC_JP_IP}"     # Tokyo
+    "${BR_SOUTH_DOMAIN}:${BR_SOUTH_IP}"    # São Paulo
   )
   
   for record in "${edge_locations[@]}"; do
@@ -85,17 +97,19 @@ setup_cloudflare_geo_routing() {
   curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/routing/rules" \
     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
     -H "Content-Type: application/json" \
-    --data '{
-      "name": "Smart Routing - Code Server",
-      "enabled": true,
-      "expression": "(cf.country in {\"US\" \"CA\" \"MX\"})",
-      "actions": [
-        {
-          "id": "serve_from_zone",
-          "value": "us-east.code-server.ai"
-        }
-      ]
-    }' | tee -a "$LOG_FILE"
+    --data @- <<EOF | tee -a "$LOG_FILE"
+{
+  "name": "Smart Routing - Code Server",
+  "enabled": true,
+  "expression": "(cf.country in {\"US\" \"CA\" \"MX\"})",
+  "actions": [
+    {
+      "id": "serve_from_zone",
+      "value": "${US_EAST_DOMAIN}"
+    }
+  ]
+}
+EOF
   
   log_success "Cloudflare geo routing configured"
 }
@@ -161,7 +175,7 @@ setup_cloudflare_waf() {
 generate_caddy_config() {
   log_info "Generating Caddy reverse proxy configuration..."
   
-  cat > "${CADDY_CONFIG_DIR}/Caddyfile.glb" <<'EOF'
+  cat > "${CADDY_CONFIG_DIR}/Caddyfile.glb" <<EOF
 # Global load balancer Caddyfile (Phase 5)
 {
   # Global configuration
@@ -181,7 +195,7 @@ generate_caddy_config() {
 }
 
 # Main API endpoints
-api.code-server.ai {
+${API_DOMAIN} {
   # Request logging
   log {
     output stdout
@@ -284,42 +298,42 @@ api.code-server.ai {
 }
 
 # Regional edge endpoints
-us-east.code-server.ai {
+${US_EAST_DOMAIN} {
   reverse_proxy localhost:3100 {
     health_uri /api/health
     health_interval 5s
   }
 }
 
-us-west.code-server.ai {
+${US_WEST_DOMAIN} {
   reverse_proxy localhost:3101 {
     health_uri /api/health
     health_interval 5s
   }
 }
 
-eu-central.code-server.ai {
+${EU_CENTRAL_DOMAIN} {
   reverse_proxy localhost:3102 {
     health_uri /api/health
     health_interval 5s
   }
 }
 
-apac-sg.code-server.ai {
+${APAC_SG_DOMAIN} {
   reverse_proxy localhost:3103 {
     health_uri /api/health
     health_interval 5s
   }
 }
 
-apac-jp.code-server.ai {
+${APAC_JP_DOMAIN} {
   reverse_proxy localhost:3104 {
     health_uri /api/health
     health_interval 5s
   }
 }
 
-br-south.code-server.ai {
+${BR_SOUTH_DOMAIN} {
   reverse_proxy localhost:3105 {
     health_uri /api/health
     health_interval 5s
@@ -352,7 +366,7 @@ deploy_caddy_config() {
 create_circuit_breaker_config() {
   log_info "Creating circuit breaker and failover policies..."
   
-  cat > "${SCRIPT_DIR}/config/glb/circuit-breaker-policy.yaml" <<'EOF'
+  cat > "${SCRIPT_DIR}/config/glb/circuit-breaker-policy.yaml" <<EOF
 # Global Load Balancer Circuit Breaker Policy (Phase 5)
 ---
 apiVersion: code-server.ai/v1
@@ -449,7 +463,7 @@ EOF
 setup_glb_monitoring() {
   log_info "Setting up GLB monitoring and metrics collection..."
   
-  cat > "${SCRIPT_DIR}/config/glb/prometheus-glb-rules.yaml" <<'EOF'
+  cat > "${SCRIPT_DIR}/config/glb/prometheus-glb-rules.yaml" <<EOF
 # Global Load Balancer Prometheus Rules
 ---
 groups:
@@ -510,7 +524,7 @@ EOF
 create_traffic_distribution_policy() {
   log_info "Creating traffic distribution policy..."
   
-  cat > "${SCRIPT_DIR}/config/glb/traffic-distribution.yaml" <<'EOF'
+  cat > "${SCRIPT_DIR}/config/glb/traffic-distribution.yaml" <<EOF
 # Traffic Distribution Policy (Phase 5)
 ---
 apiVersion: code-server.ai/v1
@@ -523,46 +537,46 @@ spec:
     # North America
     - region: us-east-1
       countries: ["US", "CA"]
-      primaryEndpoint: us-east.code-server.ai
-      secondaryEndpoint: us-west.code-server.ai
+      primaryEndpoint: ${US_EAST_DOMAIN}
+      secondaryEndpoint: ${US_WEST_DOMAIN}
       weight: 35
       latencyTarget: 50ms
       
     - region: us-west-2
       countries: ["US", "CA", "MX"]
-      primaryEndpoint: us-west.code-server.ai
-      secondaryEndpoint: br-south.code-server.ai
+      primaryEndpoint: ${US_WEST_DOMAIN}
+      secondaryEndpoint: ${BR_SOUTH_DOMAIN}
       weight: 30
       latencyTarget: 50ms
     
     # Europe
     - region: eu-central-1
       countries: ["DE", "FR", "IT", "ES", "UK", "NL", "SE", "NO"]
-      primaryEndpoint: eu-central.code-server.ai
-      secondaryEndpoint: us-east.code-server.ai
+      primaryEndpoint: ${EU_CENTRAL_DOMAIN}
+      secondaryEndpoint: ${US_EAST_DOMAIN}
       weight: 20
       latencyTarget: 30ms
     
     # Asia Pacific
     - region: ap-southeast-1
       countries: ["SG", "MY", "TH", "ID", "PH", "VN"]
-      primaryEndpoint: apac-sg.code-server.ai
-      secondaryEndpoint: apac-jp.code-server.ai
+      primaryEndpoint: ${APAC_SG_DOMAIN}
+      secondaryEndpoint: ${APAC_JP_DOMAIN}
       weight: 10
       latencyTarget: 40ms
       
     - region: ap-northeast-1
       countries: ["JP", "KR", "CN", "TW"]
-      primaryEndpoint: apac-jp.code-server.ai
-      secondaryEndpoint: apac-sg.code-server.ai
+      primaryEndpoint: ${APAC_JP_DOMAIN}
+      secondaryEndpoint: ${APAC_SG_DOMAIN}
       weight: 5
       latencyTarget: 40ms
     
     # South America
     - region: br-south
       countries: ["BR", "AR", "CL"]
-      primaryEndpoint: br-south.code-server.ai
-      secondaryEndpoint: us-east.code-server.ai
+      primaryEndpoint: ${BR_SOUTH_DOMAIN}
+      secondaryEndpoint: ${US_EAST_DOMAIN}
       weight: 5
       latencyTarget: 60ms
   
@@ -610,7 +624,7 @@ validate_glb_setup() {
   
   # Test DNS resolution
   log_info "Testing DNS resolution..."
-  for endpoint in api.code-server.ai us-east.code-server.ai eu-central.code-server.ai; do
+  for endpoint in "${API_DOMAIN}" "${US_EAST_DOMAIN}" "${EU_CENTRAL_DOMAIN}"; do
     local ip=$(dig +short "$endpoint" @8.8.8.8 | head -1)
     if [[ -n "$ip" ]]; then
       log_success "DNS resolved: $endpoint → $ip"
@@ -644,7 +658,7 @@ generate_glb_report() {
   
   local report_file="${SCRIPT_DIR}/artifacts/phase5/glb-setup-report-$(date +%Y%m%d).md"
   
-  cat > "$report_file" <<'EOF'
+  cat > "$report_file" <<EOF
 # Global Load Balancing Setup Report
 
 **Setup Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
@@ -652,13 +666,13 @@ generate_glb_report() {
 ## Cloudflare Configuration
 
 ### DNS Records Created
-- api.code-server.ai (main)
-- us-east.code-server.ai (NA - East)
-- us-west.code-server.ai (NA - West)
-- eu-central.code-server.ai (Europe)
-- apac-sg.code-server.ai (APAC - Singapore)
-- apac-jp.code-server.ai (APAC - Japan)
-- br-south.code-server.ai (South America)
+- ${API_DOMAIN} (main)
+- ${US_EAST_DOMAIN} (NA - East)
+- ${US_WEST_DOMAIN} (NA - West)
+- ${EU_CENTRAL_DOMAIN} (Europe)
+- ${APAC_SG_DOMAIN} (APAC - Singapore)
+- ${APAC_JP_DOMAIN} (APAC - Japan)
+- ${BR_SOUTH_DOMAIN} (South America)
 
 ### DDoS & WAF Protection
 - Rate limiting: 1000 req/s per IP
@@ -669,7 +683,7 @@ generate_glb_report() {
 ## Caddy Reverse Proxy
 
 ### Configuration
-- Main endpoint: api.code-server.ai
+- Main endpoint: ${API_DOMAIN}
 - Regional endpoints: 6 locations
 - Load balancing policy: Least connection
 - Health check interval: 5s
@@ -686,12 +700,12 @@ generate_glb_report() {
 
 | Region | Primary Endpoint | Weight | Latency Target |
 |--------|------------------|--------|----------------|
-| US East | us-east | 30% | 50ms |
-| US West | us-west | 25% | 50ms |
-| EU Central | eu-central | 20% | 30ms |
-| APAC SG | apac-sg | 10% | 40ms |
-| APAC JP | apac-jp | 5% | 40ms |
-| BR South | br-south | 5% | 60ms |
+| US East | ${US_EAST_DOMAIN} | 30% | 50ms |
+| US West | ${US_WEST_DOMAIN} | 25% | 50ms |
+| EU Central | ${EU_CENTRAL_DOMAIN} | 20% | 30ms |
+| APAC SG | ${APAC_SG_DOMAIN} | 10% | 40ms |
+| APAC JP | ${APAC_JP_DOMAIN} | 5% | 40ms |
+| BR South | ${BR_SOUTH_DOMAIN} | 5% | 60ms |
 
 ## Monitoring
 

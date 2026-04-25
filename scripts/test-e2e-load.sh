@@ -33,8 +33,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-API_URL="http://localhost:3100"
-DOCKER_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+AUTH_SERVER_PORT="${AUTH_SERVER_PORT:-8001}"
+API_URL="${API_BASE_URL:-http://localhost:${AUTH_SERVER_PORT}}"
+DOCKER_COMPOSE_FILES=(-f "$PROJECT_ROOT/docker-compose.yml" -f "$PROJECT_ROOT/docker/oauth2-service.yml")
 K6_TIMEOUT="5m"
 E2E_TIMEOUT="30s"
 COMPOSE_CMD=()
@@ -62,6 +63,11 @@ check_prerequisites() {
     # Check Docker
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed"
+        exit 1
+    fi
+
+    if ! docker info &> /dev/null; then
+        log_error "Docker daemon is not running"
         exit 1
     fi
     
@@ -116,9 +122,14 @@ setup_stack() {
     log_info "Starting Docker Compose stack for testing..."
     
     cd "$PROJECT_ROOT"
+
+    if ! docker network inspect infrastructure >/dev/null 2>&1; then
+        log_info "Creating missing infrastructure network"
+        docker network create infrastructure >/dev/null
+    fi
     
     # Start services
-    "${COMPOSE_CMD[@]}" up -d --build
+    "${COMPOSE_CMD[@]}" "${DOCKER_COMPOSE_FILES[@]}" up -d --build auth-server
     
     # Wait for API to be ready
     if ! wait_for_service "$API_URL" 60; then
@@ -133,6 +144,7 @@ run_e2e_tests() {
     log_info "Running E2E tests..."
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     if ! command -v pytest &> /dev/null; then
         log_warning "pytest not found, skipping E2E tests"
@@ -165,6 +177,7 @@ run_oauth_load_test() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/oauth-load-test.js \
         --vus 100 \
@@ -187,6 +200,7 @@ run_user_load_test() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/user-load-test.js \
         --vus 200 \
@@ -209,6 +223,7 @@ run_team_load_test() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/team-load-test.js \
         --vus 150 \
@@ -231,6 +246,7 @@ run_gateway_load_test() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/gateway-load-test.js \
         --vus 300 \
@@ -253,6 +269,7 @@ run_stress_test() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/stress-test.js \
         --vus 500 \
@@ -275,6 +292,7 @@ run_deployment_verification() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/deployment-verification.js \
         --vus 5 \
@@ -298,6 +316,7 @@ run_performance_benchmark() {
     fi
     
     cd "$APP_ROOT"
+    export API_BASE_URL="$API_URL"
     
     k6 run tests/load/performance-benchmark.js \
         --vus 50 \

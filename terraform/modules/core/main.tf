@@ -6,19 +6,28 @@
 # Caddyfile Configuration (HTTP/S gateway)
 # ============================================================================
 
+locals {
+  ide_domain  = "ide.${var.apex_domain}"
+  api_domain  = "api.${var.apex_domain}"
+  auth_domain = "auth.${var.apex_domain}"
+}
+
 resource "local_file" "caddyfile" {
   filename = "${path.module}/../../config/caddy/Caddyfile.${var.deployment_mode}"
   content = templatefile("${path.module}/templates/Caddyfile.tpl", {
-    apex_domain   = var.apex_domain
-    primary_host  = var.primary_host
-    admin_email   = var.admin_email
-    enable_tls    = var.enable_tls
-    log_level     = var.log_level
+    apex_domain     = var.apex_domain
+    ide_domain      = local.ide_domain
+    api_domain      = local.api_domain
+    auth_domain     = local.auth_domain
+    primary_host    = var.primary_host
+    admin_email     = var.admin_email
+    enable_tls      = var.enable_tls
+    log_level       = var.log_level
     deployment_mode = var.deployment_mode
   })
-  
+
   lifecycle {
-    ignore_changes = [content]  # Allow manual edits in production
+    ignore_changes = [content] # Allow manual edits in production
   }
 }
 
@@ -35,6 +44,10 @@ output "dns_configuration" {
         subdomain = "@"
         hostname  = var.primary_host
         note      = "Primary deployment host"
+      },
+      {
+        subdomain = "auth"
+        hostname  = var.primary_host
       },
       {
         subdomain = "api"

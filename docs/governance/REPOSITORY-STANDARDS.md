@@ -10,7 +10,7 @@
 
 ### ✓ Compliant
 
-- **Root markdown files**: 5 core files (README.md, CHANGELOG.md, CONTRIBUTING.md, ROADMAP.md, TROUBLESHOOTING.md)
+- **Root markdown files**: `README.md` only; other legacy reports archived under `docs/`
 - **Caddyfile consolidation**: Single `Caddyfile` in production (pre-SSL-fix variants archived)
 - **Directory structure**: Core `apps/`, `scripts/`, `terraform/`, `docs/`, `config/` organized
 - **Version control**: Single docker-compose.yml with profile-based service selection
@@ -36,7 +36,7 @@
 ```
 repo-root/
 ├── README.md                    # Main documentation (keep in root)
-├── CHANGELOG.md                 # Version history (keep in root)
+├── CHANGELOG.md                 # Version history (allowed in root when present)
 ├── LICENSE                      # License
 ├── docker-compose.yml           # Primary compose file (profiles for all services)
 ├── Caddyfile                    # Production reverse proxy config
@@ -339,7 +339,7 @@ pnpm list --depth=-1
 - [x] Document governance standards
 - [x] Create repository governance guide
 - [ ] Create .env.schema.json (NEXT)
-- [ ] Archive old Caddyfile variants
+- [x] Archive old Caddyfile variants
 
 ### Phase 2: Automation (Week 2)
 
@@ -350,10 +350,10 @@ pnpm list --depth=-1
 
 ### Phase 3: Migration (Week 3)
 
-- [ ] Move docs to subdirectories (if any remain in root)
+- [x] Move docs to subdirectories (if any remain in root)
 - [ ] Rename scripts to kebab-case pattern
 - [ ] Validate all pnpm packages resolve
-- [ ] Add CODEOWNERS file
+- [x] Add CODEOWNERS file
 
 ### Phase 4: Enforcement (Week 4)
 

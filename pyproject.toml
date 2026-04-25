@@ -21,6 +21,7 @@ addopts = """
     --strict-markers
     --tb=short
     --cov=src
+    --cov=apps/edge_agent
     --cov-report=html
     --cov-report=term-missing:skip-covered
     --cov-report=json
@@ -49,7 +50,7 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true
-source = ["src"]
+source = ["src", "apps/edge_agent"]
 parallel = true
 
 [tool.coverage.report]

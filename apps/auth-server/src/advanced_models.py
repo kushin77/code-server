@@ -42,7 +42,7 @@ class MFAMethodEnum(str, Enum):
 class UserSession(Base):
     """User session tracking"""
     __tablename__ = "user_sessions"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     device_id = Column(String(255), nullable=False, index=True)
@@ -53,11 +53,11 @@ class UserSession(Base):
     ip_address = Column(String(45))  # IPv4 or IPv6
     user_agent = Column(Text)
     refresh_token_id = Column(PG_UUID(as_uuid=True), ForeignKey("refresh_tokens.id"))
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     last_activity = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     revoked_at = Column(DateTime, nullable=True, index=True)
-    
+
     # Index for quick lookups
     __table_args__ = (
         Index("ix_user_sessions_user_device", "user_id", "device_id"),
@@ -67,7 +67,7 @@ class UserSession(Base):
 class UserDevice(Base):
     """User device information"""
     __tablename__ = "user_devices"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     device_id = Column(String(255), nullable=False)
@@ -77,11 +77,11 @@ class UserDevice(Base):
     browser = Column(String(64))
     ip_address = Column(String(45))
     user_agent = Column(Text)
-    
+
     is_current = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     last_seen = Column(DateTime, nullable=True)
-    
+
     __table_args__ = (
         Index("ix_user_devices_user_id", "user_id"),
     )
@@ -94,17 +94,17 @@ class UserDevice(Base):
 class RefreshToken(Base):
     """Refresh token tracking"""
     __tablename__ = "refresh_tokens"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     token_hash = Column(String(255), nullable=False, unique=True)
     device_id = Column(String(255))
     ip_address = Column(String(45))
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False, index=True)
     revoked_at = Column(DateTime, nullable=True, index=True)
-    
+
     __table_args__ = (
         Index("ix_refresh_tokens_user_id_not_revoked", "user_id"),
     )
@@ -117,25 +117,25 @@ class RefreshToken(Base):
 class UserMFA(Base):
     """User MFA configuration"""
     __tablename__ = "user_mfa"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     method = Column(String(32), nullable=False)  # email, sms, authenticator
-    
+
     # For authenticator: TOTP secret (encrypted)
     secret = Column(String(255), nullable=True)
-    
+
     # For SMS/phone: phone number (encrypted)
     phone_number = Column(String(20), nullable=True)
-    
+
     # Verification tracking
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     verified_at = Column(DateTime, nullable=True)
     last_used = Column(DateTime, nullable=True)
-    
+
     # Backup codes count
     backup_codes_remaining = Column(Integer, default=0)
-    
+
     __table_args__ = (
         Index("ix_user_mfa_user_id_method", "user_id", "method"),
     )
@@ -144,14 +144,14 @@ class UserMFA(Base):
 class RecoveryCode(Base):
     """MFA recovery codes"""
     __tablename__ = "recovery_codes"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     code_hash = Column(String(255), nullable=False)  # Hashed for security
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     used_at = Column(DateTime, nullable=True, index=True)
-    
+
     __table_args__ = (
         Index("ix_recovery_codes_user_id", "user_id"),
     )
@@ -164,15 +164,15 @@ class RecoveryCode(Base):
 class PasswordResetRequest(Base):
     """Password reset token tracking"""
     __tablename__ = "password_reset_requests"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    token = Column(String(255), nullable=False, unique=True, index=True)
-    
+    token = Column(String(255), nullable=False, unique=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
     used_at = Column(DateTime, nullable=True)
-    
+
     __table_args__ = (
         Index("ix_password_reset_user_id", "user_id"),
     )
@@ -185,16 +185,16 @@ class PasswordResetRequest(Base):
 class EmailChangeRequest(Base):
     """Email change with verification"""
     __tablename__ = "email_change_requests"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     new_email = Column(String(255), nullable=False)
-    token = Column(String(255), nullable=False, unique=True, index=True)
-    
+    token = Column(String(255), nullable=False, unique=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     verified_at = Column(DateTime, nullable=True)
-    
+
     __table_args__ = (
         Index("ix_email_change_user_id", "user_id"),
     )
@@ -207,21 +207,21 @@ class EmailChangeRequest(Base):
 class LoginEvent(Base):
     """Track all login attempts for security"""
     __tablename__ = "login_events"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    
+
     success = Column(Boolean, nullable=False)
     reason = Column(String(255))  # success, invalid_credentials, account_locked, mfa_required, etc.
-    
+
     ip_address = Column(String(45))
     user_agent = Column(Text)
     device_id = Column(String(255))
-    
+
     mfa_method_used = Column(String(32), nullable=True)  # If MFA was used
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    
+
     __table_args__ = (
         Index("ix_login_events_user_id_created", "user_id", "created_at"),
     )

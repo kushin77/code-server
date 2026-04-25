@@ -2,7 +2,7 @@
 ## Enterprise-Grade Orchestration & IaC Patterns
 
 **Status**: IMPLEMENTATION IN PROGRESS (April 25, 2026)  
-**Roadmap Link**: [Q3 Phase 4: Kubernetes Migration](../../ROADMAP.md#q3-2026-scalability--orchestration)
+**Roadmap Link**: [Q3 Phase 4: Kubernetes Migration](ROADMAP.md#q3-2026-scalability--orchestration)
 
 ---
 

@@ -124,6 +124,26 @@ async def list_events() -> list[ReplicationEvent]:
     return registry_service._event_log
 
 
+@app.post("/edge-agents/{agent_id}/report-failure")
+async def report_agent_failure(agent_id: str) -> dict:
+    """Manual or automated failure reporting to trigger circuit breaker."""
+    try:
+        registry_service.report_failure(agent_id)
+        return {"status": "failure_recorded", "agent_id": agent_id}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/edge-agents/{agent_id}/report-success")
+async def report_agent_success(agent_id: str) -> dict:
+    """Manual or automated success reporting to reset circuit breaker."""
+    try:
+        registry_service.report_success(agent_id)
+        return {"status": "success_recorded", "agent_id": agent_id}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -365,6 +365,7 @@ services:
     container_name: alertmanager
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
+      - "--config.expand-env"
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
       - "--web.external-url=http://localhost:9093"
@@ -373,6 +374,10 @@ services:
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
+    environment:
+      - ALERTMANAGER_EMAIL_TO=${ALERTMANAGER_EMAIL_TO:-ops@${APEX_DOMAIN}}
+      - ALERTMANAGER_EMAIL_FROM=${ALERTMANAGER_EMAIL_FROM:-alertmanager@${APEX_DOMAIN}}
+      - SMTP_HOST=${SMTP_HOST:-smtp.${APEX_DOMAIN}:587}
     healthcheck:
       test:
         - CMD-SHELL

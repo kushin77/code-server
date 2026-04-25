@@ -286,8 +286,8 @@ log_info "Phase 8: Deployment Documentation Validation"
 echo ""
 
 DOCS=(
-    "DEPLOYMENT-MANIFEST.md"
-    "OPERATIONAL-READINESS-SIGN-OFF.md"
+    "docs/operations/DEPLOYMENT-MANIFEST.md"
+    "docs/operations/OPERATIONAL-READINESS-SIGN-OFF.md"
 )
 
 for doc in "${DOCS[@]}"; do

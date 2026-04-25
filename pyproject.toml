@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "elevatediq-backend"
+version = "0.1.0"
+description = "ElevatedIQ DevOS Enterprise Platform"
+requires-python = ">=3.11"
+authors = [{name = "Team", email = "team@kushnir.cloud"}]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+# Coverage configuration
+addopts = """
+    --strict-markers
+    --tb=short
+    --cov=src
+    --cov-report=html
+    --cov-report=term-missing:skip-covered
+    --cov-report=json
+    --cov-report=lcov
+    --cov-fail-under=80
+    -v
+    --color=yes
+    -ra
+"""
+
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (medium speed)",
+    "e2e: End-to-end tests (slow, comprehensive)",
+    "slow: Slow tests (timeout > 10s)",
+    "skip_ci: Skip in CI environment",
+    "requires_db: Tests requiring database connection",
+    "requires_cache: Tests requiring cache (Redis)",
+]
+
+# Timeout for all tests (seconds)
+timeout = 300
+
+# Asyncio mode for async tests
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "class .*\\(Protocol\\):",
+]
+
+precision = 2
+skip_covered = false
+skip_empty = true
+show_missing = true
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.json]
+output = ".coverage.json"

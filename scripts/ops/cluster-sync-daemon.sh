@@ -91,8 +91,10 @@ else
 fi
 readonly DOCKER_COMPOSE
 
-# Sync parameters
-GIT_BRANCH="${GIT_BRANCH:-origin/main}"
+# Sync parameters — track the currently checked-out branch, fallback to main
+GIT_BRANCH="${GIT_BRANCH:-$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
+# Prefix with origin/ for fetch if not already
+[[ "$GIT_BRANCH" != origin/* ]] && GIT_BRANCH="origin/$GIT_BRANCH"
 MAX_SYNC_TIME=300  # 5 minutes
 HEALTH_CHECK_TIMEOUT=60  # 1 minute
 SERVICES_TO_MONITOR=(

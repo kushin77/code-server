@@ -1,0 +1,201 @@
+# @file        .github/workflows/governance-checks.yml
+# @module      ci/governance
+# @description Repository governance enforcement — no loose files, naming conventions, SSOT
+# @governance  GOV-002: IaC, immutable, idempotent
+# Issue #1534: Repository Governance — FAANG-Standard Structure, Naming, Git Hygiene, SSOT
+
+name: Governance Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # ── No Loose Markdown Files in Root ──────────────────────────────────────────
+  no-loose-root-files:
+    name: No loose markdown files in root
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for loose markdown files in root
+        run: |
+          ALLOWED_ROOT_MD="README.md CHANGELOG.md"
+          VIOLATIONS=()
+
+          for f in *.md; do
+            [ -f "$f" ] || continue
+            allowed=false
+            for allowed_file in $ALLOWED_ROOT_MD; do
+              [ "$f" = "$allowed_file" ] && allowed=true && break
+            done
+            if [ "$allowed" = "false" ]; then
+              VIOLATIONS+=("$f")
+            fi
+          done
+
+          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+            echo "❌ Loose markdown files found in repo root (move to docs/):"
+            for v in "${VIOLATIONS[@]}"; do
+              echo "  - $v"
+            done
+            echo ""
+            echo "Allowed root markdown files: $ALLOWED_ROOT_MD"
+            echo "Move documentation to: docs/{architecture,operations,security,runbooks,decisions}/"
+            exit 1
+          fi
+
+          echo "✓ No loose markdown files in root"
+
+  # ── Commit Message Convention ─────────────────────────────────────────────────
+  conventional-commits:
+    name: Conventional commit format
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR commit messages follow Conventional Commits
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|ops|infra|security|iac)(\([a-z0-9/-]+\))?!?: .+'
+
+          FAILURES=0
+          while IFS= read -r msg; do
+            if ! echo "$msg" | grep -qE "$PATTERN"; then
+              echo "❌ Invalid commit: $msg"
+              FAILURES=$((FAILURES + 1))
+            fi
+          done < <(git log --format="%s" "$BASE..$HEAD")
+
+          if [ "$FAILURES" -gt 0 ]; then
+            echo ""
+            echo "Conventional Commit format required:"
+            echo "  <type>(<scope>): <subject>"
+            echo "  Types: feat fix docs style refactor perf test build ci chore revert ops infra security iac"
+            echo "  Example: feat(agent-runtime): add approval gate integration"
+            exit 1
+          fi
+
+          echo "✓ All commits follow Conventional Commits format"
+
+  # ── Docker Compose Naming ────────────────────────────────────────────────────
+  compose-naming:
+    name: Docker Compose file naming convention
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify docker-compose files follow naming convention
+        run: |
+          VIOLATIONS=()
+
+          # Allowed patterns: docker-compose.yml, docker-compose.*.yml
+          for f in docker-compose*.yml; do
+            [ -f "$f" ] || continue
+            if ! echo "$f" | grep -qE '^docker-compose(\.[a-z0-9-]+)?\.yml$'; then
+              VIOLATIONS+=("$f")
+            fi
+          done
+
+          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+            echo "❌ Docker Compose files violate naming convention (must be docker-compose[.profile].yml):"
+            for v in "${VIOLATIONS[@]}"; do
+              echo "  - $v"
+            done
+            exit 1
+          fi
+
+          echo "✓ Docker Compose file naming convention OK"
+
+  # ── Script Naming (kebab-case) ────────────────────────────────────────────────
+  script-naming:
+    name: Shell script naming convention (kebab-case)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check shell scripts use kebab-case naming
+        run: |
+          VIOLATIONS=()
+
+          while IFS= read -r -d '' f; do
+            filename=$(basename "$f" .sh)
+            # kebab-case: lowercase letters, numbers, hyphens only
+            if ! echo "$filename" | grep -qE '^[a-z0-9][a-z0-9-]*$'; then
+              VIOLATIONS+=("$f")
+            fi
+          done < <(find scripts/ -name "*.sh" -print0 2>/dev/null)
+
+          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+            echo "❌ Shell scripts violate kebab-case naming convention:"
+            for v in "${VIOLATIONS[@]}"; do
+              echo "  - $v"
+            done
+            echo ""
+            echo "All .sh files in scripts/ must use kebab-case (no underscores, no camelCase)"
+            exit 1
+          fi
+
+          echo "✓ Shell script naming convention OK"
+
+  # ── env.yaml Validation ───────────────────────────────────────────────────────
+  env-yaml-validation:
+    name: Validate env.yaml schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jsonschema
+        run: pip install jsonschema pyyaml
+
+      - name: Validate env.yaml against schema
+        run: |
+          if [ ! -f env.yaml ]; then
+            echo "ℹ env.yaml not found — skipping validation"
+            exit 0
+          fi
+
+          python3 - <<'EOF'
+          import yaml, json, jsonschema, sys
+
+          with open("env.yaml") as f:
+              data = yaml.safe_load(f)
+          with open("schemas/env-yaml.v1.json") as f:
+              schema = json.load(f)
+
+          try:
+              jsonschema.validate(data, schema)
+              print("✓ env.yaml is valid against schemas/env-yaml.v1.json")
+          except jsonschema.ValidationError as e:
+              print(f"❌ env.yaml validation failed: {e.message}")
+              sys.exit(1)
+          EOF
+
+  # ── No Duplicate Caddyfile Variants ──────────────────────────────────────────
+  ssot-caddyfile:
+    name: Single Caddyfile source of truth
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for duplicate Caddyfile variants in root
+        run: |
+          COUNT=$(find . -maxdepth 1 -name "Caddyfile*" | wc -l)
+
+          if [ "$COUNT" -gt 2 ]; then
+            echo "❌ Multiple Caddyfile variants found in root (SSOT violation):"
+            find . -maxdepth 1 -name "Caddyfile*"
+            echo ""
+            echo "Keep only: Caddyfile (production) and optionally Caddyfile.tpl (template)"
+            echo "Archive all others to docs/archive/"
+            exit 1
+          fi
+
+          echo "✓ Caddyfile SSOT OK ($COUNT file(s) in root)"

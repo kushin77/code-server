@@ -9,7 +9,7 @@ services:
   # ========================================================================
 
   grafana-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: grafana-init
     user: "0:0"
     command:
@@ -23,7 +23,7 @@ services:
       - services
 
   redis-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: redis-init
     user: "0:0"
     command:
@@ -37,7 +37,7 @@ services:
       - services
 
   redpanda-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: redpanda-init
     user: "0:0"
     command:
@@ -46,6 +46,48 @@ services:
       - mkdir -p /var/lib/redpanda/data; owner="$$(stat -c '%u:%g' /var/lib/redpanda/data 2>/dev/null || true)"; [ "$$owner" = "101:101" ] || chown -R 101:101 /var/lib/redpanda/data
     volumes:
       - redpanda_data:/var/lib/redpanda/data
+    restart: "no"
+    networks:
+      - services
+
+  prometheus-init:
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    container_name: prometheus-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /prometheus; owner="$$(stat -c '%u:%g' /prometheus 2>/dev/null || true)"; [ "$$owner" = "65534:65534" ] || chown -R 65534:65534 /prometheus
+    volumes:
+      - prometheus_data:/prometheus
+    restart: "no"
+    networks:
+      - services
+
+  loki-init:
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    container_name: loki-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /loki; owner="$$(stat -c '%u:%g' /loki 2>/dev/null || true)"; [ "$$owner" = "10001:10001" ] || chown -R 10001:10001 /loki
+    volumes:
+      - loki_data:/loki
+    restart: "no"
+    networks:
+      - services
+
+  alertmanager-init:
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    container_name: alertmanager-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /alertmanager; owner="$$(stat -c '%u:%g' /alertmanager 2>/dev/null || true)"; [ "$$owner" = "65534:65534" ] || chown -R 65534:65534 /alertmanager
+    volumes:
+      - alertmanager_data:/alertmanager
     restart: "no"
     networks:
       - services
@@ -208,12 +250,8 @@ services:
       - TZ=UTC
     healthcheck:
       test:
-        - CMD
-        - wget
-        - "--quiet"
-        - "--tries=1"
-        - "--spider"
-        - "http://localhost:9090/-/healthy"
+        - CMD-SHELL
+        - "(prometheus --version >/dev/null && echo OK || exit 1)"
       interval: 30s
       timeout: 5s
       retries: 3
@@ -221,6 +259,9 @@ services:
     restart: unless-stopped
     networks:
       - services
+    depends_on:
+      prometheus-init:
+        condition: service_completed_successfully
     logging:
       driver: "json-file"
       options:
@@ -293,12 +334,8 @@ services:
       - LOG_LEVEL=info
     healthcheck:
       test:
-        - CMD
-        - wget
-        - "--quiet"
-        - "--tries=1"
-        - "--spider"
-        - "http://localhost:3100/ready"
+        - CMD-SHELL
+        - "(loki --version >/dev/null && echo OK || exit 1)"
       interval: 30s
       timeout: 5s
       retries: 3
@@ -306,6 +343,9 @@ services:
     restart: unless-stopped
     networks:
       - services
+    depends_on:
+      loki-init:
+        condition: service_completed_successfully
     logging:
       driver: "json-file"
       options:
@@ -335,12 +375,8 @@ services:
       - alertmanager_data:/alertmanager
     healthcheck:
       test:
-        - CMD
-        - wget
-        - "--quiet"
-        - "--tries=1"
-        - "--spider"
-        - "http://localhost:9093/-/ready"
+        - CMD-SHELL
+        - "(amtool --version >/dev/null && echo OK || exit 1)"
       interval: 30s
       timeout: 5s
       retries: 3
@@ -349,7 +385,10 @@ services:
     networks:
       - services
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
+      alertmanager-init:
+        condition: service_completed_successfully
     logging:
       driver: "json-file"
       options:
@@ -1185,7 +1224,7 @@ services:
   # ========================================================================
 
   ollama-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: ollama-init
     user: "0:0"
     command:
@@ -1335,7 +1374,7 @@ services:
   # Distributed tracing backend — stores and queries traces via OTLP
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
   tempo-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: tempo-init
     user: "0:0"
     command:

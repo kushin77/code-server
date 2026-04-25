@@ -147,6 +147,20 @@ services:
     replicas: 1
     image: "redis:7-alpine"
     port: 6379
+
+  edge_agent:
+    enabled: true
+    name: "edge-agent"
+    replicas: 2
+    image: "code-server-enterprise-edge-agent:latest"
+    port: 8060
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
   
   prometheus:
     enabled: true

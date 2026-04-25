@@ -1093,6 +1093,48 @@ services:
           cpus: "2"
           memory: "4G"
 
+  edge-agent:
+    build:
+      context: apps/edge_agent
+      dockerfile: Dockerfile
+    container_name: edge-agent
+    ports:
+      - "8060:8060"
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
+      - REPLICATION_TOPIC=edge.replication.events
+      - LOG_LEVEL=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8060/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.2"
+          memory: 256m
+    profiles:
+      - "infrastructure"
+      - "all"
+
 # ============================================================================
 # NETWORKS & VOLUMES
 # ============================================================================

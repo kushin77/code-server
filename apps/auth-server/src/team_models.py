@@ -54,7 +54,7 @@ class Organization(Base):
     
     # Basic Information
     name = Column(String(255), nullable=False)
-    slug = Column(String(255), nullable=False, unique=True, index=True)  # URL-friendly name
+    slug = Column(String(255), nullable=False, unique=True)  # URL-friendly name
     description = Column(Text, nullable=True)
     logo_url = Column(String(512), nullable=True)
     website_url = Column(String(512), nullable=True)

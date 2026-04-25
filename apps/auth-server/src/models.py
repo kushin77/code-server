@@ -77,7 +77,7 @@ class AuthorizationCode(Base):
     __tablename__ = "oauth_authorization_codes"
     
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    code = Column(String(256), nullable=False, unique=True, index=True)
+    code = Column(String(256), nullable=False, unique=True)
     
     # Authorization request details
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
@@ -175,7 +175,7 @@ class OAuthClient(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
     # Client details
-    client_id = Column(String(255), nullable=False, unique=True, index=True)
+    client_id = Column(String(255), nullable=False, unique=True)
     client_secret = Column(String(512), nullable=False)  # Store hashed in production
     client_name = Column(String(255), nullable=False)
     client_description = Column(Text, nullable=True)

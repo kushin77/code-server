@@ -27,7 +27,7 @@ class APIKey(Base):
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     
     name = Column(String(255), nullable=False)
-    key_hash = Column(String(255), nullable=False, unique=True, index=True)
+    key_hash = Column(String(255), nullable=False, unique=True)
     
     # Scopes/permissions for this key
     scopes = Column(JSON, default=list)

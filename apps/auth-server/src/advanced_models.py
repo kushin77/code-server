@@ -158,7 +158,7 @@ class PasswordResetRequest(Base):
     
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    token = Column(String(255), nullable=False, unique=True, index=True)
+    token = Column(String(255), nullable=False, unique=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
@@ -180,7 +180,7 @@ class EmailChangeRequest(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     new_email = Column(String(255), nullable=False)
-    token = Column(String(255), nullable=False, unique=True, index=True)
+    token = Column(String(255), nullable=False, unique=True)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     expires_at = Column(DateTime, nullable=False)

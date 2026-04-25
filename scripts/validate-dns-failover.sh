@@ -14,7 +14,7 @@
 #
 # Prerequisites:
 #   - Docker running with services deployed
-#   - Primary host accessible (192.168.168.31)
+#   - Primary host accessible (${PRIMARY_HOST:?PRIMARY_HOST must be set})
 #   - DNS services responding
 #
 # Usage:

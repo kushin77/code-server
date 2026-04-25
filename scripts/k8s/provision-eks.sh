@@ -9,6 +9,7 @@ set -euo pipefail
 ENVIRONMENT="${1:-production}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 CLUSTER_NAME="code-server-enterprise-${ENVIRONMENT}"
+ADMIN_EMAIL="${ADMIN_EMAIL:?ADMIN_EMAIL must be set}"
 NODE_GROUP_MIN=3
 NODE_GROUP_MAX=10
 NODE_GROUP_DESIRED=5
@@ -187,7 +188,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: admin@kushnir.cloud
+    email: ${ADMIN_EMAIL}
     privateKeySecretRef:
       name: letsencrypt-prod-key
     solvers:

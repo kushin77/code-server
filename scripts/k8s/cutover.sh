@@ -7,7 +7,7 @@ set -euo pipefail
 
 CUTOVER_PERCENT="${1:-100}"
 DNS_ZONE_ID="${DNS_ZONE_ID:-Z123456789ABC}"
-PRIMARY_DOMAIN="api.kushnir.cloud"
+PRIMARY_DOMAIN="${API_DOMAIN:?API_DOMAIN must be set}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -69,7 +69,7 @@ fi
 log_success "NLB endpoint: ${NLB_ENDPOINT}"
 
 # Get current Docker Compose IP
-DC_IP="${DOCKER_COMPOSE_IP:-192.168.1.100}"
+DC_IP="${DOCKER_COMPOSE_IP:?DOCKER_COMPOSE_IP must be set}"
 log_info "Docker Compose endpoint: ${DC_IP}"
 
 # ===== PHASE 3: UPDATE DNS ROUTING =====

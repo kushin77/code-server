@@ -7,6 +7,8 @@ set -euo pipefail
 
 REASON="${1:-manual-rollback}"
 BACKUP_DIR="/backups/docker-compose-archive"
+API_DOMAIN="${API_DOMAIN:?API_DOMAIN must be set}"
+DOCKER_COMPOSE_IP="${DOCKER_COMPOSE_IP:?DOCKER_COMPOSE_IP must be set}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -87,11 +89,11 @@ log_info "Phase 5: Reverting DNS routing"
 
 # Redirect 100% traffic back to Docker Compose
 DNS_ZONE_ID="${DNS_ZONE_ID:-Z123456789ABC}"
-DC_IP="${DOCKER_COMPOSE_IP:-192.168.1.100}"
+DC_IP="${DOCKER_COMPOSE_IP}"
 
 aws route53 change-resource-record-sets \
   --hosted-zone-id ${DNS_ZONE_ID} \
-  --change-batch '{"Changes": [{"Action": "UPSERT", "ResourceRecordSet": {"Name": "api.kushnir.cloud", "Type": "A", "TTL": 60, "ResourceRecords": [{"Value": "'${DC_IP}'"}]}}]}' 2>/dev/null || log_warn "DNS update skipped (not in AWS environment)"
+  --change-batch '{"Changes": [{"Action": "UPSERT", "ResourceRecordSet": {"Name": "'${API_DOMAIN}'", "Type": "A", "TTL": 60, "ResourceRecords": [{"Value": "'${DC_IP}'"}]}}]}' 2>/dev/null || log_warn "DNS update skipped (not in AWS environment)"
 
 log_success "DNS routing reverted to Docker Compose (${DC_IP})"
 

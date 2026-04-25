@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file domain-variability-enforcer.sh
 # @module infrastructure/governance
-# @description P3-1531: Enforce domain and config variability - replace hardcoded kushnir.cloud with env vars
+# @description P3-1531: Enforce domain and config variability - replace hardcoded domains with env vars
 # @governance GOV-002: IaC, Immutable, Idempotent - All domain references must be env-var driven
 # @usage domain-variability-enforcer.sh [--check] [--fix] [--report]
 

@@ -33,7 +33,8 @@ source "${SCRIPT_DIR}/init.sh"
 : "${NAS_HOST:?NAS_HOST must be set}"
 
 # Domain root (for FQDN construction)
-: "${DOMAIN:=${APEX_DOMAIN:-kushnir.cloud}}"
+: "${APEX_DOMAIN:?APEX_DOMAIN must be set}"
+: "${DOMAIN:=${APEX_DOMAIN}}"
 
 # SSH user (default: current user)
 : "${SSH_USER:=${USER:-ops}}"

@@ -130,7 +130,7 @@ verify_no_hardcoded_values() {
     return 1
   fi
   
-  # Check for hardcoded domain (kushnir.cloud should be ${APEX_DOMAIN})
+  # Check for hardcoded domain (use ${APEX_DOMAIN} / env-driven domains)
   if grep -E 'kushnir\.cloud|localhost|127\.0\.0\.1' \
     docker-compose.yml docker-compose.override.yml 2>/dev/null | grep -v "^#" | grep -v '\$'; then
     log_warn "Potential hardcoded values found - check if should be variables"

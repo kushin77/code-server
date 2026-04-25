@@ -37,6 +37,7 @@ API_URL="http://localhost:3100"
 DOCKER_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 K6_TIMEOUT="5m"
 E2E_TIMEOUT="30s"
+COMPOSE_CMD=()
 
 # Functions
 log_info() {
@@ -64,9 +65,15 @@ check_prerequisites() {
         exit 1
     fi
     
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "docker-compose is not installed"
+    # Check Docker Compose (prefer plugin, fall back to standalone binary)
+    if docker compose version &> /dev/null; then
+        COMPOSE_CMD=(docker compose)
+        log_info "Using Docker Compose plugin"
+    elif command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD=(docker-compose)
+        log_info "Using docker-compose binary"
+    else
+        log_error "Neither 'docker compose' nor 'docker-compose' is available"
         exit 1
     fi
     
@@ -111,7 +118,7 @@ setup_stack() {
     cd "$PROJECT_ROOT"
     
     # Start services
-    docker-compose up -d --build
+    "${COMPOSE_CMD[@]}" up -d --build
     
     # Wait for API to be ready
     if ! wait_for_service "$API_URL" 60; then
@@ -320,7 +327,7 @@ cleanup_stack() {
     
     cd "$PROJECT_ROOT"
     
-    docker-compose down -v
+    "${COMPOSE_CMD[@]}" down -v
     
     log_success "Docker Compose stack stopped"
 }

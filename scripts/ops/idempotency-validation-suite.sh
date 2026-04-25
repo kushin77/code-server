@@ -13,6 +13,8 @@ set -euo pipefail
 # ============================================================================
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Source shared configuration (GOV-002)
+. "${REPO_ROOT}/scripts/_common/_base-config.env"
 readonly LOG_FILE="${REPO_ROOT}/artifacts/idempotency-validation-$(date +%Y%m%d-%H%M%S).log"
 readonly METRICS_FILE="${REPO_ROOT}/artifacts/idempotency-metrics.json"
 

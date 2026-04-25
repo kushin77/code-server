@@ -34,6 +34,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Source shared configuration (GOV-002)
+. "${PROJECT_ROOT}/scripts/_common/_base-config.env"
 readonly TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 readonly LOG_FILE="/var/log/cluster-sync-deployment-${TIMESTAMP}.log"
 readonly BRANCH_NAME="${1:-feat/cluster-sync-fixes}"

@@ -22,6 +22,8 @@
 set -euo pipefail
 
 REPO_ROOT="${PWD}"
+# Source shared configuration (GOV-002)
+. "${REPO_ROOT}/scripts/_common/_base-config.env"
 readonly DOCKER_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
 readonly LOG_FILE="/tmp/deploy-$(date +%Y%m%d-%H%M%S).log"
 readonly HEALTH_CHECK_RETRIES=30

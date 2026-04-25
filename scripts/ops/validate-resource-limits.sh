@@ -11,6 +11,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# Source shared configuration (GOV-002)
+. "${SCRIPT_DIR}/../_common/_base-config.env"
 
 echo "Checking resource limits in docker-compose.yml..."
 

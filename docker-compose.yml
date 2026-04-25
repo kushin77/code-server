@@ -283,6 +283,50 @@ services:
           cpus: "0.5"
           memory: 256m
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0@sha256:59e6b1c1b9d4f3f4e9183cb3da7e5c6a5bc58d8c7f90e6f7c8c7f2b9d6f8f3a2
+    container_name: alertmanager
+    user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=http://localhost:9093"
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:9093/-/ready"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - services
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+        reservations:
+          cpus: "0.25"
+          memory: 128m
+
   # ========================================================================
   # VECTOR DATABASE & SEARCH
   # ========================================================================
@@ -1155,6 +1199,8 @@ volumes:
   grafana_data:
     driver: local
   loki_data:
+    driver: local
+  alertmanager_data:
     driver: local
   qdrant_data:
     driver: local

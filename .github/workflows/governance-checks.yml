@@ -22,16 +22,13 @@ jobs:
 
       - name: Check for loose markdown files in root
         run: |
-          ALLOWED_ROOT_MD="README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md TROUBLESHOOTING.md"
+          # Only README.md allowed as loose markdown in root
+          ALLOWED_ROOT_MD="README.md"
           VIOLATIONS=()
 
           for f in *.md; do
             [ -f "$f" ] || continue
-            allowed=false
-            for allowed_file in $ALLOWED_ROOT_MD; do
-              [ "$f" = "$allowed_file" ] && allowed=true && break
-            done
-            if [ "$allowed" = "false" ]; then
+            if [ "$f" != "$ALLOWED_ROOT_MD" ]; then
               VIOLATIONS+=("$f")
             fi
           done
@@ -42,12 +39,12 @@ jobs:
               echo "  - $v"
             done
             echo ""
-            echo "Allowed root markdown files: $ALLOWED_ROOT_MD"
-            echo "Move documentation to: docs/{architecture,operations,security,runbooks,decisions}/"
+            echo "Only allowed root markdown file: README.md"
+            echo "Move all other documentation to: docs/{architecture,operations,security,runbooks,decisions,archive}/"
             exit 1
           fi
 
-          echo "✓ No loose markdown files in root"
+          echo "✓ No loose markdown files in root (only README.md allowed)"
 
   # ── Commit Message Convention ─────────────────────────────────────────────────
   conventional-commits:
@@ -199,3 +196,70 @@ jobs:
           fi
 
           echo "✓ Caddyfile SSOT OK ($COUNT file(s) in root)"
+
+  # ── pnpm Workspace Validation ────────────────────────────────────────────────
+  pnpm-workspace-validation:
+    name: Validate pnpm workspace configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Validate pnpm workspace and install dependencies
+        run: |
+          if [ ! -f pnpm-workspace.yaml ]; then
+            echo "❌ pnpm-workspace.yaml not found"
+            exit 1
+          fi
+
+          # Verify workspace syntax
+          if ! pnpm install --frozen-lockfile 2>&1 | head -20; then
+            echo "❌ pnpm workspace installation failed"
+            exit 1
+          fi
+
+          # Verify all packages are resolvable
+          pnpm list --depth=0 > /dev/null 2>&1 || {
+            echo "❌ pnpm package list failed — unresolvable dependencies"
+            exit 1
+          }
+
+          echo "✓ pnpm workspace validated (all packages resolvable)"
+
+  # ── Repository Branch Hygiene ────────────────────────────────────────────────
+  branch-hygiene:
+    name: Repository branch hygiene
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check branch count and health
+        run: |
+          # Count remote branches (should be minimal)
+          BRANCH_COUNT=$(git branch -r | wc -l)
+          echo "Remote branches: $BRANCH_COUNT"
+
+          if [ "$BRANCH_COUNT" -gt 10 ]; then
+            echo "⚠️  Repository has $BRANCH_COUNT remote branches (consider cleanup: git branch -d <branch>)"
+          fi
+
+          # Verify main branch is always the latest
+          MAIN_REMOTE=$(git rev-parse origin/main)
+          MAIN_LOCAL=$(git rev-parse main)
+
+          if [ "$MAIN_REMOTE" != "$MAIN_LOCAL" ]; then
+            echo "⚠️  Local main differs from origin/main (run: git pull origin main)"
+          fi
+
+          echo "✓ Branch hygiene check complete ($BRANCH_COUNT remote branches)"

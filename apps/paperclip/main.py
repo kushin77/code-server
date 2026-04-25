@@ -2,6 +2,7 @@
 # @file apps/paperclip/main.py
 # @module paperclip
 # @description Minimal Paperclip human control plane service
+# @governance GOV-002: Approval gating, OPA policy enforcement, tier-based access
 
 from typing import Optional
 
@@ -12,6 +13,8 @@ from heartbeat import HeartbeatMonitor
 from killswitch import KillswitchManager
 from event_publisher import PaperclipEventPublisher
 from models import ApprovalCreate, ApprovalDecision, HeartbeatCreate, KillswitchRequest
+from opa_integration import OPAPolicyManager
+from reputation_integration import ReputationTierManager
 
 
 app = FastAPI(title="Paperclip Human Control Plane", version="1.0")
@@ -20,14 +23,20 @@ approval_queue = ApprovalQueue()
 heartbeat_monitor = HeartbeatMonitor()
 killswitch_manager = KillswitchManager()
 event_publisher = PaperclipEventPublisher()
+opa_manager = OPAPolicyManager()
+reputation_manager = ReputationTierManager()
 
 
 @app.get("/health")
 async def health():
+    opa_healthy = opa_manager.health_check()
+    reputation_healthy = reputation_manager.health_check()
     return {
         "status": "healthy",
         "approval_queue": len(approval_queue.list_pending()),
         "killswitch_active": killswitch_manager.active,
+        "opa_service": "healthy" if opa_healthy else "unhealthy",
+        "reputation_engine": "healthy" if reputation_healthy else "unhealthy",
     }
 
 
@@ -58,11 +67,47 @@ async def get_approval(approval_id: str):
 
 @app.post("/approvals/{approval_id}/approve")
 async def approve(approval_id: str, decision: ApprovalDecision):
+    # Fetch the approval to check details
+    approval = approval_queue.get(approval_id)
+    if approval is None:
+        raise HTTPException(status_code=404, detail="Approval not found")
+    
+    # Check OPA policy for approval eligibility
+    opa_result = opa_manager.check_approval_policy(
+        user_id=decision.approved_by,
+        approval_type=approval.approval_type if hasattr(approval, "approval_type") else "standard",
+        risk_level=approval.risk_level if hasattr(approval, "risk_level") else "medium",
+    )
+    
+    if not opa_result.get("allowed", False):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Approval denied by policy: {opa_result.get('reason', 'Unknown reason')}",
+        )
+    
+    # Check reputation tier for authority level
+    authority = reputation_manager.get_approval_authority_level(decision.approved_by)
+    risk_level = getattr(approval, "risk_level", "medium")
+    
+    if risk_level == "critical" and not authority.get("can_approve_critical", False):
+        raise HTTPException(
+            status_code=403,
+            detail=f"User tier {authority.get('tier')} cannot approve critical actions",
+        )
+    elif risk_level == "high" and not authority.get("can_approve_high", False):
+        raise HTTPException(
+            status_code=403,
+            detail=f"User tier {authority.get('tier')} cannot approve high-risk actions",
+        )
+    
+    # Proceed with approval
     try:
-        approval = approval_queue.approve(approval_id, decision)
+        approval_obj = approval_queue.approve(approval_id, decision)
     except KeyError:
         raise HTTPException(status_code=404, detail="Approval not found")
-    return approval.model_dump()
+    
+    event_publisher.publish_approved_approval(approval_obj)
+    return approval_obj.model_dump()
 
 
 @app.post("/approvals/{approval_id}/deny")

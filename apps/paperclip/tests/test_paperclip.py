@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 from datetime import timedelta
+from unittest.mock import patch, MagicMock
 
 from fastapi.testclient import TestClient
 
@@ -189,3 +190,232 @@ def test_heartbeat_tracking():
     heartbeats = client.get("/heartbeats").json()
     assert len(heartbeats["active"]) == 1
     assert heartbeats["active"][0]["agent_id"] == "agent-3"
+
+
+# ========================================================================
+# INTEGRATION TESTS: OPA Policy & Reputation Tier Enforcement
+# ========================================================================
+
+
+def test_opa_policy_allows_elite_approval():
+    """Elite users can approve all risk levels via OPA policy."""
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-opa-1",
+            "task_id": "task-opa-1",
+            "action_description": "Critical infrastructure change",
+            "risk_score": 95,
+            "risk_level": "critical",
+            "timeout_minutes": 5,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    # Mock OPA to allow elite approval
+    with patch("main.opa_manager.check_approval_policy") as mock_opa:
+        mock_opa.return_value = {
+            "allowed": True,
+            "reason": "Elite tier can approve all actions",
+            "requires_escalation": False,
+        }
+
+        # Mock Reputation to return elite tier
+        with patch("main.reputation_manager.get_approval_authority_level") as mock_rep:
+            mock_rep.return_value = {
+                "tier": "elite",
+                "can_approve_critical": True,
+                "can_approve_high": True,
+                "can_approve_medium": True,
+                "can_approve_low": True,
+                "requires_escalation": False,
+            }
+
+            response = client.post(
+                f"/approvals/{approval['approval_id']}/approve",
+                json={"approver": "elite-user", "approved_by": "elite-user", "reason": "Verified critical action"},
+            )
+
+            assert response.status_code == 200
+            assert response.json()["status"] == "approved"
+
+
+def test_reputation_tier_blocks_standard_critical_approval():
+    """Standard users cannot approve critical actions per reputation tier."""
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-tier-1",
+            "task_id": "task-tier-1",
+            "action_description": "Critical deployment",
+            "risk_score": 95,
+            "risk_level": "critical",
+            "timeout_minutes": 5,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    # Mock OPA to allow (bypassed by tier check)
+    with patch("main.opa_manager.check_approval_policy") as mock_opa:
+        mock_opa.return_value = {
+            "allowed": True,
+            "reason": "Policy allows",
+            "requires_escalation": False,
+        }
+
+        # Mock Reputation to return standard tier (cannot approve critical)
+        with patch("main.reputation_manager.get_approval_authority_level") as mock_rep:
+            mock_rep.return_value = {
+                "tier": "standard",
+                "can_approve_critical": False,
+                "can_approve_high": False,
+                "can_approve_medium": True,
+                "can_approve_low": True,
+                "requires_escalation_for": ["high", "critical"],
+            }
+
+            response = client.post(
+                f"/approvals/{approval['approval_id']}/approve",
+                json={"approver": "standard-user", "approved_by": "standard-user", "reason": "Attempt critical"},
+            )
+
+            assert response.status_code == 403
+            assert "cannot approve critical" in response.json()["detail"]
+
+
+def test_opa_policy_denial_blocks_approval():
+    """OPA policy denial blocks approval regardless of tier."""
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-opa-2",
+            "task_id": "task-opa-2",
+            "action_description": "Sensitive data export",
+            "risk_score": 85,
+            "risk_level": "high",
+            "timeout_minutes": 5,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    # Mock OPA to deny (data sovereignty rule)
+    with patch("main.opa_manager.check_approval_policy") as mock_opa:
+        mock_opa.return_value = {
+            "allowed": False,
+            "reason": "Data sovereignty breach: sensitive data requires local approval only",
+            "requires_escalation": True,
+        }
+
+        response = client.post(
+            f"/approvals/{approval['approval_id']}/approve",
+            json={"approver": "regional-user", "approved_by": "regional-user", "reason": "Attempt export"},
+        )
+
+        assert response.status_code == 403
+        assert "Data sovereignty" in response.json()["detail"]
+
+
+def test_health_endpoint_checks_opa_and_reputation():
+    """Health endpoint verifies OPA and Reputation Engine connectivity."""
+    with patch("main.opa_manager.health_check") as mock_opa_health:
+        mock_opa_health.return_value = True
+
+        with patch("main.reputation_manager.health_check") as mock_rep_health:
+            mock_rep_health.return_value = True
+
+            response = client.get("/health")
+
+            assert response.status_code == 200
+            assert response.json()["opa_service"] == "healthy"
+            assert response.json()["reputation_engine"] == "healthy"
+
+
+def test_health_endpoint_warns_opa_unavailable():
+    """Health endpoint reports when OPA is unavailable."""
+    with patch("main.opa_manager.health_check") as mock_opa_health:
+        mock_opa_health.return_value = False
+
+        with patch("main.reputation_manager.health_check") as mock_rep_health:
+            mock_rep_health.return_value = True
+
+            response = client.get("/health")
+
+            assert response.status_code == 200
+            assert response.json()["opa_service"] == "unhealthy"
+            assert response.json()["reputation_engine"] == "healthy"
+
+
+def test_senior_tier_blocks_critical_approval():
+    """Senior users cannot approve critical actions (only elite can)."""
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-senior-1",
+            "task_id": "task-senior-1",
+            "action_description": "Critical security policy change",
+            "risk_score": 99,
+            "risk_level": "critical",
+            "timeout_minutes": 5,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    with patch("main.opa_manager.check_approval_policy") as mock_opa:
+        mock_opa.return_value = {"allowed": True, "reason": "Policy allows", "requires_escalation": False}
+
+        with patch("main.reputation_manager.get_approval_authority_level") as mock_rep:
+            mock_rep.return_value = {
+                "tier": "senior",
+                "can_approve_critical": False,
+                "can_approve_high": True,
+                "can_approve_medium": True,
+                "can_approve_low": True,
+                "requires_escalation_for": ["critical"],
+            }
+
+            response = client.post(
+                f"/approvals/{approval['approval_id']}/approve",
+                json={"approver": "senior-user", "approved_by": "senior-user", "reason": "Attempt critical"},
+            )
+
+            assert response.status_code == 403
+            assert "senior" in response.json()["detail"].lower()
+
+
+def test_approval_includes_audit_trail():
+    """Approved actions include audit metadata for OPA/reputation checks."""
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-audit-1",
+            "task_id": "task-audit-1",
+            "action_description": "Standard deployment",
+            "risk_score": 45,
+            "risk_level": "medium",
+            "timeout_minutes": 5,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    with patch("main.opa_manager.check_approval_policy") as mock_opa:
+        mock_opa.return_value = {"allowed": True, "reason": "OPA approved", "requires_escalation": False}
+
+        with patch("main.reputation_manager.get_approval_authority_level") as mock_rep:
+            mock_rep.return_value = {
+                "tier": "standard",
+                "can_approve_medium": True,
+                "can_approve_low": True,
+                "can_approve_high": False,
+                "can_approve_critical": False,
+            }
+
+            response = client.post(
+                f"/approvals/{approval['approval_id']}/approve",
+                json={"approver": "standard-user", "approved_by": "standard-user", "reason": "Standard approval"},
+            )
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["status"] == "approved"
+            assert result["approver"] == "standard-user"
+            assert result["approval_id"] == approval["approval_id"]

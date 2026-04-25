@@ -493,6 +493,59 @@ services:
       - "ai"
       - "governance"
 
+  paperclip:
+    build:
+      context: apps/paperclip
+      dockerfile: Dockerfile
+    container_name: paperclip-control-plane
+    user: "1002:1002"
+    ports:
+      - "8010:8010"
+    environment:
+      - OPA_URL=http://opa:8181
+      - REPUTATION_ENGINE_URL=http://reputation-engine:8002
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opa:
+        condition: service_healthy
+      reputation-engine:
+        condition: service_healthy
+    volumes:
+      - ./apps/paperclip:/app
+    restart: unless-stopped
+    networks:
+      - services
+      - database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8010/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "governance"
+      - "all"
+
   # ========================================================================
   # DATA STORES
   # ========================================================================

@@ -1,0 +1,109 @@
+# OAuth2 Authorization Server Service Configuration
+# Issue #1545: Enterprise SSO Portal - Week 1
+#
+# Usage: docker-compose -f docker-compose.yml -f docker/oauth2-service.yml up
+
+version: "3.8"
+
+services:
+  auth-server:
+    image: ${REGISTRY}/oauth2-auth-server:${VERSION:-latest}
+    container_name: auth-server
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.auth-server
+      args:
+        PYTHON_VERSION: "3.11"
+    
+    # Environment
+    environment:
+      # Service
+      SERVICE_NAME: oauth2-auth-server
+      AUTH_SERVER_PORT: 8001
+      AUTH_SERVER_HOST: 0.0.0.0
+      DEBUG: "false"
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEPLOYMENT_ID: ${DEPLOYMENT_ID:-primary}
+      
+      # Database
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/elevatediq"
+      DATABASE_POOL_SIZE: 20
+      DATABASE_ECHO: "false"
+      DATABASE_SSL_MODE: disable
+      
+      # Redis
+      REDIS_URL: "redis://redis:6379/1"
+      REDIS_TIMEOUT: 5
+      
+      # JWT Configuration
+      JWT_ALGORITHM: RS256
+      JWT_EXPIRY_SECONDS: 900
+      JWT_REFRESH_EXPIRY_DAYS: 30
+      JWT_ISSUER: "https://auth.kushnir.cloud"
+      JWT_AUDIENCE: "https://api.kushnir.cloud"
+      
+      # OAuth Providers (from secrets)
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET}
+      
+      # Email Configuration
+      EMAIL_ENABLED: "true"
+      EMAIL_PROVIDER: sendgrid
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      EMAIL_FROM_ADDRESS: noreply@kushnir.cloud
+      EMAIL_FROM_NAME: "ElevatedIQ Auth"
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: json
+      
+      # Features
+      FEATURE_PKCE_REQUIRED: "true"
+      FEATURE_AUTO_PROVISION: "true"
+      FEATURE_MULTI_TENANT: "true"
+    
+    # Ports
+    ports:
+      - "8001:8001"
+    
+    # Volumes
+    volumes:
+      - ./apps/auth-server:/app
+      - /app/.venv  # Don't mount venv
+    
+    # Health Check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    
+    # Restart Policy
+    restart: unless-stopped
+    
+    # Dependencies
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network
+    networks:
+      - infrastructure
+
+networks:
+  infrastructure:
+    external: true

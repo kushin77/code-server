@@ -1,0 +1,79 @@
+# OAuth2 Authorization Server Dockerfile
+# Issue #1545: Enterprise SSO Portal - Week 1
+
+ARG PYTHON_VERSION=3.11
+
+FROM python:${PYTHON_VERSION}-slim as base
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+
+# ============================================================================
+# Builder Stage
+# ============================================================================
+
+FROM base as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements
+COPY apps/auth-server/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ============================================================================
+# Runtime Stage
+# ============================================================================
+
+FROM base as runtime
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Set PATH to use virtual environment
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Copy application code
+COPY apps/auth-server /app
+
+# Create required directories
+RUN mkdir -p /app/logs && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=20s \
+    CMD curl -f http://localhost:${AUTH_SERVER_PORT:-8001}/health || exit 1
+
+# Expose port
+EXPOSE ${AUTH_SERVER_PORT:-8001}
+
+# Run application
+CMD ["python", "-m", "uvicorn", "src.oauth2_server:app", \
+     "--host", "0.0.0.0", \
+     "--port", "${AUTH_SERVER_PORT:-8001}", \
+     "--workers", "4", \
+     "--access-log", "--log-level", "${LOG_LEVEL:-info}"]

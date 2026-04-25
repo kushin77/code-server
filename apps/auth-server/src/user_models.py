@@ -55,6 +55,7 @@ class User(Base):
     # Relationships
     oauth_connections = relationship("OAuthConnection", back_populates="user", cascade="all, delete-orphan")
     oauth_tokens = relationship("OAuthToken", back_populates="user", cascade="all, delete-orphan")
+    oauth_clients = relationship("OAuthClient", back_populates="owner")
     
     __table_args__ = (
         Index("ix_users_email_verified", "email", "email_verified"),

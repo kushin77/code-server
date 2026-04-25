@@ -96,10 +96,10 @@ class AccountLinkingRequest(BaseModel):
 class UserProvisioningService:
     """Service for provisioning users from OAuth providers"""
     
-    def __init__(self, db_session: Session, config):
+    def __init__(self, db_session: Session, config, email_service=None):
         self.db = db_session
         self.config = config
-        self.email_service = None  # Injected via dependency
+        self.email_service = email_service
     
     def provision_user_from_provider(
         self,

@@ -17,7 +17,7 @@ source "${REPO_ROOT}/scripts/_common/init.sh"
 source_env_file "${REPO_ROOT}/.env.infrastructure"
 
 # Default endpoint templated from environment
-DEFAULT_ENDPOINT="${API_HEALTH_ENDPOINT:=${API_PROTOCOL:-http}://${API_HOST:-localhost}:${API_PORT:-3100}/health}"
+DEFAULT_ENDPOINT="${API_HEALTH_ENDPOINT:=${API_PROTOCOL:-http}://${API_HOST:-localhost}:${API_PORT:-8080}/health}"
 DEFAULT_TIMEOUT=300
 HEALTH_REPORT="${REPO_ROOT}/artifacts/health-check-report.json"
 

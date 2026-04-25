@@ -38,7 +38,7 @@ success() {
 # ============================================================================
 check_host_health() {
     local host="$1"
-    local endpoint="${2:-http://$host:3100/api/health}"
+    local endpoint="${2:-http://$host:8080/health}"
     
     for attempt in $(seq 1 "$HEALTH_CHECK_RETRIES"); do
         if curl -sf "$endpoint" > /dev/null 2>&1; then

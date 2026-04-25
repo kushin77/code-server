@@ -11,6 +11,7 @@ from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Inde
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from pydantic import BaseModel, EmailStr, Field, validator
+from src.advanced_models import EmailChangeRequest
 from src.models import Base
 
 
@@ -247,32 +248,6 @@ class UserAPIService:
     def delete_user(self, user_id: str) -> dict:
         """Delete user account (soft or hard delete)"""
         pass
-
-
-# ============================================================================
-# Email Change Tracking
-# ============================================================================
-
-class EmailChangeRequest(Base):
-    """Track email change requests for verification"""
-    __tablename__ = "email_change_requests"
-    
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
-    old_email = Column(String(255), nullable=False)
-    new_email = Column(String(255), nullable=False)
-    verification_token = Column(String(256), nullable=False, unique=True)
-    
-    is_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    verified_at = Column(DateTime, nullable=True)
-    
-    __table_args__ = (
-        Index("ix_email_change_user_id", "user_id"),
-        Index("ix_email_change_verification_token", "verification_token"),
-    )
 
 
 # ============================================================================

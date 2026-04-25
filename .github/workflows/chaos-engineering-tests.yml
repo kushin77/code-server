@@ -15,6 +15,10 @@ jobs:
     name: Chaos Engineering Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 120  # 2 hours for all chaos scenarios
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
 
     services:
       postgres:
@@ -128,7 +132,7 @@ jobs:
           retention-days: 30
 
       - name: Post results to PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         uses: actions/github-script@v6
         with:

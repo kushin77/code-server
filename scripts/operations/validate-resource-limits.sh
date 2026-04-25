@@ -15,6 +15,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${SCRIPT_DIR}/../_common/hosts.sh"
 
 OUTPUT_DIR="${1:-.}"
@@ -22,6 +23,31 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="${OUTPUT_DIR}/resource-limits-validation-${TIMESTAMP}.txt"
 
 mkdir -p "${OUTPUT_DIR}"
+
+COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
+
+service_has_resource_limits() {
+    local service_name="$1"
+
+    awk -v svc="  ${service_name}:" '
+        BEGIN {
+            in_block = 0
+            found_deploy = 0
+            found_resources = 0
+            found_limits = 0
+            found_reservations = 0
+        }
+        $0 == svc { in_block = 1; next }
+        in_block && $0 ~ /^  [A-Za-z0-9._-]+:/ {
+            exit (found_deploy && found_resources && found_limits && found_reservations) ? 0 : 1
+        }
+        in_block && $0 ~ /^[[:space:]]*deploy:/ { found_deploy = 1 }
+        in_block && $0 ~ /^[[:space:]]*resources:/ { found_resources = 1 }
+        in_block && $0 ~ /^[[:space:]]*limits:/ { found_limits = 1 }
+        in_block && $0 ~ /^[[:space:]]*reservations:/ { found_reservations = 1 }
+        END { exit (found_deploy && found_resources && found_limits && found_reservations) ? 0 : 1 }
+    ' "${COMPOSE_FILE}"
+}
 
 echo "🧪 Starting Resource Limits Validation (Phase 3)..."
 echo "📝 Report: ${REPORT_FILE}"
@@ -36,86 +62,48 @@ echo ""
     echo ""
 } > "${REPORT_FILE}"
 
-# Test 1: Health Checks
-echo "Test 1/5: Service Health Checks..."
+if [[ ! -f "${COMPOSE_FILE}" ]]; then
+    echo "❌ docker-compose.yml not found at ${COMPOSE_FILE}"
+    exit 1
+fi
+
+services=(opa oauth2-proxy caddy prometheus grafana loki qdrant postgres redis redpanda redpanda-console ollama)
+missing_limits=0
+
 {
-    echo "TEST 1: Service Health Checks"
-    echo "-----------------------------"
-    echo "Checking all services are running..."
+    echo "TEST 1: Service Resource Limits Validation"
+    echo "-----------------------------------------"
+    echo "Compose file: ${COMPOSE_FILE}"
     echo ""
 } >> "${REPORT_FILE}"
 
-# Test 2: Memory Limits Enforcement
-echo "Test 2/5: Memory Limits Enforcement..."
-{
-    echo "TEST 2: Memory Limits Enforcement"
-    echo "--------------------------------"
-    echo "Verifying memory limits are applied correctly..."
-    echo "Running: docker stats to verify limits"
-    echo ""
-    echo "Expected behavior:"
-    echo "- Services should not exceed memory limits"
-    echo "- No OOMKilled events in 5 minutes"
-    echo "- Memory usage stable around 60-80% of limit"
-    echo ""
-} >> "${REPORT_FILE}"
+for service in "${services[@]}"; do
+    if service_has_resource_limits "$service"; then
+        echo "✅ ${service}: resource limits configured"
+        {
+            echo "Service: ${service}"
+            echo "Status: PASS"
+            echo "Check: deploy/resources/limits/reservations present"
+            echo ""
+        } >> "${REPORT_FILE}"
+    else
+        echo "⚠️  ${service}: missing full resource limits configuration"
+        {
+            echo "Service: ${service}"
+            echo "Status: FAIL"
+            echo "Check: deploy/resources/limits/reservations missing"
+            echo ""
+        } >> "${REPORT_FILE}"
+        ((missing_limits++))
+    fi
+done
 
-# Test 3: CPU Limits & Throttling
-echo "Test 3/5: CPU Limits & Throttling..."
 {
-    echo "TEST 3: CPU Limits & Throttling"
-    echo "------------------------------"
-    echo "Running CPU-intensive workload..."
-    echo ""
-    echo "Expected behavior:"
-    echo "- CPU-bound services throttle gracefully"
-    echo "- No service crashes under CPU limits"
-    echo "- Throttling visible in /sys/fs/cgroup metrics"
-    echo ""
-} >> "${REPORT_FILE}"
-
-# Test 4: Disk I/O Under Limits
-echo "Test 4/5: Disk I/O Performance..."
-{
-    echo "TEST 4: Disk I/O Performance"
-    echo "---------------------------"
-    echo "Testing database operations under limits..."
-    echo ""
-    echo "Expected behavior:"
-    echo "- Database queries complete within SLA"
-    echo "- No I/O throttling events"
-    echo "- Write performance acceptable"
-    echo ""
-} >> "${REPORT_FILE}"
-
-# Test 5: Network Performance
-echo "Test 5/5: Network Performance..."
-{
-    echo "TEST 5: Network Performance"
-    echo "--------------------------"
-    echo "Testing network throughput under limits..."
-    echo ""
-    echo "Expected behavior:"
-    echo "- Network requests complete normally"
-    echo "- No packet loss >0.1%"
-    echo "- Latency within normal range"
-    echo ""
-    echo "=========================================="
-    echo "Validation Checklist - Mark as Completed"
-    echo "=========================================="
-    echo ""
-    echo "[ ] All services running (docker ps shows 20/20)"
-    echo "[ ] No OOMKilled events in last 5 minutes"
-    echo "[ ] No CPU throttling errors in logs"
-    echo "[ ] Database queries < 500ms average"
-    echo "[ ] API response time < 100ms at p99"
-    echo "[ ] No network packet loss observed"
-    echo "[ ] Memory usage stable (±5% variance)"
-    echo "[ ] CPU usage realistic (not constant 100%)"
-    echo ""
-    echo "Validation Status: PENDING EXECUTION"
-    echo "Expected Duration: 30 minutes"
-    echo "Go/No-Go Decision: (To be updated after tests)"
+    echo "Summary"
+    echo "-------"
+    echo "Services checked: ${#services[@]}"
+    echo "Services missing limits: ${missing_limits}"
+    echo "Validation Status: $([ "${missing_limits}" -eq 0 ] && echo PASS || echo FAIL)"
     echo ""
 } >> "${REPORT_FILE}"
 

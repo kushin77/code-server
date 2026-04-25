@@ -73,6 +73,8 @@ done
 : "${NAS_HOST:?NAS_HOST must be set via --nas-host or environment}"
 : "${PRIMARY_HOST:?PRIMARY_HOST must be set via --primary-host or environment}"
 
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

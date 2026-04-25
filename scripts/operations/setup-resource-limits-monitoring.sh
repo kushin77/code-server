@@ -337,7 +337,13 @@ cat > "${PROM_DIR}/deploy-monitoring.sh" <<'EOF'
 echo "📊 Deploying Resource Limits Monitoring Configuration..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../scripts/_common/hosts.sh"
+
+REPO_ROOT="${SCRIPT_DIR}"
+while [[ ! -f "${REPO_ROOT}/scripts/_common/hosts.sh" && "${REPO_ROOT}" != "/" ]]; do
+  REPO_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
+done
+
+source "${REPO_ROOT}/scripts/_common/hosts.sh"
 
 # 1. Copy Prometheus rules
 echo "1/3: Configuring Prometheus alerting rules..."

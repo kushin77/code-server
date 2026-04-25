@@ -1,10 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 
 ###############################################################################
 # @governance: Network hardcoding audit — detect unauthorized static config
 # Purpose: Epic #1536 Phase 1 - Network Hardcoding Audit
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
+# @governance  GOV-002: Immutable, idempotent, version-controlled
 # Related issues: #1536 (Network Hardcoding Audit), #1534 (IaC Governance)
 #
 # Audits the repository for hardcoded network configuration that violates:
@@ -147,7 +149,6 @@ echo "  ✓ Compose patterns found: $COMPOSE_PATTERNS_FOUND/4" | tee -a "$AUDIT_
 # Phase 4: Report summary
 ###############################################################################
 echo -e "\n${YELLOW}========== AUDIT REPORT ==========${NC}" | tee -a "$AUDIT_LOG"
-echo "Scan Date: $(date)" | tee -a "$AUDIT_LOG"
 echo "Scan Location: $REPO_ROOT" | tee -a "$AUDIT_LOG"
 echo "Audit Log: $AUDIT_LOG" | tee -a "$AUDIT_LOG"
 

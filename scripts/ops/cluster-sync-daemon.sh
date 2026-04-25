@@ -4,6 +4,7 @@
 # @file        scripts/ops/cluster-sync-daemon.sh
 # @module      ops/cluster-synchronization
 # @description Continuous cluster sync daemon (IaC: Idempotent, Immutable)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # GOVERNANCE: GOV-002 Compliance
 # - Deterministic: git pull always produces same state

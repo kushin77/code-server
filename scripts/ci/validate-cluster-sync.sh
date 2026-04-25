@@ -4,6 +4,7 @@
 # @file        scripts/ci/validate-cluster-sync.sh
 # @module      ci/cluster-validation
 # @description Pre-deployment cluster sync validation (IaC: Immutable, Idempotent)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # GOVERNANCE: GOV-002 Compliance
 # - Deterministic: Same inputs always produce same output

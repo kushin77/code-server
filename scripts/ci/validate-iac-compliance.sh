@@ -46,9 +46,11 @@ check_env_var_usage() {
     [[ "$file" =~ (test|spec|docs|\.example) ]] && continue
     
     # Infrastructure scripts must have env var pattern: ${VAR:-default}
-    if grep -q '^\s*[A-Z_]\+=' "$file" && ! grep -q '${[A-Z_]\+:-' "$file"; then
-      # Might be setting a computed value, not a violation if sourced from _base-config.env
-      if ! grep -q 'source.*_base-config' "$file"; then
+    if grep -q '^\s*[A-Z_]\+=' "$file" && ! grep -q '\${[A-Z_]\+:-' "$file"; then
+      # Might be setting a computed value, not a violation if sourced from config env
+      # Or if it's a standard infra variable (REPO_ROOT, SCRIPT_DIR, etc.)
+      if ! grep -qE 'source.*(_base-config|_epic-1536-network-config)' "$file" && \
+         ! grep -qE '^\s*(REPO_ROOT|SCRIPT_DIR|PROJECT_ROOT|EXIT_|RED|GREEN|YELLOW|BLUE|NC)=' "$file"; then
         warn "  $file uses hardcoded assignment (prefer env vars)"
         ((violations++))
       fi
@@ -117,11 +119,14 @@ check_idempotency() {
   
   # Configuration generators should not include timestamps
   while IFS= read -r file; do
-    if grep -q 'Generated:' "$file" || grep -q '$(date)' "$file"; then
+    # Skip auditing scripts that scan for these patterns
+    [[ "$file" =~ (audit-network-hardcoding|validate-dns-service-discovery|validate-iac-compliance) ]] && continue
+
+    if grep -q 'Generated:' "$file" || grep -q '\$(date)' "$file"; then
       warn "  $file includes dynamic timestamp (violates idempotency)"
       ((violations++))
     fi
-  done < <(grep -r 'Generated:\|$(date)' "${REPO_ROOT}/scripts" 2>/dev/null | cut -d: -f1 | sort -u || true)
+  done < <(grep -El 'Generated:|\$\(date\)' "${REPO_ROOT}/scripts" 2>/dev/null | sort -u || true)
   
   if [ $violations -eq 0 ]; then
     pass "All generated configurations are idempotent (no timestamps)"

@@ -2,9 +2,9 @@
 ################################################################################
 # Q3 Phase 4: Phase 1 Infrastructure Preparation Report
 # @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Comprehensive Phase 1 readiness report and deployment strategy
 # @phase Q3 Phase 4 Preparation (Phase 1)
-# @date $(date '+%Y-%m-%d %H:%M:%S')
 ################################################################################
 
 set -euo pipefail
@@ -13,11 +13,11 @@ IFS=$'\n\t'
 # Source environment
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
+. "${PROJECT_ROOT}/scripts/_common/_base-config.env"
 
 # Configuration
 OUTPUT_DIR="${PROJECT_ROOT}/artifacts/q3-phase4-preparation"
-TIMESTAMP=$(date '+%Y-%m-%d')
-REPORT_FILE="${OUTPUT_DIR}/PHASE1-INFRASTRUCTURE-PREP-${TIMESTAMP}.md"
+REPORT_FILE="${OUTPUT_DIR}/PHASE1-INFRASTRUCTURE-PREP.md"
 
 mkdir -p "${OUTPUT_DIR}"
 

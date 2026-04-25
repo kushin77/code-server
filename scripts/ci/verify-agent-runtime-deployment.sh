@@ -8,6 +8,11 @@
 
 set -euo pipefail
 
+# Source base configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+. "${REPO_ROOT}/scripts/_common/_base-config.env"
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

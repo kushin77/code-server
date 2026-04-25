@@ -119,9 +119,8 @@ services:
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:2019/health"
+        - caddy
+        - version
       interval: 30s
       timeout: 5s
       retries: 3
@@ -989,9 +988,9 @@ services:
       - redpanda
       - start
       - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
-      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://redpanda:9092
       - --pandaproxy-addr=0.0.0.0:8082
-      - --advertise-pandaproxy-addr=localhost:8082
+      - --advertise-pandaproxy-addr=redpanda:8082
       - --schema-registry-addr=0.0.0.0:8081
       - --rpc-addr=0.0.0.0:33145
       - --advertise-rpc-addr=redpanda:33145

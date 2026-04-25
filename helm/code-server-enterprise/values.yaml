@@ -183,6 +183,27 @@ services:
     image: "grafana/loki:2.9.4"
     port: 3100
 
+  # AI Copilot Engine — self-cleaning multi-domain Copilot orchestrator
+  copilot_engine:
+    enabled: true
+    name: "copilot-engine"
+    replicas: 1
+    image: "code-server-enterprise-copilot-engine:1.0.0"
+    port: 8030
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+    # ANTHROPIC_API_KEY must be injected via external secret (GSM / Vault)
+    # Set global.anthropicApiKeySecretName to the k8s Secret name that holds
+    # a key named "ANTHROPIC_API_KEY"
+    env:
+      PORT: "8030"
+      LOG_LEVEL: "info"
+
 # Environment variables
 environment:
   LOG_LEVEL: "info"

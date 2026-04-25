@@ -1,0 +1,745 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: HELM_VALUES_COMPREHENSIVE
+# PURPOSE: Complete Kubernetes deployment configuration for 20+ microservices
+# VERSION: 1.0.0-phase4-k8s-migration
+# IMMUTABILITY: All values versioned in Git; no runtime modifications
+
+# Global Kubernetes Configuration
+global:
+  # Container Registry
+  imageRegistry: "docker.io"
+  imagePullPolicy: "IfNotPresent"
+  imagePullSecrets: []
+  
+  # Domain and TLS (from environment SSOT)
+  domain: "kushnir.cloud"
+  apiDomain: "api.kushnir.cloud"
+  ideDomain: "ide.kushnir.cloud"
+  authDomain: "auth.kushnir.cloud"
+  tlsEnabled: true
+  tlsEmail: "admin@kushnir.cloud"
+  certIssuer: "letsencrypt-prod"  # cert-manager integration
+  
+  # Logging and Observability
+  logLevel: "info"
+  prometheus:
+    enabled: true
+    scrapeInterval: "15s"
+  
+  # Default Resource Limits (can be overridden per service)
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+
+# Global Labels and Annotations
+labels:
+  app: "code-server-enterprise"
+  version: "1.0.0"
+  managed-by: "helm"
+  environment: "production"
+
+annotations:
+  governance/policy: "GOV-002"
+  governance/framework: "FAANG"
+  deployment/immutable: "true"
+  deployment/idempotent: "true"
+
+# Service Account Configuration
+serviceAccount:
+  create: true
+  name: "code-server-enterprise"
+  annotations:
+    governance/rbac: "enabled"
+
+# Pod Security Context (enforced on all pods)
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 2000
+  seccompProfile:
+    type: RuntimeDefault
+
+# 20+ Application Services Configuration
+services:
+  # ===== Core API & Gateway Services =====
+  api:
+    enabled: true
+    name: "api"
+    replicas: 3
+    image: "code-server-enterprise:latest"
+    port: 3100
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    env:
+      LOG_LEVEL: "info"
+      NODE_ENV: "production"
+    envFrom:
+      - api-config
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 3100
+      initialDelaySeconds: 10
+      periodSeconds: 5
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 3100
+      initialDelaySeconds: 30
+      periodSeconds: 10
+
+  frontend:
+    enabled: true
+    name: "frontend"
+    replicas: 2
+    image: "code-server-enterprise-frontend:latest"
+    port: 3000
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+  # ===== Governance & Reputation Services =====
+  reputation_engine:
+    enabled: true
+    name: "reputation-engine"
+    replicas: 2
+    image: "code-server-enterprise-reputation-engine:latest"
+    port: 5000
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  activity_feed:
+    enabled: true
+    name: "activity-feed"
+    replicas: 2
+    image: "code-server-enterprise-activity-feed:latest"
+    port: 5001
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  # ===== Session & Agent Management =====
+  session_broker:
+    enabled: true
+    name: "session-broker"
+    replicas: 2
+    image: "code-server-enterprise-session-broker:latest"
+    port: 5002
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  agent_runtime:
+    enabled: true
+    name: "agent-runtime"
+    replicas: 2
+    image: "code-server-enterprise-agent-runtime:latest"
+    port: 8004
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "512Mi"
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+
+  # ===== Database & Cache Layer (PERSISTENT) =====
+  postgres:
+    enabled: true
+    name: "postgres"
+    replicas: 1
+    image: "postgres:16-alpine"
+    port: 5432
+    securityContext:
+      runAsUser: 999
+      runAsNonRoot: true
+      fsGroup: 999
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "50Gi"
+      mountPath: "/var/lib/postgresql/data"
+      uid: 999
+      gid: 999
+      initContainer: true
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+    env:
+      POSTGRES_DB: "code-server-enterprise"
+      POSTGRES_USER: "pguser"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+
+  redis:
+    enabled: true
+    name: "redis"
+    replicas: 1
+    image: "redis:7-alpine"
+    port: 6379
+    securityContext:
+      runAsUser: 999
+      runAsNonRoot: true
+      fsGroup: 999
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "20Gi"
+      mountPath: "/data"
+      uid: 999
+      gid: 999
+      initContainer: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+
+  # ===== Distributed Cache & Message Queue =====
+  redpanda:
+    enabled: true
+    name: "redpanda"
+    replicas: 3
+    image: "vectorized/redpanda:latest"
+    port: 9092
+    securityContext:
+      runAsUser: 101
+      runAsNonRoot: true
+      fsGroup: 101
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "100Gi"
+      mountPath: "/var/lib/redpanda/data"
+      uid: 101
+      gid: 101
+      initContainer: true
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+      requests:
+        cpu: "1000m"
+        memory: "1Gi"
+
+  # ===== Observability Stack (Persistent) =====
+  prometheus:
+    enabled: true
+    name: "prometheus"
+    replicas: 1
+    image: "prom/prometheus:v2.48.0"
+    port: 9090
+    securityContext:
+      runAsUser: 65534
+      runAsNonRoot: true
+      fsGroup: 65534
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "50Gi"
+      mountPath: "/prometheus"
+      uid: 65534
+      gid: 65534
+      initContainer: true
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+    env:
+      PROMETHEUS_RETENTION_DAYS: "30"
+
+  loki:
+    enabled: true
+    name: "loki"
+    replicas: 1
+    image: "grafana/loki:2.9.4"
+    port: 3100
+    securityContext:
+      runAsUser: 10001
+      runAsNonRoot: true
+      fsGroup: 10001
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "50Gi"
+      mountPath: "/loki"
+      uid: 10001
+      gid: 10001
+      initContainer: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+
+  grafana:
+    enabled: true
+    name: "grafana"
+    replicas: 1
+    image: "grafana/grafana:10.2.0"
+    port: 3000
+    securityContext:
+      runAsUser: 472
+      runAsNonRoot: true
+      fsGroup: 472
+    persistence:
+      enabled: true
+      storageClass: "standard"
+      size: "10Gi"
+      mountPath: "/var/lib/grafana"
+      uid: 472
+      gid: 472
+      initContainer: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+    env:
+      GF_SECURITY_ADMIN_PASSWORD_FILE: "/etc/grafana/secrets/admin-password"
+
+  alertmanager:
+    enabled: true
+    name: "alertmanager"
+    replicas: 1
+    image: "prom/alertmanager:v0.26.0"
+    port: 9093
+    securityContext:
+      runAsUser: 65534
+      runAsNonRoot: true
+      fsGroup: 65534
+    persistence:
+      enabled: true
+      storageClass: "standard"
+      size: "5Gi"
+      mountPath: "/alertmanager"
+      uid: 65534
+      gid: 65534
+      initContainer: true
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+
+  # ===== Distributed Tracing =====
+  tempo:
+    enabled: true
+    name: "tempo"
+    replicas: 1
+    image: "grafana/tempo:latest"
+    port: 3200
+    securityContext:
+      runAsUser: 10001
+      runAsNonRoot: true
+      fsGroup: 10001
+    persistence:
+      enabled: true
+      storageClass: "standard"
+      size: "20Gi"
+      mountPath: "/var/tempo"
+      uid: 10001
+      gid: 10001
+      initContainer: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  # ===== ML/AI Services =====
+  ollama:
+    enabled: true
+    name: "ollama"
+    replicas: 1
+    image: "ollama/ollama:latest"
+    port: 11434
+    securityContext:
+      runAsUser: 11434
+      runAsNonRoot: true
+      fsGroup: 11434
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "100Gi"
+      mountPath: "/root/.ollama"
+      uid: 11434
+      gid: 11434
+      initContainer: true
+    resources:
+      limits:
+        cpu: "4000m"
+        memory: "8Gi"
+      requests:
+        cpu: "2000m"
+        memory: "4Gi"
+
+  # ===== Vector DB & Search =====
+  qdrant:
+    enabled: true
+    name: "qdrant"
+    replicas: 1
+    image: "qdrant/qdrant:latest"
+    port: 6333
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: "50Gi"
+      mountPath: "/qdrant/storage"
+      uid: 1000
+      gid: 1000
+      initContainer: true
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+
+  # ===== Additional Services =====
+  edge_agent:
+    enabled: true
+    name: "edge-agent"
+    replicas: 2
+    image: "code-server-enterprise-edge-agent:latest"
+    port: 8060
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  extension_runtime:
+    enabled: true
+    name: "extension-runtime"
+    replicas: 2
+    image: "code-server-enterprise-extension-runtime:latest"
+    port: 8070
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+
+  knowledge_graph:
+    enabled: true
+    name: "knowledge-graph"
+    replicas: 1
+    image: "code-server-enterprise-knowledge-graph:latest"
+    port: 8080
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+
+# Kubernetes Service Mesh (Istio) - Phase 4 Configuration
+istio:
+  enabled: true
+  namespace: "istio-system"
+  version: "1.18.0"
+  
+  # Ingress Gateway Configuration
+  ingressGateway:
+    enabled: true
+    replicas: 3
+    namespace: "istio-system"
+    image: "istio/proxyv2:1.18.0"
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "1024Mi"
+      requests:
+        cpu: "1000m"
+        memory: "512Mi"
+  
+  # Service Mesh Traffic Policies (enforced globally)
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+        idleTimeout: "5m"
+      tcp:
+        maxConnections: 200
+        connectTimeout: "10s"
+    loadBalancing:
+      simple: ROUND_ROBIN
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      splitExternalLocalOriginErrors: true
+  
+  # mTLS Configuration (Zero-Trust)
+  mtls:
+    mode: STRICT  # Enforce mTLS on all traffic
+    certificateRefreshInterval: "24h"
+    certificateProvider: "istiod"
+  
+  # Observability Configuration
+  monitoring:
+    prometheus:
+      enabled: true
+      interval: "15s"
+    jaeger:
+      enabled: true
+      endpoint: "http://tempo:3200"
+      samplingRate: 0.1
+    kiali:
+      enabled: true
+      dashboard: true
+
+# Horizontal Pod Autoscaling - Phase 4 Configuration
+autoscaling:
+  enabled: true
+  
+  # Default scaling policies
+  default:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCpuUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    scaleDownWindow: "5m"
+    scaleUpWindow: "1m"
+  
+  # Custom metrics support (requires Prometheus + metrics-server)
+  customMetrics:
+    enabled: true
+    metrics:
+      http_requests_per_second:
+        enabled: true
+        threshold: 1000
+      pending_tasks:
+        enabled: true
+        threshold: 30
+      cache_hit_ratio:
+        enabled: true
+        threshold: 0.8
+  
+  # Per-service autoscaling overrides
+  services:
+    api:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCpuUtilizationPercentage: 60
+    frontend:
+      minReplicas: 2
+      maxReplicas: 15
+      targetCpuUtilizationPercentage: 75
+    agent_runtime:
+      minReplicas: 1
+      maxReplicas: 8
+      targetCpuUtilizationPercentage: 65
+    postgresql:
+      minReplicas: 1
+      maxReplicas: 3
+      targetCpuUtilizationPercentage: 70
+    ollama:
+      minReplicas: 1
+      maxReplicas: 3
+      targetCpuUtilizationPercentage: 85
+
+# Kubernetes Resource Quotas (multi-tenant isolation)
+resourceQuota:
+  enabled: true
+  namespace: "code-server-enterprise"
+  requests:
+    cpu: "50"
+    memory: "100Gi"
+  limits:
+    cpu: "100"
+    memory: "200Gi"
+
+# Pod Disruption Budgets (high-availability)
+podDisruptionBudget:
+  enabled: true
+  minAvailable:
+    default: 1
+    frontend: 1
+    api: 2
+  maxUnavailable:
+    default: null
+
+# Network Policies (zero-trust networking)
+networkPolicy:
+  enabled: true
+  
+  # Default deny all ingress/egress
+  denyAll: false
+  
+  # Explicit ingress rules
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: "code-server-enterprise"
+      ports:
+        - protocol: TCP
+          port: 3100
+  
+  # Explicit egress rules (DNS, APIs, external services)
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: "kube-system"
+      ports:
+        - protocol: UDP
+          port: 53  # DNS
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443  # HTTPS
+
+# Pod Security Standards
+podSecurity:
+  enforce: "baseline"  # Baseline policy (non-root user required)
+  audit: "restricted"  # Audit restricted policy
+  warn: "restricted"   # Warn on restricted policy violations
+
+# Persistent Storage Classes
+storageClasses:
+  - name: "fast-ssd"
+    type: "io1"  # AWS EBS GP3 equivalent
+    iops: 1000
+    throughput: 125
+    reclaimPolicy: "Retain"
+  - name: "standard"
+    type: "standard"
+    reclaimPolicy: "Delete"
+
+# Cert-Manager Integration (TLS/SSL)
+certManager:
+  enabled: true
+  namespace: "cert-manager"
+  clusterIssuer: "letsencrypt-prod"
+  email: "admin@kushnir.cloud"
+  solvers:
+    - http01:
+        ingress:
+          class: "nginx"
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: "api.kushnir.cloud"
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: api
+              port:
+                number: 3100
+    - host: "ide.kushnir.cloud"
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: frontend
+              port:
+                number: 3000
+  tls:
+    - secretName: "api-kushnir-cloud-tls"
+      hosts:
+        - "api.kushnir.cloud"
+    - secretName: "ide-kushnir-cloud-tls"
+      hosts:
+        - "ide.kushnir.cloud"

@@ -1,0 +1,231 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: STATEFULSET_TEMPLATE
+# PURPOSE: Kubernetes StatefulSet for data services with persistent storage
+# PATTERN: Ensures ordered startup, stable network identities, persistent volumes
+
+{{- $root := . -}}
+{{- if $root.Values.services }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if and $serviceConfig.enabled (or $serviceConfig.persistence (has $serviceName (list "postgres" "redis" "redpanda" "prometheus" "loki" "grafana" "ollama" "qdrant"))) }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+    app.kubernetes.io/kind: "stateful"
+  annotations:
+    {{- toYaml $root.Values.annotations | nindent 4 }}
+    governance/storage: "persistent"
+    governance/pattern: "data-service"
+spec:
+  serviceName: {{ $serviceConfig.name }}-headless
+  replicas: {{ $serviceConfig.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "code-server-enterprise.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceConfig.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "code-server-enterprise.selectorLabels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $serviceConfig.name }}
+        app.kubernetes.io/kind: "stateful"
+      annotations:
+        prometheus/scrape: "true"
+        prometheus/port: "{{ $serviceConfig.port }}"
+        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        {{- toYaml $root.Values.annotations | nindent 8 }}
+    spec:
+      {{- with $root.Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "code-server-enterprise.serviceAccountName" $root }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - {{ $serviceConfig.name }}
+              topologyKey: kubernetes.io/hostname
+      
+      # Init containers for idempotent volume bootstrap
+      initContainers:
+      {{- if $serviceConfig.persistence }}
+      - name: {{ $serviceConfig.name }}-init
+        image: "alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5"
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+              - CHOWN
+        command:
+          - sh
+          - -lc
+          - |
+            mkdir -p {{ $serviceConfig.persistence.mountPath }}
+            # Idempotent ownership check: only chown if ownership differs
+            currentOwner="$(stat -c '%u:%g' {{ $serviceConfig.persistence.mountPath }} 2>/dev/null || echo 'error')"
+            targetOwner="{{ $serviceConfig.persistence.uid }}:{{ $serviceConfig.persistence.gid }}"
+            if [ "$currentOwner" != "$targetOwner" ]; then
+              echo "Setting ownership from $currentOwner to $targetOwner"
+              chown -R {{ $serviceConfig.persistence.uid }}:{{ $serviceConfig.persistence.gid }} {{ $serviceConfig.persistence.mountPath }}
+              chmod 755 {{ $serviceConfig.persistence.mountPath }}
+            else
+              echo "Ownership already correct: $currentOwner"
+            fi
+        volumeMounts:
+        - name: {{ $serviceConfig.name }}-data
+          mountPath: {{ $serviceConfig.persistence.mountPath }}
+        resources:
+          limits:
+            cpu: 100m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      {{- end }}
+      
+      containers:
+      - name: {{ $serviceConfig.name }}
+        image: "{{ $root.Values.global.imageRegistry }}/{{ $serviceConfig.image }}"
+        imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+        
+        {{- if $serviceConfig.securityContext }}
+        securityContext:
+          {{- toYaml $serviceConfig.securityContext | nindent 12 }}
+        {{- else }}
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        {{- end }}
+        
+        ports:
+        - name: http
+          containerPort: {{ $serviceConfig.port }}
+          protocol: TCP
+        
+        {{- if $serviceConfig.env }}
+        env:
+        {{- range $key, $value := $serviceConfig.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        
+        {{- if $serviceConfig.envFrom }}
+        envFrom:
+        {{- range $envFrom := $serviceConfig.envFrom }}
+        - configMapRef:
+            name: {{ $envFrom }}
+        {{- end }}
+        {{- end }}
+        
+        {{- if $serviceConfig.livenessProbe }}
+        livenessProbe:
+          {{- toYaml $serviceConfig.livenessProbe | nindent 12 }}
+        {{- else }}
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              case "{{ $serviceConfig.name }}" in
+                postgres) pg_isready -U {{ (index $serviceConfig.env "POSTGRES_USER" | default "postgres") }} ;;
+                redis) redis-cli ping | grep -q PONG ;;
+                prometheus) prometheus --version >/dev/null ;;
+                loki) loki --version >/dev/null ;;
+                *) true ;;
+              esac
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        {{- end }}
+        
+        {{- if $serviceConfig.readinessProbe }}
+        readinessProbe:
+          {{- toYaml $serviceConfig.readinessProbe | nindent 12 }}
+        {{- else }}
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              case "{{ $serviceConfig.name }}" in
+                postgres) pg_isready -U {{ (index $serviceConfig.env "POSTGRES_USER" | default "postgres") }} ;;
+                redis) redis-cli ping | grep -q PONG ;;
+                *) true ;;
+              esac
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        {{- end }}
+        
+        resources:
+          {{- toYaml ($serviceConfig.resources | default $root.Values.global.resources) | nindent 12 }}
+        
+        {{- if $serviceConfig.persistence }}
+        volumeMounts:
+        - name: {{ $serviceConfig.name }}-data
+          mountPath: {{ $serviceConfig.persistence.mountPath }}
+        {{- end }}
+        
+        {{- if $serviceConfig.volumeMounts }}
+        {{- range $mount := $serviceConfig.volumeMounts }}
+        - name: {{ $mount.name }}
+          mountPath: {{ $mount.mountPath }}
+          {{- if $mount.readOnly }}
+          readOnly: {{ $mount.readOnly }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+      
+      # Graceful termination period for data services
+      terminationGracePeriodSeconds: 300
+      
+      volumes:
+      {{- if $serviceConfig.configMaps }}
+      {{- range $configMap := $serviceConfig.configMaps }}
+      - name: {{ $configMap.name }}
+        configMap:
+          name: {{ $configMap.configMapName }}
+          {{- if $configMap.defaultMode }}
+          defaultMode: {{ $configMap.defaultMode }}
+          {{- end }}
+      {{- end }}
+      {{- end }}
+  
+  # Persistent Volume Claim template for StatefulSet
+  {{- if $serviceConfig.persistence }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ $serviceConfig.name }}-data
+      labels:
+        {{- include "code-server-enterprise.labels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $serviceConfig.name }}
+        app.kubernetes.io/kind: "persistent"
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ $serviceConfig.persistence.storageClass | default "fast-ssd" }}
+      resources:
+        requests:
+          storage: {{ $serviceConfig.persistence.size | default "50Gi" }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

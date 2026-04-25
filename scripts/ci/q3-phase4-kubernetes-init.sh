@@ -12,6 +12,13 @@ set -euo pipefail
 
 readonly INIT_TIMESTAMP="${INIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# Load network configuration SSOT
+source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 readonly K8S_INIT_DIR="${K8S_INIT_DIR:-${REPO_ROOT}/artifacts/q3-phase4-kubernetes-init}"
 readonly K8S_INIT_REPORT="${K8S_INIT_REPORT:-${K8S_INIT_DIR}/Q3-PHASE4-KUBERNETES-INIT-$(date -u +%Y-%m-%d).md}"
 readonly HELM_CHARTS_DIR="${HELM_CHARTS_DIR:-${REPO_ROOT}/helm}"

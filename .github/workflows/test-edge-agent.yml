@@ -4,12 +4,14 @@ on:
   push:
     paths:
       - 'apps/edge-agent/**'
+        - 'apps/edge_agent/**'
       - 'scripts/edge-agent/**'
       - 'apps/control-plane/edge_agent_handlers.py'
       - '.github/workflows/test-edge-agent.yml'
     branches:
       - main
   pull_request:
+        - 'apps/edge_agent/**'
     paths:
       - 'apps/edge-agent/**'
       - 'scripts/edge-agent/**'
@@ -87,7 +89,7 @@ jobs:
 
       - name: Run Python tests
         run: |
-          pytest tests/edge_agent/ -v --cov=apps/edge-agent --cov-report=xml || true
+          pytest apps/edge_agent/tests/test_edge_agent.py -v --cov=apps/edge_agent --cov-report=xml || true
         env:
           DATABASE_URL: postgresql://appuser:apppass@localhost:5432/appdb
           REDIS_URL: redis://localhost:6379

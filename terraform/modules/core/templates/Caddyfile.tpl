@@ -8,12 +8,12 @@
   https_port 443
 }
 
-https://{APEX_DOMAIN} {
+https://${apex_domain} {
   respond /health "OK" 200
 
   handle /oauth2/* {
     reverse_proxy oauth2-proxy:4180 {
-      header_up Host {APEX_DOMAIN}
+      header_up Host ${apex_domain}
       header_up X-Forwarded-For {http.request.remote.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -31,7 +31,7 @@ https://{APEX_DOMAIN} {
 
     uri strip_prefix /api
     reverse_proxy backend:8000 {
-      header_up Host {APEX_DOMAIN}
+      header_up Host ${apex_domain}
       header_up X-Forwarded-For {http.request.remote.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -53,16 +53,16 @@ https://{APEX_DOMAIN} {
   }
 }
 
-http://{APEX_DOMAIN} {
-  redir https://{APEX_DOMAIN}{uri} permanent
+http://${apex_domain} {
+  redir https://${apex_domain}{uri} permanent
 }
 
-https://{IDE_DOMAIN} {
+https://${ide_domain} {
   respond /health "OK" 200
 
   handle /oauth2/* {
     reverse_proxy oauth2-proxy:4180 {
-      header_up Host {IDE_DOMAIN}
+      header_up Host ${ide_domain}
       header_up X-Forwarded-For {http.request.remote.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -79,7 +79,7 @@ https://{IDE_DOMAIN} {
     }
 
     reverse_proxy code-server:8443 {
-      header_up Host {IDE_DOMAIN}
+      header_up Host ${ide_domain}
       header_up X-Forwarded-Host {http.request.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -87,16 +87,16 @@ https://{IDE_DOMAIN} {
   }
 }
 
-http://{IDE_DOMAIN} {
-  redir https://{IDE_DOMAIN}{uri} permanent
+http://${ide_domain} {
+  redir https://${ide_domain}{uri} permanent
 }
 
-https://{API_DOMAIN} {
+https://${api_domain} {
   respond /health "OK" 200
 
   handle /oauth2/* {
     reverse_proxy oauth2-proxy:4180 {
-      header_up Host {API_DOMAIN}
+      header_up Host ${api_domain}
       header_up X-Forwarded-For {http.request.remote.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -113,7 +113,7 @@ https://{API_DOMAIN} {
     }
 
     reverse_proxy backend:8000 {
-      header_up Host {API_DOMAIN}
+      header_up Host ${api_domain}
       header_up X-Forwarded-For {http.request.remote.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -121,16 +121,16 @@ https://{API_DOMAIN} {
   }
 }
 
-http://{API_DOMAIN} {
-  redir https://{API_DOMAIN}{uri} permanent
+http://${api_domain} {
+  redir https://${api_domain}{uri} permanent
 }
 
-https://{AUTH_DOMAIN} {
+https://${auth_domain} {
   respond /health "OK" 200
 
   handle /oauth2/* {
     reverse_proxy oauth2-proxy:4180 {
-      header_up Host {AUTH_DOMAIN}
+      header_up Host ${auth_domain}
       header_up X-Forwarded-For {http.request.remote.host}
       header_up X-Forwarded-Proto https
       header_up X-Real-IP {http.request.remote.host}
@@ -142,6 +142,6 @@ https://{AUTH_DOMAIN} {
   }
 }
 
-http://{AUTH_DOMAIN} {
-  redir https://{AUTH_DOMAIN}{uri} permanent
+http://${auth_domain} {
+  redir https://${auth_domain}{uri} permanent
 }

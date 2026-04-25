@@ -35,7 +35,7 @@ TARGET_PATTERNS=(
   'terraform/**/*.tfvars'
 )
 
-FORBIDDEN_REGEX='kushnir[.]cloud|kushnir[.]local|192[.]168[.]168[.](31|42|56)'
+FORBIDDEN_REGEX='kushnir[.]cloud|kushnir[.]local|code-server[.]ai|192[.]168[.]168[.](31|42|56)'
 
 collect_target_files() {
   git -C "${REPO_ROOT}" ls-files -- "${TARGET_PATTERNS[@]}"
@@ -48,6 +48,9 @@ scan_file() {
     {
       line = $0
       sub(/[[:space:]]+#.*$/, "", line)
+      if (line ~ /^[[:space:]]*apiVersion:[[:space:]]*code-server[.]ai\/v1[[:space:]]*$/) {
+        next
+      }
       if (line ~ regex) {
         printf "%s\t%d\t%s\n", file, NR, $0
       }

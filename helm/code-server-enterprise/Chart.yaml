@@ -1,0 +1,23 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: CHART_DEFINITION
+# PURPOSE: Helm chart for code-server-enterprise microservices
+# VERSION: 1.0.0
+# AUTHOR: Platform Engineering
+apiVersion: v2
+name: code-server-enterprise
+description: Comprehensive Helm chart for code-server-enterprise Kubernetes deployment
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/kushin77/code-server
+sources:
+  - https://github.com/kushin77/code-server
+maintainers:
+  - name: Platform Engineering Team
+    email: platform@example.com
+keywords:
+  - code-server
+  - kubernetes
+  - microservices
+  - enterprise
+dependencies: []

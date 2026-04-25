@@ -43,8 +43,6 @@ spec:
       serviceAccountName: {{ include "code-server-enterprise.serviceAccountName" . }}
       containers:
       - name: {{ $serviceConfig.name }}
-        securityContext:
-          {{- include "code-server-enterprise.securityContext" . | nindent 10 }}
         image: "{{ .Values.global.imageRegistry }}/{{ $serviceConfig.image }}"
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:

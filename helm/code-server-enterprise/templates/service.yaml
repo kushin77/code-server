@@ -1,0 +1,31 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: SERVICE_TEMPLATE
+# PURPOSE: Kubernetes Service template for internal and external communication
+# PATTERN: ClusterIP for internal, LoadBalancer for API gateway
+
+{{- if .Values.services }}
+{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}-{{ $serviceConfig.name }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+spec:
+  type: {{ if eq $serviceConfig.name "api" }}LoadBalancer{{ else }}ClusterIP{{ end }}
+  ports:
+  - port: {{ $serviceConfig.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "code-server-enterprise.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+{{- end }}
+{{- end }}
+{{- end }}

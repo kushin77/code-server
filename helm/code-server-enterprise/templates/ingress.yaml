@@ -1,0 +1,40 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: INGRESS_TEMPLATE
+# PURPOSE: Kubernetes Ingress for external API gateway access
+# PATTERN: TLS termination, rate limiting, authentication
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - {{ .Values.global.domain | quote }}
+    secretName: {{ include "code-server-enterprise.fullname" . }}-tls
+  rules:
+  - host: {{ .Values.global.domain | quote }}
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "code-server-enterprise.fullname" . }}-api
+            port:
+              number: 3100
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "code-server-enterprise.fullname" . }}-frontend
+            port:
+              number: 3000

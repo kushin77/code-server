@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly BASELINE_DIR="${SCRIPT_DIR}/artifacts/phase5/performance-baseline"
 readonly REPORT_FILE="${BASELINE_DIR}/baseline-report-$(date +%Y%m%d-%H%M%S).md"
 readonly METRICS_FILE="${BASELINE_DIR}/metrics-$(date +%Y%m%d-%H%M%S).json"

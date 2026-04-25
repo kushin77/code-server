@@ -4,7 +4,7 @@
 # @file scripts/ops/deployment-pipeline.sh
 # @module operations/deployment
 # @description End-to-end production deployment pipeline with validation
-# @governance GOV-002: All deployments validated, audited, and reversible
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 ###
 
 set -euo pipefail
@@ -33,7 +33,7 @@ log_error() {
 # Configuration
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly ENVIRONMENT="${1:-${ENVIRONMENT:-production}}"
 readonly DEPLOYMENT_ID="${DEPLOYMENT_ID:-manual-${RANDOM}}"

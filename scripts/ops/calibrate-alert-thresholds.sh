@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: Alert threshold calibration — updates Prometheus rules dynamically
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Updates Prometheus alert rules based on collected baseline metrics
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -15,7 +15,7 @@ readonly BLUE='\033[0;34m'
 readonly YELLOW='\033[1;33m'
 readonly NC='\033[0m' # No Color
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 echo -e "${BLUE}=== ALERT THRESHOLD CALIBRATION ===${NC}"

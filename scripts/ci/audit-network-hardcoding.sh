@@ -1,10 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 
 ###############################################################################
-# @governance: Network hardcoding audit — detect unauthorized static config
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Epic #1536 Phase 1 - Network Hardcoding Audit
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Related issues: #1536 (Network Hardcoding Audit), #1534 (IaC Governance)
 #
 # Audits the repository for hardcoded network configuration that violates:
@@ -24,8 +26,8 @@
 
 set -uo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly AUDIT_LOG_DIR="${AUDIT_LOG_DIR:-/tmp}"
 readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date +%s)}"
 readonly AUDIT_LOG="${AUDIT_LOG:-${AUDIT_LOG_DIR}/network-hardcoding-audit-${AUDIT_TIMESTAMP}.log}"
@@ -147,7 +149,6 @@ echo "  ✓ Compose patterns found: $COMPOSE_PATTERNS_FOUND/4" | tee -a "$AUDIT_
 # Phase 4: Report summary
 ###############################################################################
 echo -e "\n${YELLOW}========== AUDIT REPORT ==========${NC}" | tee -a "$AUDIT_LOG"
-echo "Scan Date: $(date)" | tee -a "$AUDIT_LOG"
 echo "Scan Location: $REPO_ROOT" | tee -a "$AUDIT_LOG"
 echo "Audit Log: $AUDIT_LOG" | tee -a "$AUDIT_LOG"
 

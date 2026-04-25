@@ -3,13 +3,13 @@
 # @file        scripts/k8s/validate-deployment.sh
 # @module      k8s/validate-deployment
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/k8s/validate-deployment.sh
 # @description Validates Kubernetes deployment with comprehensive health checks
-# @governance GOV-002: Deployment validation
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage ./validate-deployment.sh [namespace]
 
 set -euo pipefail

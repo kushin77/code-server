@@ -4,7 +4,7 @@
 # @file scripts/ops/infrastructure-health-check.sh
 # @module operations/infrastructure
 # @description Comprehensive infrastructure health assessment with real-time metrics
-# @governance GOV-002: Production health monitoring and incident response automation
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 ###
 
 set -euo pipefail

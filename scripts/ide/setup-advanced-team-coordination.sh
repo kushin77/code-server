@@ -3,7 +3,7 @@
 # @file        scripts/ide/setup-advanced-team-coordination.sh
 # @module      ide/setup-advanced-team-coordination
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################

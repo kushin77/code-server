@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Audit logging orchestration — centralize all security events
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Comprehensive audit logging for all security-sensitive operations
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -14,7 +14,7 @@ set -euo pipefail
 # CONFIGURATION (all env-var driven)
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly AUDIT_LOG_DIR="${AUDIT_LOG_DIR:-${REPO_DIR}/logs/audit}"
 readonly AUDIT_CONFIG="${AUDIT_CONFIG:-${REPO_DIR}/config/audit-config.json}"

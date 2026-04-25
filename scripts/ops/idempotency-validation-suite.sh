@@ -2,7 +2,7 @@
 # @file scripts/ops/idempotency-validation-suite.sh
 # @module infrastructure
 # @description Comprehensive validation suite for idempotent IaC patterns
-# @governance GOV-002: All init containers must be idempotent and reproducible
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @version 1.0
 # @date April 25, 2026
 
@@ -12,7 +12,7 @@ set -euo pipefail
 # CONFIGURATION
 # ============================================================================
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly LOG_FILE="${REPO_ROOT}/artifacts/idempotency-validation-$(date +%Y%m%d-%H%M%S).log"
 readonly METRICS_FILE="${REPO_ROOT}/artifacts/idempotency-metrics.json"
 

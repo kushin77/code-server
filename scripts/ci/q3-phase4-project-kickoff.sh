@@ -3,15 +3,15 @@
 # @module      q3/orchestration
 # @description Q3 Phase 4 Project Kickoff - Formal launch of Kubernetes migration
 # @type        IaC-compliant orchestration (immutable, idempotent, version-controlled)
-# @governance  GOV-002: All infrastructure as code, no runtime modifications
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 
-KICKOFF_DATE=$(date -u +%Y-%m-%d)
-KICKOFF_TIME=$(date -u +%H:%M:%SZ)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+. "${REPO_ROOT}/scripts/_common/_base-config.env"
+
 KICKOFF_DIR="${REPO_ROOT}/artifacts/q3-phase4-kickoff"
-KICKOFF_REPORT="${KICKOFF_DIR}/Q3-PHASE4-PROJECT-KICKOFF-${KICKOFF_DATE}.md"
+KICKOFF_REPORT="${KICKOFF_DIR}/Q3-PHASE4-PROJECT-KICKOFF.md"
 
 mkdir -p "${KICKOFF_DIR}"
 

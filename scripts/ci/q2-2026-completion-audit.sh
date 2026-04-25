@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Q2 completion audit — validate delivery and plan Q3
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Q2 2026 Roadmap completion audit and Q3 readiness assessment
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -7,8 +7,8 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 source "${REPO_ROOT}/scripts/_common/logging.sh"
 

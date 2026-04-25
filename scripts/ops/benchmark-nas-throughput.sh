@@ -2,7 +2,7 @@
 # @file        scripts/ops/benchmark-nas-throughput.sh
 # @module      ops/storage
 # @description NAS performance benchmarking (iperf3, fio, mount latency)
-# @governance  GOV-002: IaC, idempotent, version-controlled
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — NAS Tuning
 
 set -euo pipefail

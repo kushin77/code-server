@@ -2,12 +2,12 @@
 # @file setup-projects-board.sh
 # @module ops/automation
 # @description Create GitHub Projects board with automation rules for issue lifecycle
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 
 # Ensure shared initialization and GitHub API client are loaded
-readonly REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 source "${REPO_ROOT}/scripts/_common/init.sh"
 
 # ============================================================================

@@ -2,7 +2,7 @@
 # @file scripts/ops/sla-metrics-collector.sh
 # @module infrastructure/monitoring
 # @description P3-1531 Phase 5: Collect SLA metrics and availability verification
-# @governance GOV-002: All deployments monitored for uptime, latency, error rates
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage sla-metrics-collector.sh [--duration HOURS] [--interval SECONDS]
 
 set -euo pipefail

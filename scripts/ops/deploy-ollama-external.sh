@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: External Ollama deployment — separate AI services from main stack
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Deploy Ollama LLM services to external host with IaC compliance
 # Author: Autonomous Agent
 # Date: April 25, 2026
@@ -187,7 +187,7 @@ configure_main_deployment() {
     if [ ! -f ".env.local" ]; then
         log_warn ".env.local not found, creating with Ollama configuration..."
         cat > .env.local <<EOF
-# @governance: Environment configuration for external Ollama deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Ollama configuration (external deployment)

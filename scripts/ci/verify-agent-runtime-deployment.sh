@@ -1,12 +1,17 @@
 #!/bin/bash
 # @file scripts/ci/verify-agent-runtime-deployment.sh
 # @description Verify Agent Runtime Phase 2 deployment success
-# @governance GOV-002: Deterministic verification, immutable deployment checks
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-26
 # @related P3 #1557 Phase 2
 
 set -euo pipefail
+
+# Source base configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+. "${REPO_ROOT}/scripts/_common/_base-config.env"
 
 # Color codes for output
 RED='\033[0;31m'

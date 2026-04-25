@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/sharding-$(date +%Y%m%d-%H%M%S).log"
 readonly SHARDS="${SHARDS:-4}"
 readonly SHARD_ALGORITHM="${SHARD_ALGORITHM:-hash-user-id}"

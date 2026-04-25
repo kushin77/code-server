@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: GitOps reconciliation — continuously sync infrastructure state with Git source of truth
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Continuous GitOps reconciliation - syncs infrastructure state with Git
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

@@ -4,6 +4,7 @@
 # @file        scripts/ops/cluster-sync-daemon.sh
 # @module      ops/cluster-synchronization
 # @description Continuous cluster sync daemon (IaC: Idempotent, Immutable)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # GOVERNANCE: GOV-002 Compliance
 # - Deterministic: git pull always produces same state
@@ -66,7 +67,7 @@ set -euo pipefail
 # CONFIGURATION
 # ==============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 readonly TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 readonly LOG_DIR="/var/log"

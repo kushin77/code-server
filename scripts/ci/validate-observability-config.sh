@@ -1,12 +1,16 @@
 #!/bin/bash
 # @file scripts/ci/validate-observability-config.sh
 # @description Validate Prometheus, Loki, and Promtail configurations
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1532: Centralized Observability
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source base configuration
+. "${REPO_ROOT}/scripts/_common/_base-config.env"
 
 echo "[INFO] Validating Observability Stack Configuration..."
 

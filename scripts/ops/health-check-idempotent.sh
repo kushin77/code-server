@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Idempotent health checks — state-based monitoring without side effects
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Idempotent health checks - can be called continuously
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

@@ -3,13 +3,13 @@
 # @file        scripts/k8s/production-readiness-check.sh
 # @module      k8s/production-readiness-check
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/k8s/production-readiness-check.sh
 # @description Comprehensive production readiness validation
-# @governance GOV-002: Production deployment gating
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage ./production-readiness-check.sh [namespace]
 
 set -euo pipefail

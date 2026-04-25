@@ -2,7 +2,7 @@
 # @file scripts/monitoring/setup-opa-observability.sh
 # @module infrastructure/observability
 # @description P0-1552 Phase 5: Configure OPA decision logging and Prometheus metrics
-# @governance GOV-002: All policy decisions logged and exported to observability pipeline
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-opa-observability.sh [--enable-prometheus] [--enable-loki]
 
 set -euo pipefail

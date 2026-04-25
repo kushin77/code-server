@@ -2,7 +2,7 @@
 # @file        scripts/_common/github-api-client.sh
 # @module      github/api-client
 # @description Fine-grained GitHub token management, rate limit tracking, and exponential backoff retry logic
-# @governance GOV-002: Consolidated sourcing via init.sh pattern prevents duplicate loads
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # Provides:
 # - Secure fine-grained token retrieval from GSM

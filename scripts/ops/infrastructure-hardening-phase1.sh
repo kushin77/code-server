@@ -2,7 +2,7 @@
 # @file infrastructure-hardening-phase1.sh
 # @module infrastructure
 # @description Master orchestrator for Tier 1 critical infrastructure hardening fixes
-# @governance GOV-002 - All fixes must be production-safe and reversible
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run multiple times, state-based execution
 set -euo pipefail
 

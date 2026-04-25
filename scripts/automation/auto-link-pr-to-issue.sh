@@ -3,14 +3,14 @@
 # @file        scripts/automation/auto-link-pr-to-issue.sh
 # @module      automation/auto-link-pr-to-issue
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 #
 # @file scripts/automation/auto-link-pr-to-issue.sh
 # @description Auto-link PRs to related GitHub issues (detects from branch/title/body)
-# @governance GOV-002: Immutable, deterministic, audit-logged
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @created 2026-04-25
 #

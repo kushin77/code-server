@@ -1,13 +1,13 @@
 #!/bin/bash
-# @governance: Automated IaC violation report generator — analyze and categorize compliance issues
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Generate detailed IaC violation reports by category for remediation planning
 # Author: Autonomous Agent
 # Date: April 25, 2026
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="${SCRIPT_DIR}/../.."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${SCRIPT_DIR}/../.."
 readonly REPORT_FILE="${REPORT_FILE:-/tmp/iac-violations-$(date +%s).json}"
 readonly OUTPUT_FORMAT="${OUTPUT_FORMAT:-json}"  # json, csv, or text
 
@@ -75,20 +75,20 @@ check_error_handling() {
     log_info "Found ${#error_handling_scripts[@]} script(s) without error handling"
 }
 
-# Category 3: Find @governance header violations
+# Category 3: Find @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 check_governance_headers() {
-    log_category "Scanning for missing @governance headers..."
+    log_category "Scanning for missing @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
     
-    # Find scripts without @governance header
+    # Find scripts without @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
     while IFS= read -r script; do
-        if ! grep -q "@governance" "$script"; then
-            log_violation "$(basename "$script"): Missing @governance header"
+        if ! grep -q "@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
+            log_violation "$(basename "$script"): Missing @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
             governance_scripts+=("$script")
             ((governance_count++))
         fi
     done < <(find "${REPO_ROOT}/scripts" -name "*.sh" -type f)
     
-    log_info "Found ${#governance_scripts[@]} script(s) without @governance headers"
+    log_info "Found ${#governance_scripts[@]} script(s) without @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 }
 
 # Category 4: Find dynamic timestamp violations
@@ -159,7 +159,7 @@ $(printf '        "%s"\n' "${timestamp_scripts[@]}" | sed 's|'"${REPO_ROOT}"'||g
     "phase_2_high": {
       "effort_hours": 12,
       "scripts_to_fix": 30,
-      "focus": "remaining hardcoding + @governance headers"
+      "focus": "remaining hardcoding + @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
     },
     "phase_3_nice_to_have": {
       "effort_hours": 6,
@@ -244,7 +244,7 @@ EOF
 CATEGORY 3: GOVERNANCE HEADER VIOLATIONS ($governance_count scripts)
 ================================================================================
 Severity: MEDIUM
-Pattern: Scripts missing @governance documentation header
+Pattern: Scripts missing @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 Effort: ~5 minutes per script
 
 Scripts:
@@ -274,7 +274,7 @@ Phase 1: Critical Path (8 hours)
   - Remove timestamps in 3 config scripts (3 hr)
 
 Phase 2: High Priority (12 hours)
-  - Add @governance headers to all (1 hr)
+  - Add @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
   - Fix remaining hardcoding (10 hr)
   - Remove remaining timestamps (5 hr)
 
@@ -293,7 +293,7 @@ COMPLIANCE STANDARDS
   - Idempotent (safe to run multiple times)
   - Environment-driven (all config via env vars)
   - Fault-safe (error handling on all commands)
-  - Documented (@governance headers + inline comments)
+  - Documented (@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 These violations are pre-existing in legacy scripts created before IaC
 standards were enforced. New infrastructure code (deployment automation,

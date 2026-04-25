@@ -3,13 +3,13 @@
 # @file        scripts/ops/rollback.sh
 # @module      ops/rollback
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/rollback.sh
 # @description IaC Lifecycle Control - Comprehensive rollback mechanism (#1531)
-# @governance GOV-002 - Immutable, idempotent rollback procedures
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @automation Triggered by health-check-and-rollback.sh or manual execution
 # @prerequisite Must source scripts/_common/init.sh
 

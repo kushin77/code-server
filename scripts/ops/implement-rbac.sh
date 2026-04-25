@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: RBAC implementation — enforce access control via OPA and Redis
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Implements Role-Based Access Control (RBAC) via OPA policies and service configuration
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly OPA_POLICY_DIR="${OPA_POLICY_DIR:-${PROJECT_ROOT}/policies}"
 readonly REDIS_ACL_TEMPLATE="${REDIS_ACL_TEMPLATE:-${PROJECT_ROOT}/config/redis.acl.example}"

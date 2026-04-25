@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: Database replication monitoring — track lag and health
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Monitors database replication lag and status for PostgreSQL and Redis
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Configuration (all env-var driven)
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly DB_USER="${DB_USER:-postgres}"
 readonly DB_CONTAINER="${DB_CONTAINER:-postgres}"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Production deployment automation — ensures IaC compliance during deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Deploy code-server-enterprise to production with validation
 # Author: Autonomous Agent
 # Date: April 25, 2026
@@ -7,8 +7,8 @@
 set -euo pipefail
 
 # Source common utilities and network configuration SSOT
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Load network configuration SSOT
 source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {

@@ -4,6 +4,7 @@
 # @file        scripts/ci/validate-cluster-sync.sh
 # @module      ci/cluster-validation
 # @description Pre-deployment cluster sync validation (IaC: Immutable, Idempotent)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 #
 # GOVERNANCE: GOV-002 Compliance
 # - Deterministic: Same inputs always produce same output
@@ -56,7 +57,7 @@ set -euo pipefail
 # CONFIGURATION
 # ==============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 readonly TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 readonly LOG_DIR="${PROJECT_ROOT}/logs"

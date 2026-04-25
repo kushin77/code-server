@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: SSH emergency recovery — restore SSH daemon on unresponsive hosts
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Fixes SSH daemon on replica nodes experiencing connection resets
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

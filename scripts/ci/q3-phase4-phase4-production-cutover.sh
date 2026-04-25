@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Phase 4 Production Cutover and Kubernetes Transition
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Define procedures for full production cutover to Kubernetes
 # @phase Q3 Phase 4 - Phase 4 (Jun 10-23, 2026)
 # @date $(date '+%Y-%m-%d %H:%M:%S')

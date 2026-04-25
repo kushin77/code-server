@@ -3,13 +3,13 @@
 # @file        scripts/ops/verify-docker-compose-idempotency.sh
 # @module      ops/verify-docker-compose-idempotency
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/verify-docker-compose-idempotency.sh
 # @description Phase 2: Docker Compose idempotency verification for IaC Lifecycle Control (#1531)
-# @governance GOV-002 - Immutable, idempotent infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @automation Validates docker-compose can be redeployed from clean state
 # @prerequisite Must source scripts/_common/init.sh
 

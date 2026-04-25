@@ -3,14 +3,14 @@
 # @file        scripts/integration/gitlab-sync.sh
 # @module      integration/gitlab-sync
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 #
 # @file scripts/integration/gitlab-sync.sh
 # @description Idempotent GitHub → GitLab issue synchronization
-# @governance GOV-002: Version-controlled, audit-logged, reversible
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @created 2026-04-25
 #
@@ -28,8 +28,8 @@ set -euo pipefail
 
 # Configuration
 readonly SCRIPT_VERSION="1.0"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 readonly LOG_DIR="${REPO_ROOT}/artifacts/sync-logs"
 readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 readonly LOG_FILE="${LOG_DIR}/gitlab-sync-${TIMESTAMP}.log"

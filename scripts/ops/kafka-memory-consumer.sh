@@ -3,13 +3,13 @@
 # @file        scripts/ops/kafka-memory-consumer.sh
 # @module      ops/kafka-memory-consumer
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/kafka-memory-consumer.sh
 # @description Kafka consumer for continuous organizational memory ingestion
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES
 
 set -euo pipefail
@@ -58,7 +58,7 @@ create_consumer_python_script() {
 """
 @file apps/memory-engine/kafka_consumer.py
 @description Kafka consumer for continuous organizational memory ingestion
-@governance GOV-002
+@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 """
 
 import os

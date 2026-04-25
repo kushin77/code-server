@@ -2,7 +2,7 @@
 # @file drift-detection-and-remediation.sh
 # @module infrastructure
 # @description Detect and remediate infrastructure drift from desired state
-# @governance GOV-002 - Infrastructure must match declared IaC state
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run continuously for state reconciliation
 set -euo pipefail
 

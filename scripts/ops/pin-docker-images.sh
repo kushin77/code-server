@@ -2,7 +2,7 @@
 # @file pin-docker-images.sh
 # @module infrastructure
 # @description Pin all Docker images to content-addressable digests for immutability
-# @governance GOV-002 - All images must have version and digest
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run multiple times
 set -euo pipefail
 

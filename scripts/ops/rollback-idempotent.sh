@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Idempotent rollback — verify backup state before restoring to prevent duplication
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Idempotent rollback - safe to call multiple times
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

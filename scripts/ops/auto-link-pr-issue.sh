@@ -2,7 +2,7 @@
 # @file auto-link-pr-issue.sh
 # @module ops/automation
 # @description Auto-link GitHub PRs to issues based on title/branch name references
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

@@ -2,7 +2,7 @@
 # @file compliance-validation.sh
 # @module infrastructure
 # @description Comprehensive compliance validation for GOV-002 and production readiness
-# @governance GOV-002 - All infrastructure must meet compliance requirements
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run continuously for validation
 set -euo pipefail
 

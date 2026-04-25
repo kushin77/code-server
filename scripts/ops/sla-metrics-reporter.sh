@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###
-# @governance: SLA metrics reporting — track availability and performance
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Collect and report on SLA compliance metrics
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly SLA_AVAILABILITY_TARGET="${SLA_AVAILABILITY_TARGET:-99.9}"
 readonly SLA_LATENCY_P99_MS="${SLA_LATENCY_P99_MS:-200}"

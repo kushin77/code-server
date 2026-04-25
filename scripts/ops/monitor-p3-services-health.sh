@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ops/monitor-p3-services-health.sh
 # @description Real-time P3 Services Health Monitoring (IaC)
-# @governance GOV-002: Immutable, idempotent monitoring
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 Services #1558, #1559, #1561

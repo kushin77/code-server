@@ -2,7 +2,7 @@
 # @file sync-gitlab-mirror.sh
 # @module ops/deployment
 # @description One-way mirror sync: code-server main → kushin77/source-control main (GitLab integration)
-# @governance GOV-002
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 set -euo pipefail
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ci/verify-p3-services-full-integration.sh
 # @description Comprehensive P3 Services Integration & Deployment Verification (IaC)
-# @governance GOV-002: Immutable, idempotent, deterministic verification
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 #1561 (Execution Scheduler), #1559 (Reputation Engine), #1558 (Paperclip)

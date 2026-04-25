@@ -2,7 +2,7 @@
 ###############################################################################
 # @file        scripts/ci/pre-deployment-validation.sh
 # @description Pre-deployment validation suite for infrastructure hardening
-# @governance  GOV-002: Immutable, deterministic, audited infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################

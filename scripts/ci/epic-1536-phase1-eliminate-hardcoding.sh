@@ -2,7 +2,7 @@
 ################################################################################
 # @file: epic-1536-phase1-eliminate-hardcoding.sh
 # @description: Epic #1536 Phase 1 - Eliminate hardcoded IPs and domains
-# @governance: GOV-002 (Immutable, Idempotent, Deterministic)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author: GitHub Copilot
 # @date: 2026-04-25
 ################################################################################
@@ -46,7 +46,7 @@ create_network_config_ssot() {
 ################################################################################
 # @file: _epic-1536-network-config.env
 # @description: Epic #1536 Network Configuration - Single Source of Truth
-# @governance: GOV-002 (Immutable, Idempotent, Deterministic)
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author: GitHub Copilot
 # @date: 2026-04-25
 #

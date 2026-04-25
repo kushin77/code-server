@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Terraform drop package verification — ensure scaffold completeness
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Verify the Terraform drop package scaffold is present and complete
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly REQUIRED_TERRAFORM_PATHS="${REQUIRED_TERRAFORM_PATHS:-terraform/README.md:terraform/drop-package/README.md:terraform/drop-package/terraform.tfvars.example:terraform/environments/private/main.tf}"
 
 # Convert colon-separated paths to array

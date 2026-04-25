@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Q3 Phase 4: Phase 1 Deployment Runbook Generator
-# @governance IaC, immutable, idempotent, environment-driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Generate comprehensive Phase 1 deployment runbook for K8s migration
 # @phase Q3 Phase 4 Preparation (Phase 1)
 # @date $(date '+%Y-%m-%d %H:%M:%S')

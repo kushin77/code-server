@@ -2,7 +2,7 @@
 # @file scripts/k8s/provision-kubernetes-cluster.sh
 # @module kubernetes-infrastructure
 # @description Automated EKS cluster provisioning and initialization for Phase 4 migration
-# @governance GOV-002: All infrastructure version-controlled, auditable, immutable
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @version 1.0
 # @date April 26, 2026
 

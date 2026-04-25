@@ -2,7 +2,7 @@
 # @file health-check-post-deploy.sh
 # @module infrastructure/validation
 # @description P3-1531 Phase 2: Post-deployment health verification with automatic rollback on failure
-# @governance GOV-002: Health checks mandatory post-deployment, auto-rollback if critical services fail
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage health-check-post-deploy.sh [--endpoint ENDPOINT] [--timeout SECONDS] [--auto-rollback]
 
 set -euo pipefail

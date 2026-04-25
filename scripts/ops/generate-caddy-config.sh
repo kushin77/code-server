@@ -3,13 +3,13 @@
 # @file        scripts/ops/generate-caddy-config.sh
 # @module      ops/generate-caddy-config
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/generate-caddy-config.sh
 # @description Phase 3: Generate Caddyfile from template using environment variables (#1531)
-# @governance GOV-002 - All domains are variables, zero hardcoding
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @automation Generates Caddyfile before docker-compose up
 # @prerequisite Must source scripts/_common/hosts.sh
 

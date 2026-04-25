@@ -2,7 +2,7 @@
 # @file automated-rollback.sh
 # @module infrastructure/recovery
 # @description P3-1531 Phase 2: Automated infrastructure rollback with health verification
-# @governance GOV-002: All rollbacks version-controlled, tested, verified before deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage automated-rollback.sh <component> [--version VERSION] [--dry-run] [--health-check]
 
 set -euo pipefail

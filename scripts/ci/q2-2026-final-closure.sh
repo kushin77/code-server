@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @governance: Q2 closure — finalize delivery and plan Q3 initiatives
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Q2 2026 Final Closure - validate completion of all 3 phases
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -8,7 +8,7 @@
 set -euo pipefail
 
 readonly REPORT_TIMESTAMP="${REPORT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly CLOSURE_DIR="${CLOSURE_DIR:-${REPO_ROOT}/artifacts/q2-closure}"
 readonly CLOSURE_REPORT="${CLOSURE_REPORT:-${CLOSURE_DIR}/Q2-FINAL-CLOSURE-$(date -u +%Y-%m-%d).md}"
 

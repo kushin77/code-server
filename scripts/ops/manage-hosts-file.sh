@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ops/manage-hosts-file.sh
 # @description /etc/hosts File Management (Idempotent IaC)
-# @governance GOV-002: Deterministic host entry management, versioned in Git
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 #1536 Phase 3 - DNS Architecture
@@ -12,32 +12,37 @@ set -euo pipefail
 # NETWORK CONFIGURATION SSOT
 ################################################################################
 
-# Load network configuration SSOT
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/_common/_epic-1536-network-config.env" || {
-    echo "Error: Network configuration SSOT not found"
+# Load base configuration SSOT (primary source of truth)
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/_common/_base-config.env" || {
+    echo "Error: Base configuration SSOT not found at scripts/_common/_base-config.env"
     exit 1
 }
 
+# Load network configuration SSOT (supplementary)
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/_common/_epic-1536-network-config.env" || {
+    echo "Warning: Network configuration SSOT not found at scripts/_common/_epic-1536-network-config.env"
+}
+
 ################################################################################
-# CONFIGURATION (Environment-Driven)
+# CONFIGURATION (Environment-Driven from SSOT)
 ################################################################################
 
 HOSTS_FILE="${HOSTS_FILE:-/etc/hosts}"
 BACKUP_DIR="${BACKUP_DIR:-/etc/hosts.backups}"
 BACKUP_FILE="${BACKUP_DIR}/hosts.$(date +'%Y%m%d-%H%M%S').bak"
 
-# Infrastructure hosts (override via environment variables)
-PRIMARY_HOST="${PRIMARY_HOST:-${ONPREM_PRIMARY_IP}}"
-REPLICA_HOST="${REPLICA_HOST:-${ONPREM_REPLICA_IP}}"
-NAS_HOST="${NAS_HOST:-${ONPREM_NAS_IP}}"
-VRRP_VIP="${VRRP_VIP:-${ONPREM_VRRP_VIP}}"
+# Infrastructure hosts - sourced from _base-config.env SSOT
+# PRIMARY_HOST, REPLICA_HOST, NAS_HOST already set by source commands above
 
-APEX_DOMAIN="${APEX_DOMAIN:-${DNS_ZONE}}"
-IDE_DOMAIN="${IDE_DOMAIN:-${APP_IDE_DOMAIN}}"
-API_DOMAIN="${API_DOMAIN:-${APP_API_DOMAIN}}"
-ADMIN_DOMAIN="${ADMIN_DOMAIN:-${APP_ADMIN_DOMAIN}}"
-AUTH_DOMAIN="${AUTH_DOMAIN:-${APP_AUTH_DOMAIN}}"
-STATUS_DOMAIN="${STATUS_DOMAIN:-${APP_STATUS_DOMAIN}}"
+# Application domains - sourced from _base-config.env SSOT
+# APEX_DOMAIN, IDE_DOMAIN, API_DOMAIN, AUTH_DOMAIN, REGISTRY_DOMAIN already set
+
+# Additional optional domains (can override via environment)
+ADMIN_DOMAIN="${ADMIN_DOMAIN:-admin.${APEX_DOMAIN}}"
+STATUS_DOMAIN="${STATUS_DOMAIN:-status.${APEX_DOMAIN}}"
+
+# VRRP configuration (from _epic-1536-network-config.env)
+VRRP_VIP="${VRRP_VIP:-${ONPREM_VRRP_VIP}}"
 
 # Marker for managed entries (prevents clobbering user entries)
 MARKER_START="# BEGIN KUSHNIR.CLOUD MANAGED ENTRIES"

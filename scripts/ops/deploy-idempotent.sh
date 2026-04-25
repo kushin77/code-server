@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Idempotent deployment — verify state before changes to prevent duplicates
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Idempotent deployment script - safe to run multiple times
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

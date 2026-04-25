@@ -3,14 +3,14 @@
 # @file        scripts/ops/deploy-production-fix.sh
 # @module      ops/deploy-production-fix
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 #
 # @file scripts/ops/deploy-production-fix.sh
 # @description Idempotent production deployment with health verification
-# @governance GOV-002: Immutable, deterministic, version-controlled deployment
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @created 2026-04-24
 #
@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-readonly REPO_ROOT="${PWD}"
+REPO_ROOT="${PWD}"
 readonly DOCKER_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
 readonly LOG_FILE="/tmp/deploy-$(date +%Y%m%d-%H%M%S).log"
 readonly HEALTH_CHECK_RETRIES=30

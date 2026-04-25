@@ -2,7 +2,7 @@
 # @file scripts/monitoring/setup-activity-feed-observability.sh
 # @module infrastructure/observability
 # @description P3-1560 Phase 5: Monitoring for Kafka event bus and Activity Feed
-# @governance GOV-002: All metrics exported and alerted
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-activity-feed-observability.sh
 
 set -euo pipefail

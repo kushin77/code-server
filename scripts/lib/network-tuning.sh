@@ -2,7 +2,7 @@
 # @file        scripts/lib/network-tuning.sh
 # @module      lib/network
 # @description Network stack optimization for high-performance systems
-# @governance  GOV-002: Immutable, version-controlled infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — Network Tuning
 
 set -euo pipefail

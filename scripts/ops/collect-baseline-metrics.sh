@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: Baseline metrics collection — gathers 24h performance data
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Collects hourly performance metrics to establish operational baselines
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly ARTIFACT_DIR="${ARTIFACT_DIR:-${PROJECT_ROOT}/artifacts}"
 readonly COLLECTION_TIMESTAMP="${COLLECTION_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"

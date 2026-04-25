@@ -2,13 +2,13 @@
 # @file scripts/ci/setup-gitops-workflow.sh
 # @module infrastructure/ci-integration
 # @description P3-1531 Phase 3: Set up GitOps CI workflow and drift detection scheduling
-# @governance GOV-002: All infrastructure reconciliation via code, no manual steps
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-gitops-workflow.sh
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly WORKFLOW_FILE="${WORKFLOW_FILE:-${REPO_ROOT}/.github/workflows/gitops-drift-detection.yml}"
 readonly DRIFT_DETECTION_SCHEDULE="${DRIFT_DETECTION_SCHEDULE:-'0 */6 * * *'}"  # Every 6 hours
 readonly RECONCILIATION_TIMEOUT_MINUTES="${RECONCILIATION_TIMEOUT_MINUTES:-30}"

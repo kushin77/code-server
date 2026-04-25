@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Autonomous operations orchestration — self-healing deployments and self-recovery
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Master orchestrator for complete autonomous operations hardening
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25

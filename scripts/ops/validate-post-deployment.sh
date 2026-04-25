@@ -1,5 +1,5 @@
 #!/bin/bash
-# @governance: Post-deployment IaC validation — verify production deployment compliance
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Validate deployed infrastructure meets IaC standards (immutable, idempotent, env-driven)
 # Author: Autonomous Agent
 # Date: April 25, 2026
@@ -176,12 +176,12 @@ set -euo pipefail
 REPO_PATH="${REPO_PATH:-/root/code-server-enterprise}"
 cd "$REPO_PATH"
 
-echo "Checking for @governance headers in scripts..."
+echo "Checking for @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
-scripts_with_headers=$(grep -l "@governance" scripts/lib/*.sh scripts/ci/*.sh 2>/dev/null | wc -l)
+scripts_with_headers=$(grep -l "@governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 total_scripts=$(find scripts/lib scripts/ci -name "*.sh" -type f 2>/dev/null | wc -l)
 
-echo "Scripts with @governance headers: $scripts_with_headers / $total_scripts"
+echo "Scripts with @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 
 if [ "$scripts_with_headers" -ge "$((total_scripts - 5))" ]; then
     echo "PASS: Governance headers properly documented"

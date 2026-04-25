@@ -4,7 +4,7 @@
 # @file scripts/ops/setup-production-alerts.sh
 # @module operations/alerting
 # @description Setup comprehensive alerting rules for production infrastructure
-# @governance GOV-002: All alerting rules validated and documented for SLA compliance
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 ###
 
 set -euo pipefail
@@ -33,7 +33,7 @@ log_error() {
 # Configuration
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly ALERTS_DIR="${ALERTS_DIR:-${PROJECT_ROOT}/monitoring/alerts}"
 readonly PROMETHEUS_RULES="${PROMETHEUS_RULES:-${ALERTS_DIR}/prometheus-rules.yaml}"

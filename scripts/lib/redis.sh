@@ -2,7 +2,7 @@
 # @file        scripts/lib/redis.sh
 # @module      lib/cache
 # @description Redis health monitoring, cache statistics, and configuration
-# @governance  GOV-002: Immutable, version-controlled, no hardcoded secrets
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — Caching Strategy
 
 set -euo pipefail

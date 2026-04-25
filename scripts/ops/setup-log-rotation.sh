@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# @governance: Log rotation setup — prevent disk exhaustion via logrotate
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Purpose: Configures log rotation for infrastructure logs
 # Author: Autonomous Infrastructure
 # Date: 2026-04-25
@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 readonly LOGROTATE_CONF="${LOGROTATE_CONF:-logrotate.snippet}"

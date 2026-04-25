@@ -2,13 +2,13 @@
 # @file gitops-drift-detector.sh
 # @module infrastructure/continuous-reconciliation
 # @description P3-1531: GitOps continuous reconciliation - detect infrastructure drift vs. code state
-# @governance GOV-002: Drift detection runs on schedule (daily minimum), alerts on divergence, auto-remediates or files issues
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage gitops-drift-detector.sh [--check] [--remediate] [--alert] [--schedule]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly DRIFT_LOG="${DRIFT_LOG:-${REPO_ROOT}/logs/drift-detection.log}"
 readonly DRIFT_REPORT="${DRIFT_REPORT:-${REPO_ROOT}/artifacts/drift-report.json}"
 readonly DRIFT_THRESHOLD_HOURS="${DRIFT_THRESHOLD_HOURS:-24}"

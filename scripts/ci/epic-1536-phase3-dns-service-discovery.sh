@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Epic #1536 Phase 3: DNS-Based Service Discovery Implementation
-# @governance Kubernetes DNS configuration, CoreDNS setup, service discovery
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @purpose Configure DNS-based service-to-service resolution for K8s migration
 # @phase Q3 Phase 4 (Phase 3: DNS Service Discovery)
 # @date 2026-04-26

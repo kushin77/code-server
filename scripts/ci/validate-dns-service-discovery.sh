@@ -2,7 +2,7 @@
 # @file        scripts/ci/validate-dns-service-discovery.sh
 # @module      ci/networking
 # @description Validate DNS service discovery — no hardcoded IPs in inter-service config
-# @governance  GOV-002: Immutable, idempotent, version-controlled
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # Issue #1536: Networking, DNS & Performance — DNS Service Discovery
 #
 # Checks:
@@ -68,6 +68,8 @@ HARDCODED_IN_SOURCE=$(
     grep -v '\.md:' | \
     grep -v '^\s*#' | \
     grep -v ': *#' | \
+    grep -v '_epic-1536-network-config\.env:' | \
+    grep -v 'epic-1536-phase1-eliminate-hardcoding\.sh:' | \
     grep -v 'audit-network-hardcoding\.sh:' || true
 )
 

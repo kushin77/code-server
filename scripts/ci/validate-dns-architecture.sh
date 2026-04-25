@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file scripts/ci/validate-dns-architecture.sh
 # @description Comprehensive DNS Architecture Validation (CI/CD Integration)
-# @governance GOV-002: Infrastructure validation with detailed audit logging
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author GitHub Copilot
 # @date 2026-04-25
 # @related P3 #1536 Phase 3 - DNS Architecture & Resilience

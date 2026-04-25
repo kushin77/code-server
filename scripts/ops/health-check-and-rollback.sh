@@ -3,13 +3,13 @@
 # @file        scripts/ops/health-check-and-rollback.sh
 # @module      ops/health-check-and-rollback
 # @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
 # @file scripts/ops/health-check-and-rollback.sh
 # @description IaC Lifecycle Control - Health check with automatic rollback triggers (#1531)
-# @governance GOV-002 - Immutable, idempotent health checking and remediation
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @automation Runs on every deployment to validate system state and trigger rollback on failure
 # @prerequisite Must source scripts/_common/init.sh
 

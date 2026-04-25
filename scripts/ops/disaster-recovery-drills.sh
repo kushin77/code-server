@@ -2,7 +2,7 @@
 # @file disaster-recovery-drills.sh
 # @module infrastructure
 # @description Comprehensive disaster recovery testing and validation
-# @governance GOV-002 - DR procedures must be tested monthly
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES - Safe to run for validation, no production impact
 set -euo pipefail
 

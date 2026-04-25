@@ -2,13 +2,13 @@
 # @file scripts/ops/setup-qdrant-vector-db.sh
 # @module infrastructure/memory-engine
 # @description P3-1562 Phase 1: Deploy Qdrant vector database for organizational memory
-# @governance GOV-002: All memory data version-controlled, searchable, audited
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage setup-qdrant-vector-db.sh [--deploy] [--check]
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly QDRANT_DATA_PATH="${QDRANT_DATA_PATH:-${REPO_ROOT}/data/qdrant}"
 readonly QDRANT_CONFIG="${QDRANT_CONFIG:-${REPO_ROOT}/config/qdrant-config.yaml}"
 readonly QDRANT_PORT="${QDRANT_PORT:-6333}"

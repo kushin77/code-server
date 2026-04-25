@@ -2,13 +2,13 @@
 # @file scripts/ci/validate-config-ssot.sh
 # @module infrastructure/validation
 # @description P3-1531 Phase 4: Validate configuration SSOT compliance
-# @governance GOV-002: All infrastructure configuration version-controlled, env-var driven
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @usage validate-config-ssot.sh
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/config-ssot-validation-report.json}"
 readonly CONFIG_SSOT_DIR="${CONFIG_SSOT_DIR:-${REPO_ROOT}/config}"
 readonly MAX_CONFIG_SIZE_MB="${MAX_CONFIG_SIZE_MB:-100}"

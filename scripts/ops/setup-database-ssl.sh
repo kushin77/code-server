@@ -2,7 +2,7 @@
 # @file setup-database-ssl.sh
 # @module security
 # @description Set up SSL/TLS certificates for PostgreSQL database connections
-# @governance GOV-002 - P1 Priority 3: Enforce SSL for all database connections
+# @governance  GOV-002: Immutable, version-controlled, idempotent infrastructure
 # @idempotent YES
 
 set -euo pipefail
@@ -11,7 +11,7 @@ set -euo pipefail
 # CONFIGURATION
 # ============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly CERT_DIR="${CERT_DIR:-${REPO_DIR}/vault-tls}"
 readonly POSTGRES_CERT_DIR="${POSTGRES_CERT_DIR:-${CERT_DIR}/postgres}"

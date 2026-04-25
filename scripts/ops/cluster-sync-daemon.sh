@@ -181,7 +181,8 @@ check_for_updates() {
   cd "$PROJECT_ROOT" || return 1
   
   # Fetch latest from remote (no-op, just check)
-  if ! git fetch origin main >/dev/null 2>&1; then
+  local branch_name="${GIT_BRANCH#origin/}"
+  if ! git fetch origin "$branch_name" >/dev/null 2>&1; then
     log_error "Failed to fetch from remote"
     log_audit "fetch_failed" "error" "git fetch error"
     return 2
@@ -189,7 +190,7 @@ check_for_updates() {
   
   # Compare commits
   local current_commit=$(git rev-parse HEAD)
-  local remote_commit=$(git rev-parse origin/main)
+  local remote_commit=$(git rev-parse "$GIT_BRANCH" 2>/dev/null || git rev-parse FETCH_HEAD)
   
   log_info "Current commit: $current_commit"
   log_info "Remote commit:  $remote_commit"
@@ -219,7 +220,8 @@ pull_updates() {
   fi
   
   # Pull with timeout
-  if timeout $MAX_SYNC_TIME git pull origin main >/dev/null 2>&1; then
+  local branch_name="${GIT_BRANCH#origin/}"
+  if timeout $MAX_SYNC_TIME git pull origin "$branch_name" >/dev/null 2>&1; then
     log_success "Git pull completed successfully"
     return 0
   else

@@ -13,6 +13,30 @@ on:
     branches: [main]
 
 jobs:
+  # ── Branch Naming Convention ────────────────────────────────────────────────
+  branch-naming-convention:
+    name: Branch naming convention
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate branch naming pattern
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+
+          # Allow common branch families used in this repository.
+          if echo "$BRANCH_NAME" | grep -qE '^(feat|fix|hotfix|chore|docs|refactor|security|release|infra|ops|test)/[a-z0-9._/-]+$'; then
+            echo "✓ Branch name is valid: $BRANCH_NAME"
+            exit 0
+          fi
+
+          echo "❌ Invalid branch name: $BRANCH_NAME"
+          echo "Expected format: <type>/<slug>"
+          echo "Allowed types: feat, fix, hotfix, chore, docs, refactor, security, release, infra, ops, test"
+          echo "Examples:"
+          echo "  - security/cve-remediation-april-25"
+          echo "  - feat/epic-1537-phase2"
+          exit 1
+
   # ── No Loose Markdown Files in Root ──────────────────────────────────────────
   no-loose-root-files:
     name: No loose markdown files in root

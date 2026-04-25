@@ -170,7 +170,6 @@ jobs:
         if: always()
 
   lint-docs:
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -180,4 +179,3 @@ jobs:
         uses: nosborn/github-action-markdown-cli@v3.3.0
         with:
           files: docs/edge-agent/PHASE-3-*.md
-        continue-on-error: true

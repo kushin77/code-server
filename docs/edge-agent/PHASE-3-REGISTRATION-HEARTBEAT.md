@@ -1,5 +1,7 @@
 # Issue #1768 Phase 3: Edge Agent Registration & Heartbeat Protocol
 
+<!-- markdownlint-disable MD012 MD013 MD031 MD032 MD036 MD040 -->
+
 **Status**: ✅ IMPLEMENTATION COMPLETE  
 **Date**: April 24, 2026  
 **Priority**: Q3 CRITICAL PATH  

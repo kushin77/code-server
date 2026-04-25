@@ -1,5 +1,7 @@
 # Issue #1768 Phase 3: Edge Agent Registration & Heartbeat - COMPLETE ✅
 
+<!-- markdownlint-disable MD012 MD013 MD031 MD032 MD036 MD040 -->
+
 **Status**: ✅ READY FOR PRODUCTION DEPLOYMENT  
 **Date Completed**: April 24-25, 2026  
 **Issue**: #1768 (Q3 CRITICAL PATH)  

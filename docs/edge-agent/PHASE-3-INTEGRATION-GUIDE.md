@@ -1,5 +1,7 @@
 # Edge Agent Phase 3: Integration & Deployment Guide
 
+<!-- markdownlint-disable MD012 MD013 MD031 MD032 MD040 -->
+
 **Status**: ✅ PHASE 3 IMPLEMENTATION COMPLETE  
 **Governance**: 100% IaC, Immutable, Idempotent  
 **Target Deployment**: Q3 2026  

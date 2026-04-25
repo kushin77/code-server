@@ -90,9 +90,9 @@ jobs:
           node-version: '18'
           cache: 'pnpm'
 
-      - name: Run pnpm audit
+      - name: Run ppnpm audit
         run: |
-          pnpm audit --json > ./artifacts/npm-audit-report.json || true
+          ppnpm audit --json > ./artifacts/npm-audit-report.json || true
         continue-on-error: true
 
       - name: Check for critical vulnerabilities
@@ -307,4 +307,5 @@ jobs:
               repo: context.repo.repo,
               body: '⚠️ Security scanning found issues. Please review artifacts and address vulnerabilities before merging.'
             })
+
 

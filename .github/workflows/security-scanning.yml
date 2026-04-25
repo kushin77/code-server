@@ -108,18 +108,32 @@ jobs:
 
       - name: Run pnpm audit
         run: |
+          if ! pnpm install --frozen-lockfile; then
+            echo "Frozen lockfile install failed; retrying with --no-frozen-lockfile for scan mode"
             pnpm install --no-frozen-lockfile
-          pnpm audit --json > ./artifacts/npm-audit-report.json || true
+          fi
+
+          set +e
+          pnpm audit --json > ./artifacts/npm-audit-report.json
+          AUDIT_EXIT=$?
+          set -e
+
           if [ ! -s ./artifacts/npm-audit-report.json ]; then
             echo '{"metadata":{"vulnerabilities":{"critical":0}}}' > ./artifacts/npm-audit-report.json
           fi
-        continue-on-error: true
+
+          if [ "$AUDIT_EXIT" -ne 0 ] && ! jq -e '.metadata' ./artifacts/npm-audit-report.json > /dev/null 2>&1; then
+            echo "pnpm audit failed without a parseable JSON report"
+            exit 1
+          fi
 
       - name: Check for critical vulnerabilities
         run: |
-            if [ ! -f ./artifacts/npm-audit-report.json ]; then
-              echo '{"metadata":{"vulnerabilities":{"critical":0}}}' > ./artifacts/npm-audit-report.json
-            fi
+          if [ ! -f ./artifacts/npm-audit-report.json ]; then
+            echo "❌ Missing npm audit report artifact"
+            exit 1
+          fi
+
           CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' ./artifacts/npm-audit-report.json 2>/dev/null || echo 0)
           if [ "$CRITICAL" -gt 0 ]; then
             echo "Found $CRITICAL critical vulnerabilities in dependencies"
@@ -317,6 +331,7 @@ jobs:
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
+        continue-on-error: true
         with:
           script: |
             github.rest.issues.createComment({
@@ -335,6 +350,7 @@ jobs:
     steps:
       - name: Post failure notification
         uses: actions/github-script@v6
+        continue-on-error: true
         with:
           script: |
             github.rest.issues.createComment({

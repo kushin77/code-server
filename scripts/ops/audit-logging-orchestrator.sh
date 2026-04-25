@@ -14,12 +14,12 @@ set -euo pipefail
 # CONFIGURATION (all env-var driven)
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-AUDIT_LOG_DIR="${REPO_DIR}/logs/audit"
-AUDIT_CONFIG="${REPO_DIR}/config/audit-config.json"
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-AUDIT_ID=$(date '+%s%N' | cut -b1-13)
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly AUDIT_LOG_DIR="${AUDIT_LOG_DIR:-${REPO_DIR}/logs/audit}"
+readonly AUDIT_CONFIG="${AUDIT_CONFIG:-${REPO_DIR}/config/audit-config.json}"
+readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date '+%Y-%m-%d %H:%M:%S')}"
+readonly AUDIT_ID="${AUDIT_ID:-$(date '+%s%N' | cut -b1-13)}"
 
 # Create audit log directory
 mkdir -p "${AUDIT_LOG_DIR}"

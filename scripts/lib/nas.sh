@@ -4,13 +4,16 @@
 # Author: Infrastructure Team
 # Date: 2026-04-25
 # Related issues: #1536
-#
+
 # All configuration via environment variables with sensible defaults.
 # No hardcoded paths, thresholds, or credentials.
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly NAS_MOUNT_PATH="${NAS_MOUNT_PATH:-/mnt/nas}"
+readonly NAS_LATENCY_THRESHOLD_MS="${NAS_LATENCY_THRESHOLD_MS:-50}"
+readonly NAS_MAX_RETRIES="${NAS_MAX_RETRIES:-5}"
 source "${SCRIPT_DIR}/../_common/hosts.sh"
 
 : "${NAS_MOUNT_PATH:=/mnt/nas}"

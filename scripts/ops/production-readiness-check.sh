@@ -39,6 +39,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPORT_DIR="${PROJECT_ROOT}/artifacts"
 readonly READINESS_REPORT_FILE="${READINESS_REPORT_FILE:-${REPORT_DIR}/production-readiness.json}"
+readonly READINESS_TIMESTAMP="${READINESS_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 
 mkdir -p "${REPORT_DIR}"
 
@@ -344,7 +345,7 @@ log_info ""
 # Generate JSON report
 cat > "${REPORT_FILE}" << EOF
 {
-  "check_timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+  "check_timestamp": "${READINESS_TIMESTAMP}",
   "readiness_status": "${READINESS_STATUS}",
   "results": {
     "total_checks": ${CHECKS_TOTAL},

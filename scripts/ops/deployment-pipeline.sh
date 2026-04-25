@@ -37,6 +37,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly ENVIRONMENT="${1:-${ENVIRONMENT:-production}}"
 readonly DEPLOYMENT_ID="${DEPLOYMENT_ID:-manual-${RANDOM}}"
+readonly DEPLOYMENT_TIMESTAMP="${DEPLOYMENT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 readonly LOG_FILE="${LOG_FILE:-${PROJECT_ROOT}/logs/deployment.log}"
 readonly ARTIFACT_DIR="${ARTIFACT_DIR:-${PROJECT_ROOT}/artifacts}"
 readonly REPORT_FILE="${REPORT_FILE:-${ARTIFACT_DIR}/deployment-pipeline.json}"
@@ -55,10 +56,10 @@ done
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 source_env_file "${PROJECT_ROOT}/.env.infrastructure"
 
-: "${API_PROTOCOL:=${API_PROTOCOL:-http}}"
-: "${API_HOST:=${API_HOST:-localhost}}"
-: "${API_PORT:=${API_PORT:-3100}}"
-: "${API_ENDPOINT:=http://${API_HOST}:${API_PORT}}"
+: "${API_PROTOCOL:=http}"
+: "${API_HOST:=localhost}"
+: "${API_PORT:=3100}"
+: "${API_ENDPOINT:=${API_PROTOCOL}://${API_HOST}:${API_PORT}}"
 : "${API_HEALTH_ENDPOINT:=${API_ENDPOINT}/health}"
 
 mkdir -p "$(dirname "${LOG_FILE}")" "${ARTIFACT_DIR}"
@@ -79,13 +80,13 @@ log_stage() {
     log_info ""
     log_info "[$STAGE] $description"
     log_info "---"
-    echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') [STAGE $STAGE] $description" >> "${LOG_FILE}"
+    echo "${DEPLOYMENT_TIMESTAMP} [STAGE $STAGE] $description" >> "${LOG_FILE}"
 }
 
 stage_success() {
     log_success "✅ Stage $STAGE complete"
     SUCCESS=$((SUCCESS + 1))
-    echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') [SUCCESS] Stage $STAGE completed" >> "${LOG_FILE}"
+    echo "${DEPLOYMENT_TIMESTAMP} [SUCCESS] Stage $STAGE completed" >> "${LOG_FILE}"
 }
 
 stage_fail() {
@@ -93,7 +94,7 @@ stage_fail() {
     log_error "❌ Stage $STAGE failed: $reason"
     DEPLOYMENT_STATUS="FAILED"
     DEPLOYMENT_ERRORS="${DEPLOYMENT_ERRORS}Stage $STAGE: $reason | "
-    echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') [FAILED] $reason" >> "${LOG_FILE}"
+    echo "${DEPLOYMENT_TIMESTAMP} [FAILED] $reason" >> "${LOG_FILE}"
 }
 
 # ============================================================================
@@ -245,7 +246,7 @@ DEPLOYMENT_MANIFEST="${ARTIFACT_DIR}/deployment-manifest-${DEPLOYMENT_ID}.json"
 cat > "${DEPLOYMENT_MANIFEST}" << EOF
 {
   "deployment_id": "${DEPLOYMENT_ID}",
-  "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+  "timestamp": "${DEPLOYMENT_TIMESTAMP}",
   "environment": "${ENVIRONMENT}",
   "git_commit": "${CURRENT_COMMIT}",
   "git_branch": "${CURRENT_BRANCH}",
@@ -325,7 +326,7 @@ REPORT_JSON="${ARTIFACT_DIR}/deployment-ready-${DEPLOYMENT_ID}.json"
 cat > "${REPORT_JSON}" << EOF
 {
   "deployment_id": "${DEPLOYMENT_ID}",
-  "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+  "timestamp": "${DEPLOYMENT_TIMESTAMP}",
   "environment": "${ENVIRONMENT}",
   "git_commit": "${CURRENT_COMMIT:0:7}",
   "git_branch": "${CURRENT_BRANCH}",

@@ -18,10 +18,11 @@ source "${PROJECT_ROOT}/scripts/_common/init.sh"
 # Configuration
 # ============================================================================
 
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
-REPORT_FILE="${HEALTH_REPORT_FILE:-${ARTIFACT_DIR}/infrastructure-health-check.json}"
-CRITICAL_THRESHOLD="${CRITICAL_THRESHOLD:-1}"
-WARNING_THRESHOLD="${WARNING_THRESHOLD:-3}"
+readonly ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
+readonly REPORT_FILE="${HEALTH_REPORT_FILE:-${ARTIFACT_DIR}/infrastructure-health-check.json}"
+readonly CRITICAL_THRESHOLD="${CRITICAL_THRESHOLD:-1}"
+readonly WARNING_THRESHOLD="${WARNING_THRESHOLD:-3}"
+readonly HEALTH_TIMESTAMP="${HEALTH_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 
 mkdir -p "${ARTIFACT_DIR}"
 
@@ -329,7 +330,7 @@ log_info ""
 # Generate JSON report
 cat > "${REPORT_FILE}" << EOF
 {
-  "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+  "timestamp": "${HEALTH_TIMESTAMP}",
   "status": "$HEALTH_STATUS",
   "metrics": {
     "critical": $CRITICAL_COUNT,

@@ -1,14 +1,17 @@
 #!/bin/bash
-# @file audit-logging-orchestrator.sh
-# @module security
-# @description Comprehensive audit logging for all security-sensitive operations
-# @governance GOV-002 - P1 #1: Audit logging for compliance and incident response
-# @idempotent YES
+# @governance: Audit logging orchestration — centralize all security events
+# Purpose: Comprehensive audit logging for all security-sensitive operations
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+#
+# Provides: P1 #1: Audit logging for compliance and incident response
+# Idempotent: YES
 
 set -euo pipefail
 
 # ============================================================================
-# CONFIGURATION
+# CONFIGURATION (all env-var driven)
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

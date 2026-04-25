@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# @file        scripts/ci/q2-completion-audit-simple.sh
-# @module      governance/q2-completion-audit
-# @description Q2 2026 Roadmap completion audit - immutable, idempotent, IaC-compliant
-# @governance  GOV-002: Version-controlled, no hardcoding, template-driven
+# @governance: Q2 completion audit (simple) — lightweight validation without complex dependencies
+# Purpose: Q2 2026 Roadmap completion audit - simpler version for minimal deps
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1560 (Q2 Completion)
 
 set -euo pipefail
 
-AUDIT_DATE=$(date -u +%Y-%m-%d)
-AUDIT_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-AUDIT_DIR="${REPO_ROOT}/artifacts/q2-completion-audit"
-AUDIT_REPORT="${AUDIT_DIR}/Q2-COMPLETION-AUDIT-${AUDIT_DATE}.md"
+readonly AUDIT_TIMESTAMP="${AUDIT_TIMESTAMP:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+readonly AUDIT_DIR="${AUDIT_DIR:-${REPO_ROOT}/artifacts/q2-completion-audit}"
+readonly AUDIT_REPORT="${AUDIT_REPORT:-${AUDIT_DIR}/Q2-COMPLETION-AUDIT-$(date -u +%Y-%m-%d).md}"
 
 mkdir -p "${AUDIT_DIR}"
 

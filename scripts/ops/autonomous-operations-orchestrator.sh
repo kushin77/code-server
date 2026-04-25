@@ -1,13 +1,16 @@
 #!/bin/bash
-# @file autonomous-operations-orchestrator.sh
-# @module infrastructure
-# @description Master orchestrator for complete autonomous operations hardening
-# @governance GOV-002 - Autonomous operational excellence implementation
-# @idempotent YES - Safe for continuous operational improvement
+# @governance: Autonomous operations orchestration — self-healing deployments and self-recovery
+# Purpose: Master orchestrator for complete autonomous operations hardening
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+# Idempotent: YES - Safe for continuous operational improvement
+
 set -euo pipefail
 
+readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly ORCHESTRATION_ID="ops-$(date +%s)"
-readonly LOG_DIR="./artifacts/autonomous-ops-${ORCHESTRATION_ID}"
+readonly LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/artifacts/autonomous-ops-${ORCHESTRATION_ID}}"
 readonly MASTER_REPORT="${LOG_DIR}/AUTONOMOUS-OPERATIONS-MASTER-REPORT.md"
 
 mkdir -p "$LOG_DIR"

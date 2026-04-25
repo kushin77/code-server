@@ -1,10 +1,11 @@
 #!/bin/bash
 
 ###
-# @file scripts/ops/cleanup-uncommitted.sh
-# @module operations/cleanup
-# @description Clean up uncommitted changes and generated artifacts
-# @governance GOV-002: Operational cleanup for deployment readiness
+# @governance: Cleanup uncommitted state — remove transient artifacts before deployment
+# Purpose: Clean up uncommitted changes and generated artifacts
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
 ###
 
 set -euo pipefail

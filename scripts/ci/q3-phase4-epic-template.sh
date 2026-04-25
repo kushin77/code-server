@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# @file        scripts/ci/q3-phase4-epic-template.sh
-# @description Generate Q3 Phase 4 GitHub Epic #1537 template
-# @type        IaC-compliant documentation generator
+# @governance: Q3 Phase 4 epic generation — create GitHub issue templates at scale
+# Purpose: Generate Q3 Phase 4 GitHub Epic #1537 template and related issues
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1539 (Q3 Phase 4)
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-EPIC_TEMPLATE="${REPO_ROOT}/artifacts/EPIC-1537-KUBERNETES-MIGRATION-TEMPLATE.md"
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+readonly EPIC_TEMPLATE="${EPIC_TEMPLATE:-${REPO_ROOT}/artifacts/EPIC-1537-KUBERNETES-MIGRATION-TEMPLATE.md}"
 
 cat > "${EPIC_TEMPLATE}" << 'EOF'
 # Epic #1537: Kubernetes Migration - Q3 2026 Phase 4

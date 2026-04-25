@@ -17,7 +17,7 @@ source "$(dirname "$0")/../../scripts/_common/hosts.sh" 2>/dev/null || true
 # ── Config ────────────────────────────────────────────────────────────────────
 DRY_RUN="${DRY_RUN:-0}"
 RECOVERY_TIMEOUT="${RECOVERY_TIMEOUT:-60}"    # seconds to wait for recovery
-HEALTH_URL="${HEALTH_URL:-https://ide.kushnir.cloud/oauth2/ping}"
+HEALTH_URL="${HEALTH_URL:-https://ide.${APEX_DOMAIN:-kushnir.cloud}/oauth2/ping}"
 REPORT_FILE="artifacts/reports/chaos-test-$(date +%Y%m%d-%H%M%S).json"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

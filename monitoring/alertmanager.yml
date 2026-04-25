@@ -77,7 +77,7 @@ receivers:
         http_config:
           follow_redirects: true
     email_configs:
-      - to: "${ALERTMANAGER_OPS_EMAIL:-ops@kushnir.cloud}"
+      - to: "${ALERTMANAGER_OPS_EMAIL:-ops@${APEX_DOMAIN:-kushnir.cloud}}"
         send_resolved: true
         headers:
           Subject: "[P0 CRITICAL] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service }}"
@@ -92,7 +92,7 @@ receivers:
 
   - name: warning-multi
     email_configs:
-      - to: "${ALERTMANAGER_OPS_EMAIL:-ops@kushnir.cloud}"
+      - to: "${ALERTMANAGER_OPS_EMAIL:-ops@${APEX_DOMAIN:-kushnir.cloud}}"
         send_resolved: true
         headers:
           Subject: "[P1 WARNING] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service }}"

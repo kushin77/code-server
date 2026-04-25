@@ -12,12 +12,14 @@ global:
   imagePullSecrets: []
   
   # Domain and TLS (from environment SSOT)
-  domain: "kushnir.cloud"
-  apiDomain: "api.kushnir.cloud"
-  ideDomain: "ide.kushnir.cloud"
-  authDomain: "auth.kushnir.cloud"
+  # Override via: helm install ... --set global.domain=example.com
+  # Or environment: APEX_DOMAIN=example.com helm install ...
+  domain: "${APEX_DOMAIN:-kushnir.cloud}"
+  apiDomain: "api.${APEX_DOMAIN:-kushnir.cloud}"
+  ideDomain: "ide.${APEX_DOMAIN:-kushnir.cloud}"
+  authDomain: "auth.${APEX_DOMAIN:-kushnir.cloud}"
   tlsEnabled: true
-  tlsEmail: "admin@kushnir.cloud"
+  tlsEmail: "admin@${APEX_DOMAIN:-kushnir.cloud}"
   certIssuer: "letsencrypt-prod"  # cert-manager integration
   
   # Logging and Observability
@@ -704,7 +706,7 @@ certManager:
   enabled: true
   namespace: "cert-manager"
   clusterIssuer: "letsencrypt-prod"
-  email: "admin@kushnir.cloud"
+  email: "admin@${APEX_DOMAIN:-kushnir.cloud}"
   solvers:
     - http01:
         ingress:
@@ -718,7 +720,7 @@ ingress:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/rate-limit: "100"
   hosts:
-    - host: "api.kushnir.cloud"
+    - host: "api.${APEX_DOMAIN:-kushnir.cloud}"
       paths:
         - path: /
           pathType: Prefix
@@ -727,7 +729,7 @@ ingress:
               name: api
               port:
                 number: 3100
-    - host: "ide.kushnir.cloud"
+    - host: "ide.${APEX_DOMAIN:-kushnir.cloud}"
       paths:
         - path: /
           pathType: Prefix
@@ -737,9 +739,9 @@ ingress:
               port:
                 number: 3000
   tls:
-    - secretName: "api-kushnir-cloud-tls"
+    - secretName: "api-tls"
       hosts:
-        - "api.kushnir.cloud"
-    - secretName: "ide-kushnir-cloud-tls"
+        - "api.${APEX_DOMAIN:-kushnir.cloud}"
+    - secretName: "ide-tls"
       hosts:
-        - "ide.kushnir.cloud"
+        - "ide.${APEX_DOMAIN:-kushnir.cloud}"

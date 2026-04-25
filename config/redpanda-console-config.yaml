@@ -53,8 +53,8 @@ console:
 # Authentication (if needed in future)
 #auth:
 #  enabled: false
-#  # OIDC configuration for kushnir.cloud SSO
+#  # OIDC configuration for SSO
 #  oidc:
 #    clientId: "${OIDC_CLIENT_ID}"
 #    clientSecret: "${OIDC_CLIENT_SECRET}"
-#    issuerUrl: "https://auth.kushnir.cloud"
+#    issuerUrl: "https://auth.${APEX_DOMAIN:-kushnir.cloud}"

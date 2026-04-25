@@ -39,8 +39,8 @@ services:
       JWT_ALGORITHM: RS256
       JWT_EXPIRY_SECONDS: 900
       JWT_REFRESH_EXPIRY_DAYS: 30
-      JWT_ISSUER: "https://auth.kushnir.cloud"
-      JWT_AUDIENCE: "https://api.kushnir.cloud"
+      JWT_ISSUER: "https://auth.${APEX_DOMAIN:-kushnir.cloud}"
+      JWT_AUDIENCE: "https://api.${APEX_DOMAIN:-kushnir.cloud}"
       
       # OAuth Providers (from secrets)
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
@@ -54,7 +54,7 @@ services:
       EMAIL_ENABLED: "true"
       EMAIL_PROVIDER: sendgrid
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
-      EMAIL_FROM_ADDRESS: noreply@kushnir.cloud
+      EMAIL_FROM_ADDRESS: "noreply@${APEX_DOMAIN:-kushnir.cloud}"
       EMAIL_FROM_NAME: "ElevatedIQ Auth"
       
       # Logging

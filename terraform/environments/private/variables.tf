@@ -3,7 +3,7 @@
 
 variable "apex_domain" {
   type        = string
-  description = "Organization's apex domain (e.g., kushnir.cloud)"
+  description = "Organization's apex domain (e.g., example.com)"
 }
 
 variable "primary_host" {

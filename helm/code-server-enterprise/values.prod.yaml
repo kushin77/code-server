@@ -1,12 +1,11 @@
 ## Production Kubernetes Helm Values - Phase 4 Migration
-## Values file for kushnir.cloud enterprise deployment on EKS
-## 
-## Usage: helm install code-server ./helm/code-server-enterprise \
-##   -f values.prod.yaml -n production
+## Values file for enterprise deployment on EKS
+## Override domain via: helm install ... --set global.domain=example.com
+## Or environment: APEX_DOMAIN=example.com helm install ...
 
 global:
   environment: production
-  domain: kushnir.cloud
+  domain: "${APEX_DOMAIN:-kushnir.cloud}"
   tlsEnabled: true
   certIssuer: "letsencrypt-prod"
   imagePullPolicy: IfNotPresent
@@ -31,20 +30,20 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     kubernetes.io/ingress.class: istio
   hosts:
-    - host: api.kushnir.cloud
+    - host: "api.${APEX_DOMAIN:-kushnir.cloud}"
       paths:
         - path: /
           pathType: Prefix
-    - host: app.kushnir.cloud
+    - host: "app.${APEX_DOMAIN:-kushnir.cloud}"
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: kushnir-tls
+    - secretName: enterprise-tls
       hosts:
-        - api.kushnir.cloud
-        - app.kushnir.cloud
-        - kushnir.cloud
+        - "api.${APEX_DOMAIN:-kushnir.cloud}"
+        - "app.${APEX_DOMAIN:-kushnir.cloud}"
+        - "${APEX_DOMAIN:-kushnir.cloud}"
 
 # Istio configuration
 istio:
@@ -99,7 +98,7 @@ statelessServices:
     image: kushin77/code-server-frontend:latest
     port: 3000
     env:
-      API_URL: https://api.kushnir.cloud
+      API_URL: "https://api.${APEX_DOMAIN:-kushnir.cloud}"
     resources:
       requests:
         memory: "256Mi"

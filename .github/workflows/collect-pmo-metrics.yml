@@ -1,0 +1,72 @@
+name: Collect PMO Metrics
+
+on:
+  schedule:
+    # Every Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      period:
+        description: 'Period in days'
+        required: false
+        default: '30'
+
+jobs:
+  collect-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Collect project metrics
+        run: |
+          chmod +x scripts/metrics/collect-project-metrics.sh
+          bash scripts/metrics/collect-project-metrics.sh ${{ github.event.inputs.period || 30 }} json
+
+      - name: Parse metrics
+        id: metrics
+        run: |
+          LATEST=$(ls -t artifacts/project-metrics/*.json 2>/dev/null | head -1)
+          if [ -f "$LATEST" ]; then
+            echo "metrics_file=$LATEST" >> $GITHUB_OUTPUT
+            cat "$LATEST" | jq . >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## PMO Metrics Collection" >> $GITHUB_STEP_SUMMARY
+          echo "Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "${{ steps.metrics.outputs.metrics_file }}" ]; then
+            echo "✅ Metrics collected successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Key Metrics:" >> $GITHUB_STEP_SUMMARY
+            cat "${{ steps.metrics.outputs.metrics_file }}" | jq '.velocity, .cycle_time, .pr_metrics' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Metrics collection failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-metrics
+          path: artifacts/project-metrics/
+          retention-days: 90
+
+      - name: Commit metrics (if changed)
+        if: always()
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          if [ -n "$(git status -s artifacts/project-metrics/)" ]; then
+            git add artifacts/project-metrics/
+            git commit -m "metrics: Update PMO metrics ($(date +%Y-%m-%d))"
+            git push origin main || true
+          fi

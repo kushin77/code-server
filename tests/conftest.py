@@ -232,3 +232,99 @@ def invalid_passwords():
         "NoNumbers!",  # No numbers
         "NoSpecialChar1",  # No special char
     ]
+
+
+# ============================================================================
+# FIXTURES: Phase 6 Qdrant & Multi-Tenant Testing
+# ============================================================================
+
+@pytest.fixture
+def sample_vector():
+    """Generate a sample 1536-dimensional vector (OpenAI text-embedding-3-small)."""
+    import random
+    return [random.uniform(-1.0, 1.0) for _ in range(1536)]
+
+
+@pytest.fixture
+def sample_embedding_document():
+    """Provide a sample document for embedding tests."""
+    return {
+        "id": "doc-test-001",
+        "title": "Test Document",
+        "content": "This is a test document for unit testing organizational memory.",
+        "source_url": "https://example.com/docs/test",
+        "tags": ["test", "unit", "phase6"],
+        "confidence_score": 0.95,
+        "timestamp": "2026-04-25T12:00:00Z",
+    }
+
+
+@pytest.fixture
+def tenant_context_standard():
+    """Provide a standard tier tenant context."""
+    return {
+        "tenant_id": "tenant-unit-test-001",
+        "namespace": "default",
+        "tier": "standard",
+        "quota_limit": 100000,
+    }
+
+
+@pytest.fixture
+def tenant_context_enterprise():
+    """Provide an enterprise tier tenant context."""
+    return {
+        "tenant_id": "tenant-unit-test-enterprise",
+        "namespace": "production",
+        "tier": "enterprise",
+        "quota_limit": 1000000,
+    }
+
+
+@pytest.fixture
+def qdrant_collection_config():
+    """Provide standard Qdrant collection configuration."""
+    return {
+        "name": "test-collection",
+        "vectors": {
+            "size": 1536,
+            "distance": "Cosine",
+            "on_disk": False,
+        },
+        "replication_factor": 2,
+        "write_consistency_factor": 1,
+        "optimizers_config": {
+            "default_segment_number": 2,
+            "memmap_threshold": 20000,
+        },
+    }
+
+
+@pytest.fixture
+def mock_qdrant_client(mocker):
+    """Mock Qdrant client with common methods."""
+    mock = mocker.MagicMock()
+    mock.create_collection = mocker.AsyncMock()
+    mock.delete_collection = mocker.AsyncMock()
+    mock.collection_exists = mocker.AsyncMock(return_value=True)
+    mock.upsert = mocker.AsyncMock()
+    mock.search = mocker.AsyncMock(return_value=[])
+    mock.delete = mocker.AsyncMock()
+    mock.get = mocker.AsyncMock()
+    mock.get_collection = mocker.AsyncMock()
+    mock.create_payload_index = mocker.AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def multi_tenant_filter_document():
+    """Provide a document with multi-tenant payload for filtering."""
+    return {
+        "id": "doc-mt-001",
+        "title": "Multi-tenant Test",
+        "content": "Testing multi-tenant isolation and filtering.",
+        "tenant_id": "tenant-unit-test-001",
+        "namespace": "test",
+        "created_at": "2026-04-25T12:00:00Z",
+        "tags": ["isolation", "filtering"],
+    }

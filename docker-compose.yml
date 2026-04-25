@@ -1142,7 +1142,7 @@ services:
     command:
       - sh
       - -lc
-      - chown -R 11434:11434 /home/ollama/.ollama
+      - mkdir -p /home/ollama/.ollama; owner="$$(stat -c '%u:%g' /home/ollama/.ollama 2>/dev/null || true)"; [ "$$owner" = "11434:11434" ] || chown -R 11434:11434 /home/ollama/.ollama
     volumes:
       - ollama_models:/home/ollama/.ollama
     restart: "no"
@@ -1241,7 +1241,7 @@ services:
     user: "65534:65534"  # @security GOV-002 - run as non-root nobody user
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
-      - ./config/otel-collector.yaml:/etc/otel-collector.yaml:ro
+      - ./config/otel-collector.config.yaml:/etc/otel-collector.yaml:ro
     ports:
       - "4317:4317"    # OTLP gRPC
       - "4318:4318"    # OTLP HTTP
@@ -1294,7 +1294,7 @@ services:
     user: "10001:10001"  # @security GOV-002 - run as non-root tempo user
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
-      - ./config/tempo.yaml:/etc/tempo.yaml:ro
+      - ./config/tempo.config.yaml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
       - "3200:3200"    # Tempo HTTP API

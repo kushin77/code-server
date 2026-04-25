@@ -9,83 +9,83 @@
 # Can reference users, teams, or organizations
 
 # Root-level configuration files (infrastructure/build configuration)
-Dockerfile @kushin77
-docker-compose*.yml @kushin77
-Caddyfile @kushin77
-.env.schema.json @kushin77
-pnpm-workspace.yaml @kushin77
+Dockerfile @kushin77 @BestGaaS220 @JoshuaKushnir
+docker-compose*.yml @kushin77 @BestGaaS220 @JoshuaKushnir
+Caddyfile @kushin77 @BestGaaS220 @JoshuaKushnir
+.env.schema.json @kushin77 @BestGaaS220 @JoshuaKushnir
+pnpm-workspace.yaml @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Terraform and infrastructure-as-code
-terraform/ @kushin77
-*.tf @kushin77
-variables.tf @kushin77
-main.tf @kushin77
+terraform/ @kushin77 @BestGaaS220 @JoshuaKushnir
+*.tf @kushin77 @BestGaaS220 @JoshuaKushnir
+variables.tf @kushin77 @BestGaaS220 @JoshuaKushnir
+main.tf @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Kubernetes configuration
-k8s/ @kushin77
-kubernetes/ @kushin77
+k8s/ @kushin77 @BestGaaS220 @JoshuaKushnir
+kubernetes/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # CI/CD workflow definitions
-.github/workflows/ @kushin77
-.github/CODEOWNERS @kushin77
-.gitignore @kushin77
+.github/workflows/ @kushin77 @BestGaaS220 @JoshuaKushnir
+.github/CODEOWNERS @kushin77 @BestGaaS220 @JoshuaKushnir
+.gitignore @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Documentation (governance, architecture, runbooks)
-docs/ @kushin77
-docs/governance/ @kushin77
-docs/architecture/ @kushin77
-docs/runbooks/ @kushin77
-*.md @kushin77
+docs/ @kushin77 @BestGaaS220 @JoshuaKushnir
+docs/governance/ @kushin77 @BestGaaS220 @JoshuaKushnir
+docs/architecture/ @kushin77 @BestGaaS220 @JoshuaKushnir
+docs/runbooks/ @kushin77 @BestGaaS220 @JoshuaKushnir
+*.md @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Configuration and schemas
-config/ @kushin77
-schemas/ @kushin77
-.env.schema.json @kushin77
+config/ @kushin77 @BestGaaS220 @JoshuaKushnir
+schemas/ @kushin77 @BestGaaS220 @JoshuaKushnir
+.env.schema.json @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Core platform services
-apps/backend/ @kushin77
-apps/api/ @kushin77
-apps/control-plane/ @kushin77
-apps/paperclip-control-plane/ @kushin77
+apps/backend/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/api/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/control-plane/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/paperclip-control-plane/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Runtime services
-apps/agent-runtime/ @kushin77
-apps/execution-scheduler/ @kushin77
-apps/env-provisioner/ @kushin77
+apps/agent-runtime/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/execution-scheduler/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/env-provisioner/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # AI/ML services
-apps/multimodal-ai/ @kushin77
-apps/memory-engine/ @kushin77
-apps/knowledge-graph/ @kushin77
+apps/multimodal-ai/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/memory-engine/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/knowledge-graph/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Frontend and IDE extensions
-apps/frontend/ @kushin77
-apps/ide-extension/ @kushin77
-apps/extensions/ @kushin77
+apps/frontend/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/ide-extension/ @kushin77 @BestGaaS220 @JoshuaKushnir
+apps/extensions/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Repository governance
-.github/ @kushin77
-.gitignore @kushin77
-pnpm-workspace.yaml @kushin77
-package.json @kushin77
-pnpm-lock.yaml @kushin77
+.github/ @kushin77 @BestGaaS220 @JoshuaKushnir
+.gitignore @kushin77 @BestGaaS220 @JoshuaKushnir
+pnpm-workspace.yaml @kushin77 @BestGaaS220 @JoshuaKushnir
+package.json @kushin77 @BestGaaS220 @JoshuaKushnir
+pnpm-lock.yaml @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Shared packages (all changes require review)
-packages/shared/ @kushin77
-sdk/ @kushin77
-lib/ @kushin77
+packages/shared/ @kushin77 @BestGaaS220 @JoshuaKushnir
+sdk/ @kushin77 @BestGaaS220 @JoshuaKushnir
+lib/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Observability, monitoring, and logging
-dashboards/ @kushin77
-grafana/ @kushin77
-monitoring/ @kushin77
-opa/ @kushin77
+dashboards/ @kushin77 @BestGaaS220 @JoshuaKushnir
+grafana/ @kushin77 @BestGaaS220 @JoshuaKushnir
+monitoring/ @kushin77 @BestGaaS220 @JoshuaKushnir
+opa/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Operations and deployment
-scripts/ @kushin77
-operations/ @kushin77
-playbooks/ @kushin77
-migrations/ @kushin77
+scripts/ @kushin77 @BestGaaS220 @JoshuaKushnir
+operations/ @kushin77 @BestGaaS220 @JoshuaKushnir
+playbooks/ @kushin77 @BestGaaS220 @JoshuaKushnir
+migrations/ @kushin77 @BestGaaS220 @JoshuaKushnir
 
 # Default - apply to any file not explicitly covered above
-* @kushin77
+* @kushin77 @BestGaaS220 @JoshuaKushnir

@@ -31,7 +31,7 @@ wait_for_qdrant_health() {
   local attempt=0
 
   while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if curl -sf http://localhost:6333/health > /dev/null 2>&1; then
+    if curl -sf http://localhost:6333/readyz > /dev/null 2>&1; then
       return 0
     fi
 
@@ -90,7 +90,7 @@ services:
     environment:
       - QDRANT_API_KEY=
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -145,7 +145,7 @@ verify_qdrant_health() {
   local attempt=0
   
   while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if curl -sf http://localhost:6333/health > /dev/null 2>&1; then
+    if curl -sf http://localhost:6333/readyz > /dev/null 2>&1; then
       log_success "Qdrant health check passed"
       return 0
     fi

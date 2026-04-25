@@ -304,7 +304,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://localhost:6333/health"
+        - "http://localhost:6333/readyz"
       interval: 30s
       timeout: 5s
       retries: 3

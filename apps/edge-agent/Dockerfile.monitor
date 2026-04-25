@@ -1,0 +1,41 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY apps/edge-agent/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy health monitor script
+COPY scripts/edge-agent/monitor-edge-agent-health.sh ./scripts/
+RUN chmod +x ./scripts/monitor-edge-agent-health.sh
+
+# Create logging directory
+RUN mkdir -p /var/log/health-monitor
+
+# Expose Prometheus metrics port
+EXPOSE 9090
+
+# Health check - verify monitoring process
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9090/metrics || exit 1
+
+# Environment variables
+ENV CONTROL_PLANE=http://control-plane:8080
+ENV HEALTH_CHECK_INTERVAL=10
+ENV HEARTBEAT_TIMEOUT=60
+ENV PROMETHEUS_ENABLED=true
+ENV PROMETHEUS_PORT=9090
+ENV LOG_LEVEL=INFO
+ENV LOG_DIR=/var/log/health-monitor
+
+# Run health monitor in foreground
+CMD ["bash", "./scripts/monitor-edge-agent-health.sh"]

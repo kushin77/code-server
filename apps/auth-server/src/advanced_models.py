@@ -196,6 +196,7 @@ class EmailChangeRequest(Base):
     
     __table_args__ = (
         Index("ix_email_change_user_id", "user_id"),
+        {"extend_existing": True},
     )
 
 

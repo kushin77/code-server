@@ -397,6 +397,33 @@ main() {
             check_prerequisites "load"
             run_performance_benchmark
             ;;
+        chaos)
+            log_info "Running chaos engineering tests..."
+            if [ -f scripts/ops/chaos-test.sh ]; then
+                chmod +x scripts/ops/chaos-test.sh
+                ./scripts/ops/chaos-test.sh all || true
+            else
+                log_warning "Chaos test script not found"
+            fi
+            ;;
+        security)
+            log_info "Running security scanning..."
+            if [ -f scripts/security/security-scan.sh ]; then
+                chmod +x scripts/security/security-scan.sh
+                ./scripts/security/security-scan.sh comprehensive || true
+            else
+                log_warning "Security scan script not found"
+            fi
+            ;;
+        dr-drills)
+            log_info "Running disaster recovery drills..."
+            if [ -f scripts/ops/disaster-recovery-drills.sh ]; then
+                chmod +x scripts/ops/disaster-recovery-drills.sh
+                ./scripts/ops/disaster-recovery-drills.sh all || true
+            else
+                log_warning "DR drills script not found"
+            fi
+            ;;
         cleanup)
             cleanup_stack
             ;;

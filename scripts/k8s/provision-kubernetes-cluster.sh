@@ -21,6 +21,8 @@ readonly REGION="${AWS_REGION:-us-east-1}"
 readonly NODE_TYPE="${NODE_TYPE:-t3.xlarge}"
 readonly NODE_COUNT="${NODE_COUNT:-3}"
 readonly K8S_VERSION="${K8S_VERSION:-1.28}"
+readonly AUTH_DOMAIN="${AUTH_DOMAIN:?AUTH_DOMAIN must be set}"
+readonly OIDC_ISSUER="${OIDC_ISSUER:-https://${AUTH_DOMAIN}}"
 readonly CLUSTER_VERSION="phase4-migration-$(date +%Y%m%d)"
 
 # Color codes
@@ -316,7 +318,7 @@ configure_istio_mesh() {
   kubectl label namespace production istio-injection=enabled
   
   # Enable mutual TLS
-  kubectl apply -f - <<'ISTIO_CONFIG'
+  kubectl apply -f - <<EOF
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
@@ -334,9 +336,9 @@ metadata:
 spec:
   providers:
   - name: "oidc-provider"
-    issuer: "https://oauth2.kushnir.cloud"
-    jwksUri: "https://oauth2.kushnir.cloud/.well-known/jwks.json"
-ISTIO_CONFIG
+    issuer: "${OIDC_ISSUER}"
+    jwksUri: "${OIDC_ISSUER}/.well-known/jwks.json"
+EOF
   
   log_success "Istio mesh configured with mTLS"
 }

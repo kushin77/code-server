@@ -847,7 +847,7 @@ services:
       - PAPERCLIP_URL=http://paperclip-control-plane:8010
       - REPUTATION_URL=http://reputation-engine:8000
       - SCHEDULER_URL=http://execution-scheduler:8080
-      - OIDC_ISSUER=https://auth.internal
+      - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
     depends_on:
       paperclip:
@@ -901,7 +901,7 @@ services:
       - PAPERCLIP_URL=http://paperclip-control-plane:8010
       - REPUTATION_URL=http://reputation-engine:8000
       - SCHEDULER_URL=http://execution-scheduler:8080
-      - OIDC_ISSUER=https://auth.internal
+      - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
     depends_on:
       paperclip:
@@ -955,7 +955,7 @@ services:
       - PAPERCLIP_URL=http://paperclip-control-plane:8010
       - REPUTATION_URL=http://reputation-engine:8000
       - SCHEDULER_URL=http://execution-scheduler:8080
-      - OIDC_ISSUER=https://auth.internal
+      - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
     depends_on:
       paperclip:
@@ -1009,7 +1009,7 @@ services:
       - PAPERCLIP_URL=http://paperclip-control-plane:8010
       - REPUTATION_URL=http://reputation-engine:8000
       - SCHEDULER_URL=http://execution-scheduler:8080
-      - OIDC_ISSUER=https://auth.internal
+      - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
     depends_on:
       paperclip:

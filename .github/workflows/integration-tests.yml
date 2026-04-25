@@ -80,8 +80,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/apps/auth-server
         run: |
           cd apps/auth-server
-          # Force explicit config path to avoid transient malformed pytest.ini content in CI checkout.
-          pytest -c /dev/null tests/integration/ \
+          pytest -c pytest.ini tests/integration/ \
+            --ignore=tests/integration/test_gateway_integration.py \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml \
@@ -95,8 +95,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/apps/auth-server
         run: |
           cd apps/auth-server
-          # Keep unit test invocation aligned with integration run to avoid parser-related CI flakiness.
-          pytest -c /dev/null tests/unit/ \
+          pytest -c pytest.ini tests/unit/ \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml \

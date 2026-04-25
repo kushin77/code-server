@@ -417,7 +417,7 @@ services:
     container_name: reputation-engine
     user: "1001:1001"
     ports:
-      - "8002:8002"
+      - "8002:8000"
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - KAFKA_BROKER=redpanda:9092
@@ -466,7 +466,7 @@ services:
       - AGENT_RUNTIME_HOST=0.0.0.0
       - LOG_LEVEL=INFO
       - OPA_URL=http://opa:8181
-      - REPUTATION_ENGINE_URL=http://reputation-engine:8002
+      - REPUTATION_ENGINE_URL=http://reputation-engine:8000
     depends_on:
       opa:
         condition: service_healthy
@@ -587,7 +587,7 @@ services:
       - "8010:8010"
     environment:
       - OPA_URL=http://opa:8181
-      - REPUTATION_ENGINE_URL=http://reputation-engine:8002
+      - REPUTATION_ENGINE_URL=http://reputation-engine:8000
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       - LOG_LEVEL=INFO
     depends_on:

@@ -21,7 +21,10 @@ from qdrant_client.http.models import (
     FieldCondition,
     MatchValue,
     HasIdCondition,
+    PayloadSchemaType,
 )
+
+from apps.memory_engine.multi_tenant import MultiTenantManager, TenantContext
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +68,7 @@ class QdrantMemoryClient:
         self.port = port
         self.client = QdrantClient(host=host, port=port)
         self.vector_size = 384  # nomic-embed-text embedding dimension
+        self.multi_tenant = MultiTenantManager(self)
         logger.info(f"Connected to Qdrant at {host}:{port}")
 
     def ensure_collection(self, collection_name: str) -> None:
@@ -78,6 +82,9 @@ class QdrantMemoryClient:
                 collection_name=collection_name,
                 vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
             )
+        
+        # Ensure multi-tenant indexes exist
+        self.multi_tenant.ensure_tenant_optimizations(collection_name)
 
     def store_document(
         self,

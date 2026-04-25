@@ -209,11 +209,10 @@ class EdgeAgentRegistryService:
             last_heartbeat_at=now,
         )
         self._agents[request.agent_id] = record
-          
-          # METRICS
-          AGENT_REGISTRATIONS.labels(region=request.region).inc()
-          ACTIVE_AGENTS.set(len(self.list_agents(include_stale=False)))
-          
+
+        # METRICS
+        AGENT_REGISTRATIONS.labels(region=request.region).inc()
+        ACTIVE_AGENTS.set(len(self.list_agents(include_stale=False)))
 
     def record_heartbeat(
         self,

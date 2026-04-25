@@ -8,11 +8,10 @@ from enum import Enum
 import uuid
 
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Index, JSON
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from pydantic import BaseModel, EmailStr, Field, validator
-
-Base = declarative_base()
+from src.models import Base
 
 
 # ============================================================================

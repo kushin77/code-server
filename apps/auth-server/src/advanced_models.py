@@ -16,11 +16,10 @@ import uuid
 from sqlalchemy import (
     Column, String, DateTime, Boolean, ForeignKey, Text, JSON, Integer, Index, LargeBinary
 )
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from pydantic import BaseModel, EmailStr, Field
-
-Base = declarative_base()
+from src.models import Base
 
 
 # ============================================================================

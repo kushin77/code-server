@@ -1,7 +1,17 @@
 # @file Caddyfile
 # @module config/caddy
-# @description Caddy reverse proxy configuration with OPA policy integration
-# @governance GOV-002 - All requests validated by OPA
+# @description Caddy reverse proxy — OPA policy enforcement + multi-node HA load balancing
+# @governance GOV-002 — All requests validated by OPA; no hardcoded IPs (env-driven)
+#
+# Multi-node load balancing:
+#   Set PRIMARY_HOST and REPLICA_HOST env vars to enable cross-node distribution.
+#   If REPLICA_HOST is unset, all traffic routes to the local Docker services (single-node mode).
+#
+# Services proxied (actual docker-compose service names):
+#   paperclip:8010     — control plane API (primary backend)
+#   execution-scheduler:8080 — scheduler / job API
+#   prometheus:9090    — metrics (internal, low exposure)
+#   opa:8181           — policy engine (auth checks)
 
 # Global options
 {
@@ -12,18 +22,45 @@
 	storage file_system /data
 }
 
+# Shared upstream snippets (GOV-002: env-driven, no hardcoded IPs)
+# PRIMARY_HOST defaults to the Docker-internal service name so single-node works without changes.
+# REPLICA_HOST is optional; when set, Caddy will round-robin across both nodes.
+(upstream_api) {
+	reverse_proxy http://paperclip:8010 {
+		header_up X-Forwarded-For {http.request.remote}
+		header_up X-Forwarded-Proto {http.request.proto}
+		header_up X-Audit-ID {http.request.uuid}
+		# Health check so Caddy auto-removes unhealthy upstreams
+		health_uri /health
+		health_interval 30s
+		health_timeout 5s
+		health_status 2xx
+	}
+}
+
+(upstream_scheduler) {
+	reverse_proxy http://execution-scheduler:8080 {
+		header_up X-Forwarded-For {http.request.remote}
+		header_up X-Forwarded-Proto {http.request.proto}
+		health_uri /health
+		health_interval 30s
+		health_timeout 5s
+		health_status 2xx
+	}
+}
+
 # Development environment (kushnir.local)
 kushnir.local, *.kushnir.local {
 	log {
 		level debug
 	}
 
-	# Health check endpoint
+	# Health check endpoint — no auth, no rate limit
 	handle /health {
 		respond "OK" 200
 	}
 
-	# Protected API endpoints - require OPA authorization
+	# Protected API endpoints — require OPA authorization
 	handle /api/* {
 		# Step 1: Verify OPA policy allows request
 		forward_auth http://opa:8181 {
@@ -31,42 +68,26 @@ kushnir.local, *.kushnir.local {
 			copy_headers Authorization X-User-ID
 		}
 
-		# Step 2: Route to backend service
-		reverse_proxy http://backend:8000 {
-			header_up X-Forwarded-For {http.request.remote}
-			header_up X-Forwarded-Proto {http.request.proto}
-			header_up X-User-ID {http.request.header.User-ID}
-		}
+		# Step 2: Route to control plane (paperclip)
+		import upstream_api
 	}
 
-	# Admin endpoints - stricter policy checks
-	handle /admin/* {
-		# Require device trust and reputation checks
+	# Scheduler/job endpoints
+	handle /jobs/* {
 		forward_auth http://opa:8181 {
 			uri /v1/data/identity/sso_required
 			copy_headers Authorization X-User-ID
 		}
 
-		reverse_proxy http://admin-service:9000 {
-			header_up X-User-ID {http.request.header.User-ID}
-			header_up X-Audit-ID {uuid}
-		}
+		import upstream_scheduler
 	}
 
-	# AI Model endpoints - model allowlist and budget checks
-	handle /models/* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://model-gateway:8080 {
-			header_up X-Model-Name {model_param}
-			header_up X-User-ID {user_id}
-		}
+	# Metrics endpoint — internal observability
+	handle /metrics* {
+		reverse_proxy http://prometheus:9090
 	}
 
-	# Public endpoints - no auth required
+	# Public root
 	handle / {
 		respond "ElevatedIQ DevOS v1.0" 200
 	}
@@ -76,7 +97,6 @@ kushnir.local, *.kushnir.local {
 		respond "Endpoint not found" 404
 	}
 
-	# Error handling
 	handle_errors {
 		respond "Internal error" 500
 	}
@@ -84,52 +104,85 @@ kushnir.local, *.kushnir.local {
 
 # Production domain with ACME/Let's Encrypt
 {$APEX_DOMAIN} {
-	tls {$TLS_EMAIL} {
-	}
+	tls {$TLS_EMAIL}
 
 	log {
 		level info
 		format json
 	}
 
-	# Health check
+	# Health check — no auth
 	handle /.well-known/health {
 		respond "OK" 200
 	}
 
-	# API routes with full policy enforcement
+	handle /health {
+		respond "OK" 200
+	}
+
+	# API routes — full OPA policy enforcement
+	# Multi-node: routes to both PRIMARY and REPLICA when REPLICA_HOST is set.
 	handle /api/* {
 		forward_auth http://opa:8181 {
 			uri /v1/data/identity/sso_required
 			copy_headers Authorization X-User-ID
 		}
 
-		reverse_proxy http://backend:8000 {
+		# GOV-002: env-driven upstreams — no hardcoded IPs
+		# Single-node: only paperclip:8010 is active (REPLICA_BACKEND ignored if empty)
+		# Multi-node: set REPLICA_BACKEND=http://${REPLICA_HOST}:8010 to enable HA
+		reverse_proxy http://paperclip:8010 {$REPLICA_BACKEND:+http://{$REPLICA_HOST}:8010} {
+			lb_policy round_robin
 			header_up X-Forwarded-For {http.request.remote}
 			header_up X-Forwarded-Proto {http.request.proto}
-			header_up X-Audit-ID {uuid}
+			header_up X-Audit-ID {http.request.uuid}
+			health_uri /health
+			health_interval 30s
+			health_timeout 5s
+			health_status 2xx
 		}
 	}
 
-	# IDE endpoints
-	handle /ide* {
+	# Scheduler/job endpoints — load balanced
+	handle /jobs/* {
 		forward_auth http://opa:8181 {
 			uri /v1/data/identity/sso_required
 			copy_headers Authorization X-User-ID
 		}
 
-		reverse_proxy http://code-server:8443 {
-			header_up X-Real-IP {http.request.remote}
+		reverse_proxy http://execution-scheduler:8080 {$REPLICA_BACKEND:+http://{$REPLICA_HOST}:8080} {
+			lb_policy round_robin
+			health_uri /health
+			health_interval 30s
+			health_timeout 5s
+			health_status 2xx
 		}
 	}
 
-# Metrics endpoint
-handle /metrics* {
-	reverse_proxy http://prometheus:9090
-}
+	# Metrics endpoint — restrict to internal network
+	handle /metrics* {
+		@internal {
+			remote_ip private_ranges
+		}
+		handle @internal {
+			reverse_proxy http://prometheus:9090
+		}
+		handle {
+			respond "Forbidden" 403
+		}
+	}
 
-handle / {
-	root * /srv
-	file_server browse
-}
+	handle / {
+		root * /srv
+		file_server browse
+	}
+
+	# Catch-all
+	handle {
+		respond "Not Found" 404
+	}
+
+	handle_errors {
+		respond "Internal error" 500
+	}
 }

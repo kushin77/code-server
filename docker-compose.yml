@@ -246,6 +246,10 @@ services:
       - APEX_DOMAIN=${APEX_DOMAIN}
       - TLS_EMAIL=${TLS_EMAIL}
       - LOG_LEVEL=${LOG_LEVEL}
+      # Multi-node HA: set REPLICA_HOST to enable cross-node load balancing.
+      # Leave unset for single-node deployments (GOV-002: env-driven, no hardcoded IPs).
+      - REPLICA_HOST=${REPLICA_HOST:-}
+      - REPLICA_BACKEND=${REPLICA_BACKEND:-}
     healthcheck:
       test:
         - CMD

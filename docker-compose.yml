@@ -21,6 +21,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   redis-init:
     image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
@@ -35,6 +43,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   redpanda-init:
     image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
@@ -49,6 +65,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   prometheus-init:
     image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
@@ -63,6 +87,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   loki-init:
     image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
@@ -77,6 +109,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   alertmanager-init:
     image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
@@ -91,6 +131,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   opa:
     image: openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe
@@ -420,6 +468,14 @@ services:
     restart: "no"
     networks:
       - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   qdrant:
     image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
@@ -1017,6 +1073,14 @@ services:
     networks:
       - services
       - database
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   postgres:
     image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
@@ -1055,10 +1119,10 @@ services:
       resources:
         limits:
           cpus: "2.0"
-          memory: 4g
+          memory: 8g
         reservations:
           cpus: "1.0"
-          memory: 2g
+          memory: 4g
 
   redis:
     image: redis:7-alpine@sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6
@@ -1095,10 +1159,10 @@ services:
       resources:
         limits:
           cpus: "2.0"
-          memory: 4g
+          memory: 2g
         reservations:
           cpus: "1.0"
-          memory: 2g
+          memory: 1g
 
   # ========================================================================
   # EVENT BUS & STREAMING
@@ -1150,11 +1214,11 @@ services:
     deploy:
       resources:
         limits:
+          cpus: "8.0"
+          memory: 16g
+        reservations:
           cpus: "4.0"
           memory: 8g
-        reservations:
-          cpus: "2.0"
-          memory: 4g
     labels:
       io.elevatediq.component: "event-bus"
       io.elevatediq.tier: "infrastructure"
@@ -1328,6 +1392,14 @@ services:
     profiles:
       - "observability"
       - "all"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
 
   tempo:
     image: grafana/tempo:2.4.1@sha256:cf1ed1d5cc671c80d389f7c59cfa491a9e5b99d28a42fccb9d6cbbef0da378e4

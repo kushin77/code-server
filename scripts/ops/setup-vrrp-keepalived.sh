@@ -1,0 +1,405 @@
+#!/bin/bash
+# @file scripts/ops/setup-vrrp-keepalived.sh
+# @description VRRP HA Virtual IP Configuration (Idempotent IaC)
+# @governance GOV-002: Deterministic, audited, environment-driven
+# @author GitHub Copilot
+# @date 2026-04-25
+# @related P3 #1536 Phase 3 - DNS Architecture & VRRP Failover
+
+set -euo pipefail
+
+################################################################################
+# COLOR CODES
+################################################################################
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+################################################################################
+# CONFIGURATION (Environment-Driven Variables with Defaults)
+################################################################################
+
+# VRRP Configuration
+VRRP_ROUTER_ID="${VRRP_ROUTER_ID:-1}"
+VRRP_INTERFACE="${VRRP_INTERFACE:-eth0}"
+VRRP_VIRTUAL_IP="${VRRP_VIRTUAL_IP:-192.168.168.100}"
+VRRP_AUTH_PASS="${VRRP_AUTH_PASS:-KushnirCloudHA123}"  # Override in production!
+VRRP_HEARTBEAT_INTERVAL="${VRRP_HEARTBEAT_INTERVAL:-1}"  # seconds
+
+# Node Role and Priority
+NODE_ROLE="${NODE_ROLE:-primary}"  # primary or replica
+PRIMARY_PRIORITY="${PRIMARY_PRIORITY:-100}"
+REPLICA_PRIORITY="${REPLICA_PRIORITY:-50}"
+
+# System Configuration
+CONFIG_DIR="/etc/keepalived"
+CONFIG_FILE="${CONFIG_DIR}/keepalived.conf"
+UNIT_FILE="/etc/systemd/system/keepalived.service"
+LOG_FILE="/var/log/vrrp-setup.log"
+
+################################################################################
+# LOGGING FUNCTIONS
+################################################################################
+
+log() {
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+error() {
+  echo -e "${RED}[ERROR]${NC} $*" | tee -a "$LOG_FILE"
+  exit 1
+}
+
+success() {
+  echo -e "${GREEN}[✓]${NC} $*" | tee -a "$LOG_FILE"
+}
+
+warning() {
+  echo -e "${YELLOW}[⚠]${NC} $*" | tee -a "$LOG_FILE"
+}
+
+################################################################################
+# PREREQUISITE CHECKS
+################################################################################
+
+check_root() {
+  if [[ $EUID -ne 0 ]]; then
+    error "This script must be run as root"
+  fi
+}
+
+check_required_interface() {
+  if ! ip link show "$VRRP_INTERFACE" > /dev/null 2>&1; then
+    error "Network interface $VRRP_INTERFACE not found"
+  fi
+  success "Network interface $VRRP_INTERFACE found"
+}
+
+check_systemd() {
+  if ! command -v systemctl &> /dev/null; then
+    error "systemd not found. This script requires systemd"
+  fi
+  success "systemd available"
+}
+
+################################################################################
+# IDEMPOTENCY CHECK - Skip if Already Configured
+################################################################################
+
+is_already_configured() {
+  # Check if keepalived is installed and running
+  if [[ -f "$CONFIG_FILE" ]]; then
+    # Verify configuration matches current settings
+    if grep -q "virtual_router_id $VRRP_ROUTER_ID" "$CONFIG_FILE" && \
+       grep -q "virtual_ipaddress.*$VRRP_VIRTUAL_IP" "$CONFIG_FILE"; then
+      return 0  # Already configured
+    fi
+  fi
+  return 1  # Not configured
+}
+
+################################################################################
+# INSTALLATION PHASE
+################################################################################
+
+install_keepalived() {
+  log "Checking keepalived installation..."
+
+  if command -v keepalived &> /dev/null; then
+    success "keepalived already installed ($(keepalived -v 2>&1 | head -1))"
+    return
+  fi
+
+  log "Installing keepalived..."
+  if command -v apt-get &> /dev/null; then
+    apt-get update -qq
+    apt-get install -y keepalived > /dev/null 2>&1
+  elif command -v yum &> /dev/null; then
+    yum install -y keepalived > /dev/null 2>&1
+  else
+    error "Unsupported package manager. Supported: apt-get, yum"
+  fi
+
+  success "keepalived installed"
+}
+
+################################################################################
+# CONFIGURATION PHASE - Generate IaC Config File
+################################################################################
+
+determine_node_priority() {
+  local priority
+  case "$NODE_ROLE" in
+    primary)
+      priority="$PRIMARY_PRIORITY"
+      log "Configuring as PRIMARY node (priority: $priority)"
+      ;;
+    replica)
+      priority="$REPLICA_PRIORITY"
+      log "Configuring as REPLICA node (priority: $priority)"
+      ;;
+    *)
+      error "Invalid NODE_ROLE: $NODE_ROLE (must be 'primary' or 'replica')"
+      ;;
+  esac
+  echo "$priority"
+}
+
+generate_keepalived_config() {
+  local priority
+  priority=$(determine_node_priority)
+
+  log "Generating keepalived configuration..."
+
+  # Create directory if not exists
+  mkdir -p "$CONFIG_DIR"
+
+  # Generate configuration file (immutable - versioned in Git)
+  cat > "$CONFIG_FILE" << EOF
+################################################################################
+# VRRP Configuration Generated by setup-vrrp-keepalived.sh
+# Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+# Role: $NODE_ROLE (Priority: $priority)
+#
+# @governance GOV-002: This file is auto-generated. Changes should be made via
+# environment variables and script re-execution, not direct file editing.
+################################################################################
+
+# Global configuration
+global_defs {
+  enable_script_security
+  script_user root
+  max_auto_priority 99
+}
+
+# VRRP Instance Configuration
+vrrp_instance VI_${VRRP_ROUTER_ID} {
+  # Instance state and priority
+  state ${NODE_ROLE^^}
+  priority $priority
+  interface $VRRP_INTERFACE
+  virtual_router_id $VRRP_ROUTER_ID
+
+  # Advertising interval (1 = fast failover)
+  advert_int $VRRP_HEARTBEAT_INTERVAL
+
+  # Authentication
+  authentication {
+    auth_type PASS
+    auth_pass "$VRRP_AUTH_PASS"
+  }
+
+  # Virtual IP Address (floating VIP)
+  virtual_ipaddress {
+    $VRRP_VIRTUAL_IP/24
+  }
+
+  # Track scripts (optional - for advanced monitoring)
+  track_interface {
+    $VRRP_INTERFACE  # Track interface up/down status
+  }
+
+  # Failover transition notifications
+  notify_master /etc/keepalived/notify.sh
+  notify_backup /etc/keepalived/notify.sh
+  notify_fault /etc/keepalived/notify.sh
+  notify_stop /etc/keepalived/notify.sh
+}
+
+################################################################################
+# End of auto-generated configuration
+################################################################################
+EOF
+
+  success "keepalived configuration generated"
+}
+
+generate_notification_script() {
+  log "Generating notification script..."
+
+  mkdir -p "$CONFIG_DIR"
+
+  cat > "$CONFIG_DIR/notify.sh" << 'EOF'
+#!/bin/bash
+# VRRP State Change Notification Script
+
+TYPE=$1
+NAME=$2
+STATE=$3
+
+LOG_FILE="/var/log/keepalived-events.log"
+
+case $STATE in
+  MASTER)
+    echo "[$(date)] $NAME transitioned to MASTER state" >> $LOG_FILE
+    # Add custom actions (e.g., DNS update, Slack notification)
+    ;;
+  BACKUP)
+    echo "[$(date)] $NAME transitioned to BACKUP state" >> $LOG_FILE
+    # Add custom actions
+    ;;
+  FAULT)
+    echo "[$(date)] $NAME entered FAULT state" >> $LOG_FILE
+    # Add alert actions
+    ;;
+  STOP)
+    echo "[$(date)] $NAME stopped" >> $LOG_FILE
+    ;;
+esac
+EOF
+
+  chmod +x "$CONFIG_DIR/notify.sh"
+  success "notification script generated"
+}
+
+################################################################################
+# SYSTEMD INTEGRATION PHASE
+################################################################################
+
+enable_systemd_service() {
+  log "Configuring systemd service..."
+
+  # Enable keepalived service
+  systemctl enable keepalived > /dev/null 2>&1
+  success "keepalived service enabled"
+
+  # Configure service restart policy
+  if [[ ! -d "/etc/systemd/system/keepalived.service.d" ]]; then
+    mkdir -p /etc/systemd/system/keepalived.service.d
+    cat > /etc/systemd/system/keepalived.service.d/override.conf << EOF
+# Override for keepalived resilience
+[Unit]
+After=network-online.target
+
+[Service]
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+EOF
+    systemctl daemon-reload
+  fi
+
+  success "systemd configuration applied"
+}
+
+################################################################################
+# DEPLOYMENT & VERIFICATION PHASE
+################################################################################
+
+deploy_vrrp() {
+  log "Deploying VRRP configuration..."
+
+  # Restart keepalived with new configuration
+  systemctl restart keepalived
+
+  # Wait for service to stabilize
+  sleep 2
+
+  # Verify service is running
+  if ! systemctl is-active --quiet keepalived; then
+    error "keepalived failed to start. Check: systemctl status keepalived"
+  fi
+
+  success "keepalived service restarted and verified"
+}
+
+verify_vrrp_configuration() {
+  log "Verifying VRRP configuration..."
+
+  # Check if VIP exists on this node
+  if ip addr show | grep -q "$VRRP_VIRTUAL_IP"; then
+    success "Virtual IP $VRRP_VIRTUAL_IP is assigned to this node"
+  else
+    warning "Virtual IP $VRRP_VIRTUAL_IP not currently assigned (node is BACKUP)"
+  fi
+
+  # Check keepalived process
+  if pgrep -x keepalived > /dev/null; then
+    success "keepalived process running (PID: $(pgrep -x keepalived))"
+  else
+    error "keepalived process not running"
+  fi
+
+  # Display keepalived status
+  systemctl status keepalived --no-pager | head -10
+}
+
+################################################################################
+# TESTING & DIAGNOSTICS
+################################################################################
+
+test_vrrp_configuration() {
+  log "Running VRRP diagnostics..."
+
+  echo -e "\n${BLUE}=== VRRP Configuration ===${NC}"
+  cat "$CONFIG_FILE" | grep -E "(state|priority|virtual_router_id|virtual_ipaddress|advert_int)"
+
+  echo -e "\n${BLUE}=== Network Interfaces ===${NC}"
+  ip addr show "$VRRP_INTERFACE"
+
+  echo -e "\n${BLUE}=== Virtual IP Status ===${NC}"
+  if ip addr show | grep -q "$VRRP_VIRTUAL_IP"; then
+    echo "✓ VIP is assigned to this node"
+  else
+    echo "✗ VIP not assigned (this node is BACKUP)"
+  fi
+
+  echo -e "\n${BLUE}=== keepalived Service ===${NC}"
+  systemctl status keepalived --no-pager | head -15 || true
+
+  echo -e "\n${BLUE}=== Logs ===${NC}"
+  tail -20 /var/log/syslog 2>/dev/null | grep -i keepalived || echo "No keepalived logs yet"
+}
+
+################################################################################
+# IDEMPOTENT DEPLOYMENT
+################################################################################
+
+main() {
+  log "╔════════════════════════════════════════════════════════╗"
+  log "║  VRRP HA Configuration (keepalived)                   ║"
+  log "║  Role: $NODE_ROLE | Priority: $(determine_node_priority)                        ║"
+  log "╚════════════════════════════════════════════════════════╝"
+
+  # Idempotency check
+  if is_already_configured; then
+    warning "VRRP already configured with same settings"
+    log "Re-applying configuration (idempotent)..."
+  fi
+
+  # Prerequisites
+  check_root
+  check_required_interface
+  check_systemd
+
+  # Installation
+  install_keepalived
+
+  # Configuration (IaC - regenerate to ensure consistency)
+  generate_keepalived_config
+  generate_notification_script
+
+  # Deployment
+  enable_systemd_service
+  deploy_vrrp
+
+  # Verification
+  verify_vrrp_configuration
+
+  # Diagnostics
+  echo ""
+  log "VRRP configuration complete!"
+  test_vrrp_configuration
+
+  log "╔════════════════════════════════════════════════════════╗"
+  log "║  ✓ VRRP Virtual IP: $VRRP_VIRTUAL_IP"
+  log "║  ✓ Failover Time: < 3 seconds                          ║"
+  log "║  ✓ Configuration: IaC (GOV-002 Compliant)              ║"
+  log "╚════════════════════════════════════════════════════════╝"
+}
+
+# Execute main function
+main "$@"

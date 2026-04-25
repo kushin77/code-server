@@ -1135,6 +1135,20 @@ services:
   # AI/ML SERVICES
   # ========================================================================
 
+  ollama-init:
+    image: alpine:3.20
+    container_name: ollama-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - chown -R 11434:11434 /home/ollama/.ollama
+    volumes:
+      - ollama_models:/home/ollama/.ollama
+    restart: "no"
+    networks:
+      - services
+
   ollama:
     image: ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a
     container_name: ollama-models
@@ -1147,6 +1161,9 @@ services:
       - HOME=/home/ollama
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_MODELS=/home/ollama/.ollama/models
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD

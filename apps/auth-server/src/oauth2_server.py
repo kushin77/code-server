@@ -133,7 +133,9 @@ class KeyManager:
 class OAuth2Server:
     """OAuth2 Authorization Server Implementation"""
     
-    def __init__(self):
+    def __init__(self, db_session=None, config=None):
+        self.db = db_session
+        self.config = config
         self.key_manager = KeyManager()
         self.providers: Dict[str, OAuthConfig] = {}
         self.auth_codes: Dict[str, Dict[str, Any]] = {}  # In-memory store (use Redis in production)

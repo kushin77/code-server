@@ -1,8 +1,11 @@
 #!/bin/bash
-# @file health-check-idempotent.sh
-# @module infrastructure
-# @description Idempotent health checks - can be called continuously
-# @idempotent YES - State-based checking without side effects
+# @governance: Idempotent health checks — state-based monitoring without side effects
+# Purpose: Idempotent health checks - can be called continuously
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+# Idempotent: YES - State-based checking without side effects
+
 set -euo pipefail
 
 readonly LOG_FILE="./artifacts/health-$(date +%s).log"

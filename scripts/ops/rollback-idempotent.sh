@@ -1,8 +1,11 @@
 #!/bin/bash
-# @file rollback-idempotent.sh
-# @module infrastructure
-# @description Idempotent rollback - safe to call multiple times
-# @idempotent YES - Idempotent state checking before rollback
+# @governance: Idempotent rollback — verify backup state before restoring to prevent duplication
+# Purpose: Idempotent rollback - safe to call multiple times
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+# Idempotent: YES - Idempotent state checking before rollback
+
 set -euo pipefail
 
 readonly BACKUP_DIR="./state/backups"

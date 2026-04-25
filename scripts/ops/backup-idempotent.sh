@@ -1,8 +1,11 @@
 #!/bin/bash
-# @file backup-idempotent.sh
-# @module infrastructure
-# @description Idempotent backup - skip if already backed up in this period
-# @idempotent YES - Checks backup age before creating new backup
+# @governance: Idempotent backup — skip if recently backed up to prevent redundancy
+# Purpose: Idempotent backup - skip if already backed up in this period
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+# Idempotent: YES - Checks backup age before creating new backup
+
 set -euo pipefail
 
 readonly BACKUP_DIR="./state/backups"

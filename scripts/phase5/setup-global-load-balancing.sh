@@ -1,8 +1,9 @@
 #!/bin/bash
-# @file scripts/phase5/setup-global-load-balancing.sh
-# @description Cloudflare + Caddy global load balancing orchestration (Q3 Phase 5)
-# @version 1.0.0
-# @date April 25, 2026
+# @governance: Global load balancing setup — orchestrate Cloudflare + Caddy for multi-region failover
+# Purpose: Cloudflare + Caddy global load balancing orchestration (Q3 Phase 5)
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
 
 set -euo pipefail
 

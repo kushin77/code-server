@@ -1,8 +1,11 @@
 #!/bin/bash
-# @file deploy-idempotent.sh
-# @module infrastructure
-# @description Idempotent deployment script - safe to run multiple times
-# @idempotent YES - Checks state before any modifications
+# @governance: Idempotent deployment — verify state before changes to prevent duplicates
+# Purpose: Idempotent deployment script - safe to run multiple times
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+# Idempotent: YES - Checks state before any modifications
+
 set -euo pipefail
 
 readonly DEPLOYMENT_ID="deployment-$(date +%s)"

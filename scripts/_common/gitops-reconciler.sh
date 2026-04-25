@@ -1,7 +1,9 @@
 #!/bin/bash
-# @file gitops-reconciler.sh
-# @module infrastructure/gitops
-# @description Continuous GitOps reconciliation - syncs infrastructure state with Git
+# @governance: GitOps reconciliation — continuously sync infrastructure state with Git source of truth
+# Purpose: Continuous GitOps reconciliation - syncs infrastructure state with Git
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
 
 set -euo pipefail
 

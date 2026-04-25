@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# @file        scripts/ops/preflight-air-gap-images.sh
-# @module      ops/terraform-drop-package
-# @description Pre-pull digest-pinned images for an air-gapped Terraform deployment
+# @governance: Air-gap image preflight — pre-pull digest-pinned images for offline deployment
+# Purpose: Pre-pull digest-pinned images for an air-gapped Terraform deployment
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1531 (Infrastructure as Code)
+
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

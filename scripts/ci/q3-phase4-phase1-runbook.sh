@@ -77,7 +77,7 @@ Phase 1 focuses on **infrastructure provisioning and validation** for the Kubern
 - [ ] kubectl configured and authenticated
 - [ ] Helm 3.x installed on deployment machine
 - [ ] kubeval installed for manifest validation
-- [ ] 192.168.168.100 (VRRP) configured
+- [ ] ${ONPREM_VRRP_VIP} (VRRP) configured
 - [ ] Network security groups configured for service access
 
 ### Platform Team Responsibilities
@@ -90,7 +90,7 @@ Phase 1 focuses on **infrastructure provisioning and validation** for the Kubern
 - **Master nodes**: 3 (high availability)
 - **Worker nodes**: 6-8 (capacity for 18 microservices)
 - **Node specs**: 16-core, 64GB RAM per worker node
-- **Network**: 10Gbps connectivity to NAS (192.168.168.56)
+- **Network**: 10Gbps connectivity to NAS (${ONPREM_NAS_IP})
 - **Storage**: StorageClass configured for StatefulSets
 - **DNS**: Internal DNS for service discovery
 
@@ -181,11 +181,11 @@ helm install ingress-nginx ingress-nginx/ingress-nginx \
   --namespace ingress-nginx \
   --create-namespace \
   --set controller.service.type=LoadBalancer \
-  --set controller.service.externalIPs[0]=192.168.168.100
+  --set controller.service.externalIPs[0]=${ONPREM_VRRP_VIP}
 
 # Verify ingress controller
 kubectl get svc -n ingress-nginx
-# Expected: EXTERNAL-IP = 192.168.168.100
+# Expected: EXTERNAL-IP = ${ONPREM_VRRP_VIP}
 ```
 
 **Day 2 (May 2): Storage & Networking**
@@ -408,9 +408,9 @@ kubectl create secret docker-registry regcred \
 # Create ConfigMap for environment variables
 kubectl create configmap app-config \
   --from-literal=APEX_DOMAIN=kushnir.cloud \
-  --from-literal=PRIMARY_HOST=192.168.168.31 \
-  --from-literal=REPLICA_HOST=192.168.168.42 \
-  --from-literal=NAS_HOST=192.168.168.56 \
+  --from-literal=PRIMARY_HOST=${ONPREM_PRIMARY_IP} \
+  --from-literal=REPLICA_HOST=${ONPREM_REPLICA_IP} \
+  --from-literal=NAS_HOST=${ONPREM_NAS_IP} \
   -n staging
 ```
 
@@ -628,7 +628,7 @@ cat > /tmp/PHASE1-SIGN-OFF.md <<'CHECKLIST'
 - [ ] kubectl and helm configured
 - [ ] Storage classes created and tested
 - [ ] Network policies deployed
-- [ ] Ingress controller operational (VRRP 192.168.168.100)
+- [ ] Ingress controller operational (VRRP ${ONPREM_VRRP_VIP})
 - [ ] Certificate manager ready (Let's Encrypt integration)
 
 ## Monitoring (20-30h included in Infrastructure)

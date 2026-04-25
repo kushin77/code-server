@@ -124,4 +124,29 @@ test.describe("VS Code IDE Workspace", () => {
     expect(page.url()).not.toMatch(/sign_in|accounts\.google\.com/);
     await expect(page.locator(".monaco-workbench")).toBeVisible();
   });
+
+  test("integrated terminal supports git operations", async ({ page }) => {
+    // Open terminal via keyboard shortcut
+    await page.keyboard.press("Control+`");
+    await page.waitForSelector(".terminal-wrapper, .xterm", { timeout: 15_000 });
+
+    const terminal = page.locator(".terminal-wrapper, .xterm").first();
+    await expect(terminal).toBeVisible();
+
+    // Check git is available in the terminal
+    await page.keyboard.type("git --version\n");
+    await page.waitForTimeout(2_000);
+
+    // Terminal should show git output (not "command not found")
+    const terminalText = await terminal.textContent();
+    expect(terminalText).toMatch(/git version/i);
+
+    // Check git status works inside a repo
+    await page.keyboard.type("git status 2>&1 | head -3\n");
+    await page.waitForTimeout(2_000);
+
+    const statusText = await terminal.textContent();
+    // Either "On branch" (in a repo) or "not a git repository" — both confirm git runs
+    expect(statusText).toMatch(/On branch|fatal: not a git repository|nothing to commit/i);
+  });
 });

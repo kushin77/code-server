@@ -1,0 +1,162 @@
+# @file        .github/workflows/upstream-sync.yml
+# @module      ci/upstream
+# @description Automated upstream sync from coder/code-server — opens PR when new release available
+# @governance  GOV-002: IaC, immutable, idempotent
+# Issue #1546: AI/Ollama Repository Separation — Fork Strategy, Isolated Deployment
+
+name: Upstream Sync Check
+
+on:
+  schedule:
+    # Monthly check — 1st of each month at 06:00 UTC
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      force_check:
+        description: 'Force upstream check even if no new release'
+        required: false
+        default: 'false'
+
+jobs:
+  # ── Check for new upstream release ──────────────────────────────────────────
+  check-upstream:
+    name: Check coder/code-server for new release
+    runs-on: ubuntu-latest
+    outputs:
+      new_release: ${{ steps.compare.outputs.new_release }}
+      upstream_tag: ${{ steps.upstream.outputs.tag }}
+      upstream_url: ${{ steps.upstream.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest upstream release
+        id: upstream
+        run: |
+          RELEASE=$(curl -sf \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/coder/code-server/releases/latest")
+          TAG=$(echo "$RELEASE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['tag_name'])")
+          URL=$(echo "$RELEASE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['html_url'])")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream: $TAG ($URL)"
+
+      - name: Get current tracked upstream version
+        id: current
+        run: |
+          # Version tracked in .upstream-version file; create if missing
+          if [ -f .upstream-version ]; then
+            CURRENT=$(cat .upstream-version | tr -d '[:space:]')
+          else
+            CURRENT="untracked"
+          fi
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Currently tracking: $CURRENT"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          UPSTREAM="${{ steps.upstream.outputs.tag }}"
+          CURRENT="${{ steps.current.outputs.current }}"
+          FORCE="${{ github.event.inputs.force_check }}"
+
+          if [ "$UPSTREAM" != "$CURRENT" ] || [ "$FORCE" = "true" ]; then
+            echo "new_release=true" >> "$GITHUB_OUTPUT"
+            echo "New upstream release detected: $UPSTREAM (was: $CURRENT)"
+          else
+            echo "new_release=false" >> "$GITHUB_OUTPUT"
+            echo "Already up to date: $CURRENT"
+          fi
+
+  # ── Open PR for upstream sync ────────────────────────────────────────────────
+  open-sync-pr:
+    name: Open upstream sync PR
+    runs-on: ubuntu-latest
+    needs: check-upstream
+    if: needs.check-upstream.outputs.new_release == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create sync branch and update upstream version file
+        id: branch
+        run: |
+          UPSTREAM_TAG="${{ needs.check-upstream.outputs.upstream_tag }}"
+          BRANCH="upstream-sync/${UPSTREAM_TAG}"
+
+          git checkout -b "$BRANCH"
+
+          # Update .upstream-version to track what we're syncing to
+          echo "$UPSTREAM_TAG" > .upstream-version
+          git add .upstream-version
+          git commit -m "chore(upstream): track coder/code-server $UPSTREAM_TAG"
+
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const upstreamTag = '${{ needs.check-upstream.outputs.upstream_tag }}';
+            const upstreamUrl = '${{ needs.check-upstream.outputs.upstream_url }}';
+            const branch = '${{ steps.branch.outputs.branch }}';
+
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore(upstream): sync with coder/code-server ${upstreamTag}`,
+              head: branch,
+              base: 'main',
+              body: `## Upstream Sync: coder/code-server ${upstreamTag}
+
+            A new release of the upstream [coder/code-server](https://github.com/coder/code-server) has been detected.
+
+            **Upstream release:** [${upstreamTag}](${upstreamUrl})
+
+            ### Required Actions
+
+            1. **Review upstream changelog** for breaking changes, security fixes, and new features
+            2. **Cherry-pick relevant commits** from upstream into KC customization branches
+            3. **Update base image** in Dockerfile if upstream changed their image tag
+            4. **Test locally** with \`docker compose up -d\` before merging
+            5. **Update \`.upstream-version\`** once all changes are validated
+
+            ### KC Customization Boundaries (do not overwrite)
+
+            Per [docs/architecture/AI-REPO-SEPARATION.md](docs/architecture/AI-REPO-SEPARATION.md):
+            - \`patches/\` — KC-specific patches applied on top of upstream
+            - \`apps/ide-extension/\` — KC IDE extension (Team Hub, Terminal DLP)
+            - \`Caddyfile\` — KC reverse proxy config
+            - \`config/oauth2-proxy/\` — KC auth gateway
+
+            ### Automation Notes
+            - This PR was opened automatically by the \`upstream-sync\` workflow
+            - See \`.github/workflows/upstream-sync.yml\` for configuration
+            - Scheduled: monthly on the 1st at 06:00 UTC
+            `,
+              labels: [],
+            });
+
+            console.log(`PR opened: ${pr.data.html_url}`);
+
+            // Add label if it exists
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.data.number,
+                labels: ['upstream-sync']
+              });
+            } catch (e) {
+              console.log('Label upstream-sync not found, skipping');
+            }

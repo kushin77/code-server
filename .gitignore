@@ -19,6 +19,10 @@ pnpm-debug.log
 .history/
 .pnpm-store/
 
+# Python
+__pycache__/
+*.py[cod]
+
 # Operational Artifacts
 .deployments/
 artifacts/

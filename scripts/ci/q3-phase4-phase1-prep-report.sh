@@ -326,9 +326,9 @@ Available for Services:
    - Fallback: Use local SSD on nodes if NAS < 300 MB/s
 
 3. **Network Connectivity**
-   - Pre-flight validation: `ping -c 10 192.168.168.56`
+   - Pre-flight validation: `ping -c 10 ${ONPREM_NAS_IP}`
    - Verify 10Gbps link: `ethtool eth0 | grep Speed`
-   - Test SMB mount: `mount -t cifs //192.168.168.56/nas /mnt/nas -o credentials=/tmp/creds`
+   - Test SMB mount: `mount -t cifs //${ONPREM_NAS_IP}/nas /mnt/nas -o credentials=/tmp/creds`
 
 4. **Data Protection**
    - Backup all data before Phase 1: `kubectl exec postgres-0 -- pg_dump`
@@ -348,7 +348,7 @@ Available for Services:
   - [ ] kubectl configured and authenticated
 
 - [ ] **Network Ready**
-  - [ ] 192.168.168.100 (VRRP) reserved and assigned
+  - [ ] ${ONPREM_VRRP_VIP} (VRRP) reserved and assigned
   - [ ] Network security groups configured
   - [ ] Ingress load balancer provisioned
   - [ ] 10Gbps NAS connectivity verified
@@ -356,7 +356,7 @@ Available for Services:
 - [ ] **Storage Ready**
   - [ ] StorageClass defined (fast-ssd or equivalent)
   - [ ] PV provisioning tested (create/destroy test PVC)
-  - [ ] NAS accessible at 192.168.168.56
+  - [ ] NAS accessible at ${ONPREM_NAS_IP}
   - [ ] Backup target prepared (S3 or equivalent)
 
 - [ ] **Tools & Access**
@@ -364,7 +364,7 @@ Available for Services:
   - [ ] Helm 3.x installed
   - [ ] kubeval installed
   - [ ] k6 (load testing) installed
-  - [ ] ssh access to both hosts (192.168.168.31, 192.168.168.42)
+  - [ ] ssh access to both hosts (${ONPREM_PRIMARY_IP}, ${ONPREM_REPLICA_IP})
 
 ### Platform Team (Must Complete Before May 1)
 

@@ -99,6 +99,6 @@ scrape_configs:
 
   # Service discovery for dynamically registered targets
   - job_name: file-sd
-    static_configs:
+    file_sd_configs:
       - files:
           - /etc/prometheus/targets/*.json

@@ -7,7 +7,8 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from service import (
     EdgeAgentHeartbeatRequest,
@@ -40,6 +41,11 @@ async def health() -> dict:
         "registered_agents": len(registry_service.list_agents(include_stale=True)),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.post("/edge-agents/register", response_model=EdgeAgentRecord)

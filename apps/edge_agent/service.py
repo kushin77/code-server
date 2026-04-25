@@ -12,8 +12,18 @@ import logging
 from enum import Enum
 from typing import Dict, List, Optional, Any
 
+from prometheus_client import Counter, Gauge
 from pydantic import BaseModel, Field
 
+# METRICS DEFINITION
+AGENT_REGISTRATIONS = Counter("edge_agent_registrations_total", "Total registered edge agents", ["region"])
+AGENT_HEARTBEATS = Counter("edge_agent_heartbeats_total", "Total edge agent heartbeats", ["agent_id"])
+ACTIVE_AGENTS = Gauge("edge_agent_active_count", "Current number of active edge agents")
+ROUTING_REQUESTS = Counter("edge_agent_routing_requests_total", "Total routing requests", ["region", "status"])
+REPLICATION_JOBS = Counter("edge_agent_replication_jobs_total", "Total replication jobs", ["status"])
+AGENT_CPU_USAGE = Gauge("edge_agent_cpu_utilization", "CPU utilization", ["agent_id"])
+AGENT_MEM_USAGE = Gauge("edge_agent_memory_utilization", "Memory utilization", ["agent_id"])
+AGENT_SESSIONS = Gauge("edge_agent_sessions_count", "Active session count", ["agent_id"])
 
 class ServiceConfig(BaseModel):
     redis_url: str = "redis://redis:6379/0"
@@ -199,7 +209,11 @@ class EdgeAgentRegistryService:
             last_heartbeat_at=now,
         )
         self._agents[request.agent_id] = record
-        return record
+          
+          # METRICS
+          AGENT_REGISTRATIONS.labels(region=request.region).inc()
+          ACTIVE_AGENTS.set(len(self.list_agents(include_stale=False)))
+          
 
     def record_heartbeat(
         self,
@@ -223,7 +237,13 @@ class EdgeAgentRegistryService:
             }
         )
         self._agents[request.agent_id] = updated
-        return updated
+          
+          # METRICS
+          AGENT_HEARTBEATS.labels(agent_id=request.agent_id).inc()
+          AGENT_CPU_USAGE.labels(agent_id=request.agent_id).set(request.runtime.cpu_utilization)
+          AGENT_MEM_USAGE.labels(agent_id=request.agent_id).set(request.runtime.memory_utilization)
+          AGENT_SESSIONS.labels(agent_id=request.agent_id).set(request.runtime.active_sessions)
+          
 
     def list_agents(
         self,
@@ -260,6 +280,10 @@ class EdgeAgentRegistryService:
             raise ValueError("no healthy edge agents available for routing")
 
         selected_score, selected = ranked[0]
+        
+        # METRICS
+        ROUTING_REQUESTS.labels(region=request.user_region, status="success").inc()
+        
         fallback_agents = [agent.agent_id for _, agent in ranked[1:4]]
         cache_warm = self._has_warm_cache(selected, request)
         reason_parts = []
@@ -435,6 +459,9 @@ class EdgeAgentRegistryService:
             updated_at=now,
         )
         self._replication_jobs[job_id] = job
+        
+        # METRICS
+        REPLICATION_JOBS.labels(status="created").inc()
 
         await self._broadcast_event(
             "replication_started",
@@ -467,6 +494,12 @@ class EdgeAgentRegistryService:
             }
         )
         self._replication_jobs[job_id] = updated
+        
+        # METRICS
+        if status == ReplicationJobStatus.COMPLETED:
+            REPLICATION_JOBS.labels(status="completed").inc()
+        elif status == ReplicationJobStatus.FAILED:
+            REPLICATION_JOBS.labels(status="failed").inc()
 
         await self._broadcast_event(
             "replication_status_changed",

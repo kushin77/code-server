@@ -1,27 +1,28 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/setup-log-rotation.sh
-# @module      ops/setup-log-rotation
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: Log rotation setup — prevent disk exhaustion via logrotate
+# Purpose: Configures log rotation for infrastructure logs
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1536 (Infrastructure Standards)
 ###############################################################################
-# @file scripts/ops/setup-log-rotation.sh
-# @description Configures log rotation for infrastructure logs to prevent disk exhaustion.
-# @governance GOV-002
 
 set -euo pipefail
 
-LOG_DIR="logs"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
+readonly LOGROTATE_CONF="${LOGROTATE_CONF:-logrotate.snippet}"
+readonly ROTATION_FREQUENCY="${ROTATION_FREQUENCY:-daily}"
+readonly ROTATION_COUNT="${ROTATION_COUNT:-7}"
 
 echo "[INFO] Setting up log rotation..."
 
 # Create logrotate configuration snippet
-cat <<CONF > logrotate.snippet
-$PWD/$LOG_DIR/*.log {
-    daily
-    rotate 7
+cat <<CONF > "${LOGROTATE_CONF}"
+${LOG_DIR}/*.log {
+    ${ROTATION_FREQUENCY}
+    rotate ${ROTATION_COUNT}
     compress
     delaycompress
     missingok
@@ -30,5 +31,5 @@ $PWD/$LOG_DIR/*.log {
 }
 CONF
 
-echo "[SUCCESS] Log rotation configuration generated at logrotate.snippet"
-echo "[INFO] To apply, run: sudo mv logrotate.snippet /etc/logrotate.d/code-server-enterprise"
+echo "[SUCCESS] Log rotation configuration generated at ${LOGROTATE_CONF}"
+echo "[INFO] To apply, run: sudo mv ${LOGROTATE_CONF} /etc/logrotate.d/code-server-enterprise"

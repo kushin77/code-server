@@ -7,20 +7,27 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CONFIG_DIR="${REPO_DIR}/config"
-LOG_FILE="${REPO_DIR}/logs/encryption-setup.log"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly CONFIG_DIR="${CONFIG_DIR:-${REPO_DIR}/config}"
+readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/encryption-setup.log}"
 
-mkdir -p "${CONFIG_DIR}/encryption" "${REPO_DIR}/logs"
+mkdir -p "${CONFIG_DIR}/encryption" "$(dirname "${LOG_FILE}")"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"
 }
 
 # ============================================================================
-# ENCRYPTION CONFIGURATION
+# ENCRYPTION CONFIGURATION (all env-var driven)
 # ============================================================================
+
+readonly ENCRYPTION_ALGORITHM="${ENCRYPTION_ALGORITHM:-AES-256-GCM}"
+readonly KEY_ROTATION_DAYS="${KEY_ROTATION_DAYS:-30}"
+readonly DB_ENCRYPTION_METHOD="${DB_ENCRYPTION_METHOD:-pgcrypto}"
+readonly CACHE_ENCRYPTION_METHOD="${CACHE_ENCRYPTION_METHOD:-redis-tls}"
+readonly VOLUME_ENCRYPTION_METHOD="${VOLUME_ENCRYPTION_METHOD:-LUKS}"
+readonly KEY_PROVIDER="${KEY_PROVIDER:-google_secret_manager}"
 
 create_encryption_config() {
   log "Creating encryption configuration..."

@@ -11,24 +11,24 @@ set -euo pipefail
 # CONFIGURATION
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CERT_DIR="${REPO_DIR}/vault-tls"
-POSTGRES_CERT_DIR="${CERT_DIR}/postgres"
-LOG_FILE="${REPO_DIR}/logs/database-ssl-setup.log"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly CERT_DIR="${CERT_DIR:-${REPO_DIR}/vault-tls}"
+readonly POSTGRES_CERT_DIR="${POSTGRES_CERT_DIR:-${CERT_DIR}/postgres}"
+readonly LOG_FILE="${LOG_FILE:-${REPO_DIR}/logs/database-ssl-setup.log}"
 
-# Certificate configuration
-CERT_VALIDITY_DAYS=365
-DB_HOST="postgres-db"
-DB_PORT="5432"
-COUNTRY="US"
-STATE="CA"
-CITY="San Francisco"
-ORGANIZATION="ElevatedIQ"
-COMMON_NAME="postgres-db"
+# Certificate configuration (all env-var driven)
+readonly CERT_VALIDITY_DAYS="${CERT_VALIDITY_DAYS:-365}"
+readonly DB_HOST="${DB_HOST:-postgres-db}"
+readonly DB_PORT="${DB_PORT:-5432}"
+readonly COUNTRY="${COUNTRY:-US}"
+readonly STATE="${STATE:-CA}"
+readonly CITY="${CITY:-San Francisco}"
+readonly ORGANIZATION="${ORGANIZATION:-ElevatedIQ}"
+readonly COMMON_NAME="${COMMON_NAME:-postgres-db}"
 
 # Create directories
-mkdir -p "${POSTGRES_CERT_DIR}" "${REPO_DIR}/logs"
+mkdir -p "${POSTGRES_CERT_DIR}" "$(dirname "${LOG_FILE}")"
 
 # ============================================================================
 # LOGGING

@@ -26,9 +26,8 @@ services:
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:8181/health"
+        - /opa
+        - version
       interval: 30s
       timeout: 5s
       retries: 3
@@ -66,7 +65,7 @@ services:
     ports:
       - "4180:4180"
     volumes:
-      - ./config/oauth2-proxy.cfg:/etc/oauth2-proxy/oauth2-proxy.cfg:ro
+      - ./config/oauth2-proxy/oauth2-proxy.cfg:/etc/oauth2-proxy/oauth2-proxy.cfg:ro
     environment:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
@@ -74,7 +73,7 @@ services:
     healthcheck:
       test:
         - CMD
-        - oauth2-proxy
+        - /bin/oauth2-proxy
         - --version
       interval: 30s
       timeout: 5s
@@ -343,15 +342,6 @@ services:
       - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
       - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
       - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
-    healthcheck:
-      test:
-        - CMD
-        - qdrant
-        - --help
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
     restart: unless-stopped
     networks:
       - services
@@ -430,7 +420,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres-db:5432/reputation
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/reputation
       - KAFKA_BROKER=redpanda:9092
       - OPA_URL=http://opa:8181
       - LOG_LEVEL=INFO

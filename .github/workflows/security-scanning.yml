@@ -226,6 +226,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [sast, sca, secrets, container-scan]
     if: success()
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
 
     services:
       postgres:

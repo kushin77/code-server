@@ -1,0 +1,20 @@
+:80 {
+  handle /health {
+    respond OK 200
+  }
+  handle /api/execution/* {
+    uri strip_prefix /api/execution
+    reverse_proxy execution-scheduler:8080
+  }
+  handle /api/opa/* {
+    uri strip_prefix /api/opa
+    reverse_proxy opa:8181
+  }
+  handle /api/auth/* {
+    uri strip_prefix /api/auth
+    reverse_proxy oauth2-proxy:4180
+  }
+  handle / {
+    respond "ElevatedIQ Cluster Gateway" 200
+  }
+}

@@ -14,6 +14,12 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
 
+# Load network configuration SSOT
+source "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 # Environment defaults (sourced from SSOT)
 HELM_DIR="${PROJECT_ROOT}/helm"
 OUTPUT_DIR="${PROJECT_ROOT}/artifacts/q3-phase4-helm-validation"

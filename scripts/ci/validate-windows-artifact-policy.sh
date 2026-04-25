@@ -60,6 +60,10 @@ check_production_paths() {
     # Check for PowerShell command references in production scripts
     while IFS= read -r file; do
       if [[ -n "${file}" ]]; then
+        # Skip self to avoid false positives on validation script documentation
+        if [[ "$(basename "$file")" == "validate-windows-artifact-policy.sh" ]]; then
+          continue
+        fi
         local ps_refs=$(grep -c "powershell\|Get-Content\|Set-Content\|Write-Output\|Select-Object" "${file}" || true)
         if [[ ${ps_refs} -gt 0 ]]; then
           log_error "Production path violation: Found PowerShell commands in ${file} (${ps_refs} references)"

@@ -95,7 +95,7 @@ jobs:
           BASE=${{ github.event.pull_request.base.sha }}
           HEAD=${{ github.event.pull_request.head.sha }}
 
-          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|ops|infra|security|iac)(\([A-Za-z0-9/-]+\))?!?: .+'
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|ops|infra|security|iac|governance)(\([A-Za-z0-9/-]+\))?!?: .+'
 
           FAILURES=0
           while IFS= read -r msg; do
@@ -109,7 +109,7 @@ jobs:
             echo ""
             echo "Conventional Commit format required:"
             echo "  <type>(<scope>): <subject>"
-            echo "  Types: feat fix docs style refactor perf test build ci chore revert ops infra security iac"
+            echo "  Types: feat fix docs style refactor perf test build ci chore revert ops infra security iac governance"
             echo "  Example: feat(agent-runtime): add approval gate integration"
             exit 1
           fi

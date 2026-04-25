@@ -6,11 +6,17 @@
 
 set -euo pipefail
 
+# Load network configuration SSOT
+source "scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 # Deployment configuration (all env-var driven)
-readonly OLLAMA_HOST="${OLLAMA_HOST:-192.168.168.31}"
+readonly OLLAMA_HOST="${OLLAMA_HOST:-${ONPREM_PRIMARY_IP}}"
 readonly OLLAMA_USER="${OLLAMA_USER:-admin}"
 readonly OLLAMA_PORT="${OLLAMA_PORT:-11434}"
-readonly OLLAMA_REPO="${OLLAMA_REPO:-https://github.com/kushin77/ollama.git}"
+readonly OLLAMA_REPO="${OLLAMA_REPO:-https://github.com/${GIT_REPO_OWNER}/ollama.git}"
 readonly OLLAMA_BRANCH="${OLLAMA_BRANCH:-main}"
 readonly OLLAMA_TIMEOUT="${OLLAMA_TIMEOUT:-300}"
 readonly HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-20}"

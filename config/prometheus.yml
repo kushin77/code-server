@@ -97,6 +97,20 @@ scrape_configs:
       - targets:
           - loki:3100
 
+  # OpenTelemetry Collector self-metrics and export surface
+  - job_name: otel-collector
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - otel-collector:8888
+
+  # Tempo tracing backend metrics
+  - job_name: tempo
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - tempo:3200
+
   # Alertmanager health and routing surface
   - job_name: alertmanager
     static_configs:

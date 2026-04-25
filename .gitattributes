@@ -1,0 +1,1 @@
+config/grafana/provisioning/dashboards/**/*.json text eol=lf

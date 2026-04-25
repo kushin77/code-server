@@ -52,7 +52,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'pnpm'
+          cache: ''
 
       - name: Run ESLint
         run: |
@@ -108,7 +108,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'pnpm'
+          cache: ''
 
       - name: Run ppnpm audit
         run: |
@@ -187,7 +187,7 @@ jobs:
           fi
 
       - name: Build Docker image
-        run: docker build -t agent-runtime:scan apps/agent-runtime/
+        run: mkdir -p artifacts; docker build -t agent-runtime:scan apps/agent-runtime/
 
       - name: Run Trivy scan
         uses: aquasecurity/trivy-action@v0.36.0
@@ -370,5 +370,6 @@ jobs:
               repo: context.repo.repo,
               body: '⚠️ Security scanning found issues. Please review artifacts and address vulnerabilities before merging.'
             })
+
 
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/ops/test-rollback-procedures.sh
+# @module      ops/test-rollback-procedures
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/test-rollback-procedures.sh
 # @description Phase 5: Comprehensive Rollback Testing Framework (#1531)
 # @governance GOV-002 - Automated rollback with comprehensive testing

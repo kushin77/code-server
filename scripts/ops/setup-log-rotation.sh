@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/setup-log-rotation.sh
+# @module      ops/setup-log-rotation
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/setup-log-rotation.sh
 # @description Configures log rotation for infrastructure logs to prevent disk exhaustion.
 # @governance GOV-002

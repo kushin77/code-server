@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/operations/setup-resource-limits-monitoring.sh
+# @module      operations/setup-resource-limits-monitoring
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 
 # Resource Limits Monitoring & Alerting Setup (Phase 4)
 # Purpose: Configure Prometheus metrics and Grafana dashboards for resource monitoring

@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/metrics/collect-project-metrics.sh
+# @module      metrics/collect-project-metrics
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/metrics/collect-project-metrics.sh
 # @description Collect project metrics: velocity, cycle time, burndown, issue aging

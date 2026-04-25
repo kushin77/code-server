@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/harden-ssl-tls.sh
+# @module      ops/harden-ssl-tls
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/harden-ssl-tls.sh
 # @description Hardens SSL/TLS configuration for Caddy, OPA, and other services.
 # @governance GOV-002

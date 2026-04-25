@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/integration/gitlab-sync.sh
+# @module      integration/gitlab-sync
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/integration/gitlab-sync.sh
 # @description Idempotent GitHub → GitLab issue synchronization

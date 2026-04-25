@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/k8s/provision-eks-cluster.sh
+# @module      k8s/provision-eks-cluster
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/k8s/provision-eks-cluster.sh
 # @description Provisions AWS EKS cluster with Istio and observability for code-server-enterprise
 # @governance GOV-002: Immutable infrastructure provisioning
@@ -18,6 +26,7 @@ REGION="${2:-us-east-1}"
 NODE_COUNT="${3:-3}"
 INSTANCE_TYPE="${4:-t3.large}"
 KUBERNETES_VERSION="${5:-1.27}"
+readonly ISTIO_VERSION="1.18.0"
 
 echo -e "${GREEN}=== EKS Cluster Provisioning ===${NC}"
 echo "Cluster Name: $CLUSTER_NAME"
@@ -80,11 +89,11 @@ echo -e "${GREEN}✓ Cluster access verified${NC}"
 echo -e "${YELLOW}[7/8] Installing Istio service mesh...${NC}"
 # Download Istio if not present
 if [ ! -d "istio-1.18.0" ]; then
-    curl -L https://istio.io/downloadIstio | sh -
+  curl -L https://istio.io/downloadIstio | ISTIO_VERSION="${ISTIO_VERSION}" sh -
 fi
 
 # Add Istio to PATH
-export PATH=$PWD/istio-1.18.0/bin:$PATH
+export PATH=$PWD/istio-${ISTIO_VERSION}/bin:$PATH
 
 # Install Istio
 istioctl install --set profile=production -y

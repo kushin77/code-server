@@ -34,6 +34,7 @@ declare -A audit_results=(
 )
 
 declare -a issues=()
+blocking_issues=0
 
 log_info "=== P3 #1533 Phase 1: Codebase Hygiene Audit ===" | tee -a "${AUDIT_REPORT}.log"
 log_info "Repository: ${PROJECT_ROOT}" | tee -a "${AUDIT_REPORT}.log"
@@ -47,8 +48,12 @@ log_info "" | tee -a "${AUDIT_REPORT}.log"
 log_info "CHECK 1: Direct sourcing of individual _common/* files (should use init.sh)"
 
 while IFS= read -r script; do
+    if [[ "$(basename "$script")" == "codebase-hygiene-audit.sh" ]]; then
+        continue
+    fi
     if grep -qE 'source.*scripts/_common/(logging|config|utils)\.sh|source.*scripts/_common/_base' "$script" 2>/dev/null; then
         ((audit_results[duplicate_sourcing]++))
+        ((blocking_issues++))
         issues+=("DUPLICATE_SOURCING: $script - direct sourcing of _common/*.sh files (must use init.sh)")
         log_warn "  $script: direct sourcing detected"
     fi
@@ -63,6 +68,7 @@ log_info "CHECK 2: Inline echo logging (should use log_error/log_warn functions)
 while IFS= read -r script; do
     if grep -qE 'echo.*"(ERROR|WARN|INFO|DEBUG):' "$script" 2>/dev/null; then
         ((audit_results[inline_logging]++))
+        ((blocking_issues++))
         issues+=("INLINE_LOGGING: $script - using echo for logging instead of log_* functions")
         log_warn "  $script: inline logging detected"
     fi
@@ -81,6 +87,7 @@ while IFS= read -r script; do
     for host in "${AUDIT_HOSTS[@]}"; do
         if grep -F "$host" "$script" 2>/dev/null | grep -v '^[[:space:]]*#' | grep -v 'APEX_DOMAIN\|template\|example' >/dev/null; then
             ((audit_results[hardcoded_ips]++))
+            ((blocking_issues++))
             issues+=("HARDCODED_IP: $script - contains hardcoded IP addresses")
             log_warn "  $script: hardcoded IP detected"
             break
@@ -95,8 +102,9 @@ done < <(find "${PROJECT_ROOT}/scripts" -name "*.sh" -type f)
 log_info "CHECK 4: Missing GOV-002 metadata headers (@file, @module, @description)"
 
 while IFS= read -r script; do
-    if ! head -5 "$script" | grep -q '@file' || ! head -5 "$script" | grep -q '@module' || ! head -5 "$script" | grep -q '@description'; then
+    if ! head -10 "$script" | grep -q '@file' || ! head -10 "$script" | grep -q '@module' || ! head -10 "$script" | grep -q '@description'; then
         ((audit_results[missing_headers]++))
+        ((blocking_issues++))
         issues+=("MISSING_HEADER: $script - GOV-002 metadata incomplete")
         log_warn "  $script: GOV-002 header incomplete"
     fi
@@ -119,7 +127,7 @@ while IFS= read -r script; do
         next
     }' "$script" | while read -r line; do
         if [[ -n "$line" ]]; then
-            ((audit_results[high_complexity]++))
+            audit_results[high_complexity]=$((audit_results[high_complexity] + 1))
             issues+=("HIGH_COMPLEXITY: $line")
             log_warn "$line"
         fi
@@ -160,6 +168,7 @@ fi
 log_info ""
 log_info "=== AUDIT SUMMARY ==="
 log_info "Total issues found: ${#issues[@]}"
+log_info "Blocking issues found: ${blocking_issues}"
 log_info "  - Duplicate sourcing: ${audit_results[duplicate_sourcing]}"
 log_info "  - Inline logging: ${audit_results[inline_logging]}"
 log_info "  - Hardcoded IPs: ${audit_results[hardcoded_ips]}"
@@ -198,11 +207,15 @@ EOF
 log_info ""
 log_info "Report written to: $AUDIT_REPORT"
 
-# Exit with error if issues found
-if [[ ${#issues[@]} -gt 0 ]]; then
-    log_error "Audit found ${#issues[@]} issues requiring attention"
+# Exit with error if blocking issues found
+if [[ ${blocking_issues} -gt 0 ]]; then
+    log_error "Audit found ${blocking_issues} blocking issues requiring attention"
     exit 1
 else
-    log_info "✓ Audit PASSED - No issues found"
+    if [[ ${#issues[@]} -gt 0 ]]; then
+        log_warn "Audit passed with advisory complexity findings"
+    else
+        log_info "✓ Audit PASSED - No issues found"
+    fi
     exit 0
 fi

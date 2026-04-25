@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/ops/test-drift-detection.sh
+# @module      ops/test-drift-detection
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/test-drift-detection.sh
 # @description Phase 4: Drift Detection CI Job Validation Testing (#1531)
 # @governance GOV-002 - Comprehensive drift detection testing framework

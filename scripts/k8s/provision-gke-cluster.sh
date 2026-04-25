@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/k8s/provision-gke-cluster.sh
+# @module      k8s/provision-gke-cluster
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/k8s/provision-gke-cluster.sh
 # @description Provisions Google Cloud GKE cluster with Istio and observability
 # @governance GOV-002: Immutable infrastructure provisioning
@@ -17,6 +25,7 @@ REGION="${3:-us-central1}"
 NODE_COUNT="${4:-3}"
 MACHINE_TYPE="${5:-n1-standard-2}"
 KUBERNETES_VERSION="${6:-1.27}"
+readonly ISTIO_VERSION="1.18.0"
 
 if [ -z "$PROJECT_ID" ]; then
     echo -e "${RED}Error: PROJECT_ID is required${NC}"
@@ -54,8 +63,8 @@ echo -e "${YELLOW}Updating kubeconfig...${NC}"
 gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$REGION"
 
 echo -e "${YELLOW}Installing Istio...${NC}"
-curl -L https://istio.io/downloadIstio | sh -
-export PATH=$PWD/istio-1.18.0/bin:$PATH
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION="${ISTIO_VERSION}" sh -
+export PATH=$PWD/istio-${ISTIO_VERSION}/bin:$PATH
 istioctl install --set profile=production -y
 
 kubectl label namespace default istio-injection=enabled --overwrite

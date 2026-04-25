@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/seed-organizational-memory.sh
+# @module      seed-organizational-memory
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/seed-organizational-memory.sh
 # @description Historical seeding of organizational memory (incidents, runbooks, PRs, sessions)
 # @governance GOV-002
@@ -10,7 +18,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Configuration
 MEMORY_ENGINE_URL="${MEMORY_ENGINE_URL:-http://localhost:8001}"
-GITHUB_TOKEN="${GITHUB_TOKEN}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 BATCH_SIZE="${BATCH_SIZE:-5}"
 
 # Logging
@@ -50,8 +58,8 @@ seed_issues() {
             break
         fi
         
-        # Ingest each issue
-        echo "$response" | jq -c '.items[]' | while read -r issue; do
+        # Ingest each issue without losing the count in a subshell
+        while read -r issue; do
             local issue_num=$(echo "$issue" | jq -r '.number')
             local title=$(echo "$issue" | jq -r '.title' | sed 's/"/\\"/g')
             local body=$(echo "$issue" | jq -r '.body // ""' | head -c 2000 | sed 's/"/\\"/g')
@@ -81,7 +89,7 @@ EOF
             fi
             
             count=$((count + 1))
-        done
+        done < <(echo "$response" | jq -c '.items[]')
         
         page=$((page + 1))
     done

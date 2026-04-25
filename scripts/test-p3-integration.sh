@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/test-p3-integration.sh
+# @module      test-p3-integration
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # GOV-002 Compliance: P3 Services Integration Test Suite
 # Tests inter-service communication and end-to-end workflows
 # Date: April 24, 2026

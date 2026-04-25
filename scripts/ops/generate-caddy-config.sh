@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/ops/generate-caddy-config.sh
+# @module      ops/generate-caddy-config
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/generate-caddy-config.sh
 # @description Phase 3: Generate Caddyfile from template using environment variables (#1531)
 # @governance GOV-002 - All domains are variables, zero hardcoding
 # @automation Generates Caddyfile before docker-compose up
-# @prerequisite Must source scripts/_common/init.sh
+# @prerequisite Must source scripts/_common/hosts.sh
 
 set -euo pipefail
 
 # Source bootstrap
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "${SCRIPT_DIR}/_common/init.sh"
+source "${SCRIPT_DIR}/_common/hosts.sh"
 
 # ==============================================================================
 # CONFIGURATION
@@ -36,7 +44,6 @@ validate_template_variables() {
     "IDE_DOMAIN"
     "API_DOMAIN"
     "AUTH_DOMAIN"
-    "PRIMARY_HOST"
     "ENABLE_TLS"
   )
   
@@ -52,7 +59,6 @@ validate_template_variables() {
   IDE_DOMAIN="${IDE_DOMAIN:-ide.${APEX_DOMAIN}}"
   API_DOMAIN="${API_DOMAIN:-api.${APEX_DOMAIN}}"
   AUTH_DOMAIN="${AUTH_DOMAIN:-auth.${APEX_DOMAIN}}"
-  PRIMARY_HOST="${PRIMARY_HOST:-127.0.0.1}"
   ENABLE_TLS="${ENABLE_TLS:-false}"
   
   export IDE_DOMAIN API_DOMAIN AUTH_DOMAIN PRIMARY_HOST ENABLE_TLS

@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/implement-rbac.sh
+# @module      ops/implement-rbac
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/implement-rbac.sh
 # @description Implements Role-Based Access Control (RBAC) via OPA policies and service configuration.
 # @governance GOV-002

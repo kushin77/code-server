@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/k8s/provision-aks-cluster.sh
+# @module      k8s/provision-aks-cluster
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/k8s/provision-aks-cluster.sh
 # @description Provisions Azure AKS cluster with Istio and observability
 # @governance GOV-002: Immutable infrastructure provisioning

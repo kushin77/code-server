@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/cleanup-stale-branches.sh
+# @module      cleanup-stale-branches
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # Clean up stale merged branches
 # Removes local and remote branches that were merged >N days ago

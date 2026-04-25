@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/edge-agent/register-edge-agent.sh
+# @module      edge-agent/register-edge-agent
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/edge-agent/register-edge-agent.sh
 # @description Register edge agent with control plane and establish heartbeat

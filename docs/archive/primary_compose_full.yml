@@ -9,7 +9,7 @@ services:
   # ========================================================================
 
   grafana-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: grafana-init
     user: "0:0"
     command:
@@ -23,7 +23,7 @@ services:
       - services
 
   redis-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: redis-init
     user: "0:0"
     command:
@@ -37,7 +37,7 @@ services:
       - services
 
   redpanda-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: redpanda-init
     user: "0:0"
     command:
@@ -1185,7 +1185,7 @@ services:
   # ========================================================================
 
   ollama-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: ollama-init
     user: "0:0"
     command:
@@ -1335,7 +1335,7 @@ services:
   # Distributed tracing backend — stores and queries traces via OTLP
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
   tempo-init:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
     container_name: tempo-init
     user: "0:0"
     command:

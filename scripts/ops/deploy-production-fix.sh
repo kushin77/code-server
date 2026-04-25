@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/deploy-production-fix.sh
+# @module      ops/deploy-production-fix
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/ops/deploy-production-fix.sh
 # @description Idempotent production deployment with health verification

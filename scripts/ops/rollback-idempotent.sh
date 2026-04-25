@@ -14,6 +14,10 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+log_error() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
+}
+
 # Wait for all services to report healthy after restart
 wait_for_healthy_services() {
   local expected_count
@@ -47,7 +51,7 @@ rollback() {
   local latest=$(latest_backup)
   
   if [[ -z "$latest" ]]; then
-    echo "ERROR: No backup found for rollback" >&2
+    log_error "No backup found for rollback"
     return 1
   fi
   
@@ -76,7 +80,7 @@ rollback() {
   docker compose up -d
 
   if ! wait_for_healthy_services; then
-    echo "ERROR: Services did not become healthy after rollback" >&2
+    log_error "Services did not become healthy after rollback"
     return 1
   fi
   

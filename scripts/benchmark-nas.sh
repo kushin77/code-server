@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/benchmark-nas.sh
+# @module      benchmark-nas
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # ElevatedIQ NAS Performance Benchmarking
 # Measures network throughput, file I/O, and mount performance
@@ -26,11 +34,44 @@ source "${REPO_ROOT}/scripts/_common/init.sh"
 source "${REPO_ROOT}/scripts/_common/hosts.sh"
 
 # Configuration
-NAS_HOST="${1:-${NAS_HOST}}"
-PRIMARY_HOST="${2:-${PRIMARY_HOST}}"
-OUTPUT_FILE="${3:-$(date +nas-benchmark-%Y%m%d-%H%M%S.json)}"
+NAS_HOST="${NAS_HOST:-}"
+PRIMARY_HOST="${PRIMARY_HOST:-}"
+OUTPUT_FILE="$(date +nas-benchmark-%Y%m%d-%H%M%S.json)"
 BENCHMARK_DIR="/tmp/nas-benchmark-$$"
 MOUNT_POINT="/mnt/nas"
+
+usage() {
+  echo "Usage: bash scripts/benchmark-nas.sh [--nas-host HOST] [--primary-host HOST] [--output FILE]"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nas-host)
+      NAS_HOST="${2:-}"
+      shift 2
+      ;;
+    --primary-host)
+      PRIMARY_HOST="${2:-}"
+      shift 2
+      ;;
+    --output)
+      OUTPUT_FILE="${2:-$OUTPUT_FILE}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+: "${NAS_HOST:?NAS_HOST must be set via --nas-host or environment}"
+: "${PRIMARY_HOST:?PRIMARY_HOST must be set via --primary-host or environment}"
 
 # Color codes for output
 RED='\033[0;31m'

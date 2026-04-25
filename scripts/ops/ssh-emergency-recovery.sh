@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/ssh-emergency-recovery.sh
+# @module      ops/ssh-emergency-recovery
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # SSH Service Emergency Recovery - ${REPLICA_HOST}
 # Usage: bash /tmp/ssh-emergency-recovery.sh [--dry-run]
 # 

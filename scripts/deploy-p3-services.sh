@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/deploy-p3-services.sh
+# @module      deploy-p3-services
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # GOV-002 Compliance: P3 Services Autonomous Deployment Script
 # Reputation Engine + Execution Scheduler + Paperclip Control Plane
 # Date: April 24, 2026

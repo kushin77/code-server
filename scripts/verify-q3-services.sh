@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/verify-q3-services.sh
+# @module      verify-q3-services
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # GOV-002 Compliance: Production Deployment Verification
 # P3 Q3 Services: Reputation Engine, Execution Scheduler, Paperclip Control Plane
 # Status: Autonomous Verification Script

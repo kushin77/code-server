@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/autonomous/autonomous-deployment-simulator.sh
+# @module      autonomous/autonomous-deployment-simulator
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 ################################################################################
 # AUTONOMOUS INFRASTRUCTURE DEPLOYMENT SIMULATOR
 # 

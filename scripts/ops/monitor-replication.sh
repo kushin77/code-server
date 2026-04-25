@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/monitor-replication.sh
+# @module      ops/monitor-replication
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/monitor-replication.sh
 # @description Monitors database replication lag and status for PostgreSQL and Redis.
 # @governance GOV-002

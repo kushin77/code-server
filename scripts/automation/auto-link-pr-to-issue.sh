@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/automation/auto-link-pr-to-issue.sh
+# @module      automation/auto-link-pr-to-issue
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/automation/auto-link-pr-to-issue.sh
 # @description Auto-link PRs to related GitHub issues (detects from branch/title/body)

@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/collect-baseline-metrics.sh
+# @module      ops/collect-baseline-metrics
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/collect-baseline-metrics.sh
 # @description Collects performance metrics to establish operational baselines.
 # @governance GOV-002

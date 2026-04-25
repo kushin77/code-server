@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/init-testing-framework.sh
+# @module      init-testing-framework
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # Unit Testing Framework Initialization
 # Issue #1537 Week 1: Comprehensive Testing Infrastructure

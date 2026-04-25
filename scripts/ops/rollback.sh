@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/ops/rollback.sh
+# @module      ops/rollback
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/rollback.sh
 # @description IaC Lifecycle Control - Comprehensive rollback mechanism (#1531)
 # @governance GOV-002 - Immutable, idempotent rollback procedures

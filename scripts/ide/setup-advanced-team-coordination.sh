@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/ide/setup-advanced-team-coordination.sh
+# @module      ide/setup-advanced-team-coordination
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 
 ###############################################################################
 # @fileoverview Setup script for P2 #1539 Phase 7: Advanced Team Coordination

@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/kafka-memory-consumer.sh
+# @module      ops/kafka-memory-consumer
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/kafka-memory-consumer.sh
 # @description Kafka consumer for continuous organizational memory ingestion
 # @governance GOV-002
@@ -43,6 +51,7 @@ create_consumer_python_script() {
     local consumer_script="${PROJECT_ROOT}/apps/memory-engine/kafka_consumer.py"
     
     log_info "Creating Kafka consumer script: $consumer_script"
+    mkdir -p "$(dirname "$consumer_script")"
     
     cat > "$consumer_script" <<'PYTHON_EOF'
 #!/usr/bin/env python3

@@ -193,22 +193,23 @@ readonly GOV002_HEADER_TEMPLATE="###############################################
 # @date        %DATE%
 ###############################################################################"
 
-# Find scripts missing GOV-002 headers
+# Find scripts missing GOV-002 headers in the first 10 lines
 SCRIPTS_MISSING_HEADERS=$(
   find scripts/ -name "*.sh" -type f ! -path "./.git/*" |
   while read -r script; do
-    if ! grep -q "@governance.*GOV-002" "$script" 2>/dev/null; then
+    if ! head -10 "$script" | grep -q "@file" || ! head -10 "$script" | grep -q "@module" || ! head -10 "$script" | grep -q "@description"; then
       echo "$script"
     fi
   done
 )
 
 script_count=0
+missing_header_count=$(printf '%s\n' "$SCRIPTS_MISSING_HEADERS" | grep -c '^' || true)
 for script in $SCRIPTS_MISSING_HEADERS; do
-  ((script_count++))
+  script_count=$((script_count + 1))
   
   if [ "$script_count" -gt 5 ]; then
-    log_info "  ... and $(($SCRIPTS_MISSING_HEADERS - 5)) more scripts"
+    log_info "  ... and $((missing_header_count - 5)) more scripts"
     break
   fi
   
@@ -220,11 +221,6 @@ if [ "$DRY_RUN" = "false" ]; then
   log_info "Adding GOV-002 headers to scripts..."
   
   for script in $SCRIPTS_MISSING_HEADERS; do
-    # Skip scripts that already have detailed headers
-    if grep -q "@file\|@fileoverview" "$script" 2>/dev/null; then
-      continue
-    fi
-    
     # Extract first line if it's a shebang
     first_line=$(head -n1 "$script")
     if [[ "$first_line" == "#!"* ]]; then
@@ -238,6 +234,17 @@ if [ "$DRY_RUN" = "false" ]; then
           sed "s|%DATE%|$(date +%Y-%m-%d)|g"
         tail -n +2 "$script"
       ) > "$script.tmp"
+      mv "$script.tmp" "$script"
+      log_success "  ✓ Header added: $script"
+    else
+      {
+        echo "$GOV002_HEADER_TEMPLATE" |
+          sed "s|%FILEPATH%|$script|g" |
+          sed "s|%MODULE%|$(echo $script | sed 's|scripts/||; s|\.sh||')|g" |
+          sed "s|%DESCRIPTION%|Infrastructure automation script|g" |
+          sed "s|%DATE%|$(date +%Y-%m-%d)|g"
+        cat "$script"
+      } > "$script.tmp"
       mv "$script.tmp" "$script"
       log_success "  ✓ Header added: $script"
     fi

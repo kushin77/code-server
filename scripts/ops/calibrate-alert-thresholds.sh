@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/ops/calibrate-alert-thresholds.sh
+# @module      ops/calibrate-alert-thresholds
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/calibrate-alert-thresholds.sh
 # @description Updates Prometheus alert rules based on collected baseline metrics.
 # @governance GOV-002

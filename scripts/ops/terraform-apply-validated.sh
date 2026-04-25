@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/ops/terraform-apply-validated.sh
+# @module      ops/terraform-apply-validated
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 # @file scripts/ops/terraform-apply-validated.sh
 # @description Phase 4: Validated Terraform apply with environment variable sourcing (#1531)
 # @governance GOV-002 - All values from environment, no hardcoding in tfvars

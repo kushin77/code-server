@@ -118,6 +118,7 @@ record_rollback_attempt() {
   local status="${3:-unknown}"
   local health_status="${4:-not-checked}"
   
+  # Use jq to safely append to JSON array (idempotent)
   local entry=$(cat <<EOF
 {
   "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
@@ -133,8 +134,15 @@ EOF
     echo '{"rollbacks": []}' > "${ROLLBACK_HISTORY}"
   fi
   
-  # Append entry to history
-  echo "${entry}" >> "${ROLLBACK_HISTORY}"
+  # Use jq to safely append to JSON array while maintaining structure
+  if command -v jq &>/dev/null; then
+    jq ".rollbacks += [$(echo "$entry")]" "${ROLLBACK_HISTORY}" > "${ROLLBACK_HISTORY}.tmp" && \
+      mv "${ROLLBACK_HISTORY}.tmp" "${ROLLBACK_HISTORY}"
+  else
+    # Fallback: append with warning
+    log_error "jq not available; appending without JSON validation (may cause malformed output)"
+    echo "${entry}" >> "${ROLLBACK_HISTORY}"
+  fi
 }
 
 main() {

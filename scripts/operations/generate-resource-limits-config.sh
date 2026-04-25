@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/operations/generate-resource-limits-config.sh
+# @module      operations/generate-resource-limits-config
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 
 # Resource Limits Configuration Phase 2 Script
 # Purpose: Generate docker-compose updates with resource limits for all services

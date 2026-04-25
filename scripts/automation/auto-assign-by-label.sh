@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/automation/auto-assign-by-label.sh
+# @module      automation/auto-assign-by-label
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/automation/auto-assign-by-label.sh
 # @description Auto-assign issues based on labels

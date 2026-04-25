@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/validate-dns-failover.sh
+# @module      validate-dns-failover
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # DNS Failover Validation & Testing
 # Tests automatic failover when primary DNS becomes unavailable

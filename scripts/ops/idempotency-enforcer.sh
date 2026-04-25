@@ -18,6 +18,14 @@ warn() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $*" | tee -a "$LOG_FILE"
 }
 
+log_error() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
+}
+
+log_warn() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $*" | tee -a "$LOG_FILE"
+}
+
 # Ensure state directory exists for tracking idempotent operations
 ensure_state_dir() {
   mkdir -p "$STATE_DIR"
@@ -72,6 +80,14 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+log_error() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
+}
+
+log_warn() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $*" | tee -a "$LOG_FILE"
+}
+
 # Check if services are already running
 services_running() {
   docker compose ps --services 2>/dev/null | wc -l | tr -d ' '
@@ -114,13 +130,13 @@ deploy() {
   
   # Verify Docker is running
   if ! docker ps &>/dev/null; then
-    echo "ERROR: Docker daemon not running" >&2
+    log_error "Docker daemon not running"
     return 1
   fi
   
   # Verify docker-compose.yml exists
   if [[ ! -f ./docker-compose.yml ]]; then
-    echo "ERROR: docker-compose.yml not found" >&2
+    log_error "docker-compose.yml not found"
     return 1
   fi
   
@@ -132,7 +148,7 @@ deploy() {
   
   log "Waiting for health checks..."
   if ! wait_for_healthy_services; then
-    echo "ERROR: Services did not become healthy in time" >&2
+    log_error "Services did not become healthy in time"
     return 1
   fi
   
@@ -140,7 +156,7 @@ deploy() {
   local unhealthy=0
   for service in $(docker compose ps --services); do
     if ! docker compose ps "$service" | grep -q "healthy\|running"; then
-      echo "WARNING: Service $service not healthy" >&2
+      log_warn "Service $service not healthy"
       ((unhealthy++)) || true
     fi
   done
@@ -150,7 +166,7 @@ deploy() {
     echo "deployed:$(date '+%s')" >> "$state_file"
     return 0
   else
-    echo "ERROR: $unhealthy services not healthy" >&2
+    log_error "$unhealthy services not healthy"
     return 1
   fi
 }
@@ -183,6 +199,10 @@ mkdir -p "$BACKUP_DIR"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+log_error() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
 }
 
 # Wait for all services to report healthy after restart
@@ -218,7 +238,7 @@ rollback() {
   local latest=$(latest_backup)
   
   if [[ -z "$latest" ]]; then
-    echo "ERROR: No backup found for rollback" >&2
+    log_error "No backup found for rollback"
     return 1
   fi
   
@@ -247,7 +267,7 @@ rollback() {
   docker compose up -d
 
   if ! wait_for_healthy_services; then
-    echo "ERROR: Services did not become healthy after rollback" >&2
+    log_error "Services did not become healthy after rollback"
     return 1
   fi
   

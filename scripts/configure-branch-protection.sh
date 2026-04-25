@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+###############################################################################
+# @file        scripts/configure-branch-protection.sh
+# @module      configure-branch-protection
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # Configure GitHub branch protection rules for main branch
 # This script sets up protection rules aligned with issue #1534 governance standards

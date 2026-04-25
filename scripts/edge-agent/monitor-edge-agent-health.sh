@@ -1,4 +1,12 @@
 #!/bin/bash
+###############################################################################
+# @file        scripts/edge-agent/monitor-edge-agent-health.sh
+# @module      edge-agent/monitor-edge-agent-health
+# @description Infrastructure automation script
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @author      Autonomous Infrastructure
+# @date        2026-04-25
+###############################################################################
 #
 # @file scripts/edge-agent/monitor-edge-agent-health.sh
 # @description Monitor edge agent heartbeats and manage agent lifecycle

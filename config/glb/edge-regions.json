@@ -1,0 +1,539 @@
+{
+  "phase": "Q3-Phase-5",
+  "name": "Regional Edge Locations Configuration",
+  "version": "1.0.0",
+  "created_at": "2026-04-25T00:00:00Z",
+  "updated_at": "2026-04-25T00:00:00Z",
+  "description": "Comprehensive configuration for code-server edge agent deployment across 6 global regions",
+  
+  "deployment_objectives": {
+    "primary": "Deploy edge agents to minimize latency across all major global regions",
+    "secondary_goals": [
+      "Achieve <50ms latency for 99% of users",
+      "Implement active-active multi-region failover",
+      "Enable database sharding and federation",
+      "Distribute IDE extensions and runtime",
+      "Support 100+ concurrent users per edge location"
+    ],
+    "success_metrics": {
+      "latency_p99": "< 50ms",
+      "availability": "> 99.99%",
+      "error_rate": "< 0.1%",
+      "user_capacity": "100+ per region",
+      "cost_per_user_month": "< $5"
+    }
+  },
+  
+  "regions": {
+    "north_america_east": {
+      "region_id": "us-east-1",
+      "region_name": "North America - East (N. Virginia)",
+      "cloud_provider": "AWS",
+      "availability_zones": ["us-east-1a", "us-east-1b", "us-east-1c"],
+      "coordinates": {
+        "latitude": 37.926868,
+        "longitude": -77.945564
+      },
+      "coverage_countries": ["US", "Canada", "Mexico"],
+      "priority": 1,
+      "weight": 30,
+      "latency_target_ms": 50,
+      "infrastructure": {
+        "instance_type": "t3.2xlarge",
+        "instance_count": 3,
+        "vcpu": 8,
+        "memory_gb": 32,
+        "storage_gb": 500,
+        "network_performance": "Up to 5 Gigabit"
+      },
+      "services": [
+        "api-server",
+        "extensions-runtime",
+        "session-broker",
+        "cache-layer",
+        "database-replica",
+        "edge-agent"
+      ],
+      "capacity": {
+        "concurrent_users": 150,
+        "requests_per_second": 5000,
+        "storage_capacity_gb": 1500
+      },
+      "cost_monthly_usd": 3500,
+      "estimated_users": 1500,
+      "deployment_window": "Week 1 (May 27-31)",
+      "health_check_endpoint": "https://us-east.code-server.ai/api/health",
+      "monitoring": {
+        "prometheus_endpoint": "http://us-east-metrics:9090",
+        "grafana_dashboard": "us-east-1-dashboard",
+        "alert_routing": "us-east-oncall@code-server.ai"
+      }
+    },
+    
+    "north_america_west": {
+      "region_id": "us-west-2",
+      "region_name": "North America - West (N. California)",
+      "cloud_provider": "AWS",
+      "availability_zones": ["us-west-2a", "us-west-2b", "us-west-2c"],
+      "coordinates": {
+        "latitude": 37.772335,
+        "longitude": -122.408377
+      },
+      "coverage_countries": ["US", "Canada", "Pacific Islands"],
+      "priority": 1,
+      "weight": 25,
+      "latency_target_ms": 50,
+      "infrastructure": {
+        "instance_type": "t3.2xlarge",
+        "instance_count": 3,
+        "vcpu": 8,
+        "memory_gb": 32,
+        "storage_gb": 500,
+        "network_performance": "Up to 5 Gigabit"
+      },
+      "services": [
+        "api-server",
+        "extensions-runtime",
+        "session-broker",
+        "cache-layer",
+        "database-replica",
+        "edge-agent"
+      ],
+      "capacity": {
+        "concurrent_users": 125,
+        "requests_per_second": 4000,
+        "storage_capacity_gb": 1500
+      },
+      "cost_monthly_usd": 3200,
+      "estimated_users": 1200,
+      "deployment_window": "Week 1 (May 27-31)",
+      "health_check_endpoint": "https://us-west.code-server.ai/api/health",
+      "monitoring": {
+        "prometheus_endpoint": "http://us-west-metrics:9090",
+        "grafana_dashboard": "us-west-2-dashboard",
+        "alert_routing": "us-west-oncall@code-server.ai"
+      }
+    },
+    
+    "europe_central": {
+      "region_id": "eu-central-1",
+      "region_name": "Europe - Central (Frankfurt)",
+      "cloud_provider": "AWS",
+      "availability_zones": ["eu-central-1a", "eu-central-1b", "eu-central-1c"],
+      "coordinates": {
+        "latitude": 50.110924,
+        "longitude": 8.682127
+      },
+      "coverage_countries": ["DE", "FR", "IT", "ES", "UK", "NL", "SE", "NO", "PL", "CH"],
+      "priority": 2,
+      "weight": 20,
+      "latency_target_ms": 30,
+      "infrastructure": {
+        "instance_type": "t3.2xlarge",
+        "instance_count": 3,
+        "vcpu": 8,
+        "memory_gb": 32,
+        "storage_gb": 500,
+        "network_performance": "Up to 5 Gigabit"
+      },
+      "services": [
+        "api-server",
+        "extensions-runtime",
+        "session-broker",
+        "cache-layer",
+        "database-replica",
+        "edge-agent"
+      ],
+      "capacity": {
+        "concurrent_users": 100,
+        "requests_per_second": 3200,
+        "storage_capacity_gb": 1500
+      },
+      "cost_monthly_usd": 2800,
+      "estimated_users": 1000,
+      "deployment_window": "Week 2 (June 2-8)",
+      "health_check_endpoint": "https://eu-central.code-server.ai/api/health",
+      "data_residency": {
+        "requirement": "GDPR",
+        "backup_regions": ["eu-west-1", "eu-north-1"],
+        "encryption_at_rest": true
+      },
+      "monitoring": {
+        "prometheus_endpoint": "http://eu-central-metrics:9090",
+        "grafana_dashboard": "eu-central-1-dashboard",
+        "alert_routing": "eu-oncall@code-server.ai"
+      }
+    },
+    
+    "asia_pacific_singapore": {
+      "region_id": "ap-southeast-1",
+      "region_name": "Asia Pacific - Singapore",
+      "cloud_provider": "AWS",
+      "availability_zones": ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"],
+      "coordinates": {
+        "latitude": 1.352083,
+        "longitude": 103.819839
+      },
+      "coverage_countries": ["SG", "MY", "TH", "ID", "PH", "VN", "MM", "BN"],
+      "priority": 3,
+      "weight": 10,
+      "latency_target_ms": 40,
+      "infrastructure": {
+        "instance_type": "t3.xlarge",
+        "instance_count": 2,
+        "vcpu": 4,
+        "memory_gb": 16,
+        "storage_gb": 300,
+        "network_performance": "Up to 5 Gigabit"
+      },
+      "services": [
+        "api-server",
+        "extensions-runtime",
+        "session-broker",
+        "cache-layer",
+        "database-replica",
+        "edge-agent"
+      ],
+      "capacity": {
+        "concurrent_users": 75,
+        "requests_per_second": 2400,
+        "storage_capacity_gb": 1000
+      },
+      "cost_monthly_usd": 2000,
+      "estimated_users": 700,
+      "deployment_window": "Week 2 (June 2-8)",
+      "health_check_endpoint": "https://apac-sg.code-server.ai/api/health",
+      "monitoring": {
+        "prometheus_endpoint": "http://apac-sg-metrics:9090",
+        "grafana_dashboard": "ap-southeast-1-dashboard",
+        "alert_routing": "apac-oncall@code-server.ai"
+      }
+    },
+    
+    "asia_pacific_tokyo": {
+      "region_id": "ap-northeast-1",
+      "region_name": "Asia Pacific - Tokyo",
+      "cloud_provider": "AWS",
+      "availability_zones": ["ap-northeast-1a", "ap-northeast-1b", "ap-northeast-1c"],
+      "coordinates": {
+        "latitude": 35.6892,
+        "longitude": 139.6917
+      },
+      "coverage_countries": ["JP", "KR", "CN", "TW", "HK"],
+      "priority": 4,
+      "weight": 5,
+      "latency_target_ms": 40,
+      "infrastructure": {
+        "instance_type": "t3.large",
+        "instance_count": 2,
+        "vcpu": 2,
+        "memory_gb": 8,
+        "storage_gb": 200,
+        "network_performance": "Up to 5 Gigabit"
+      },
+      "services": [
+        "api-server",
+        "extensions-runtime",
+        "session-broker",
+        "cache-layer",
+        "database-replica",
+        "edge-agent"
+      ],
+      "capacity": {
+        "concurrent_users": 50,
+        "requests_per_second": 1600,
+        "storage_capacity_gb": 800
+      },
+      "cost_monthly_usd": 1500,
+      "estimated_users": 400,
+      "deployment_window": "Week 3 (June 9-15)",
+      "health_check_endpoint": "https://apac-jp.code-server.ai/api/health",
+      "monitoring": {
+        "prometheus_endpoint": "http://apac-jp-metrics:9090",
+        "grafana_dashboard": "ap-northeast-1-dashboard",
+        "alert_routing": "apac-oncall@code-server.ai"
+      }
+    },
+    
+    "south_america_brazil": {
+      "region_id": "sa-east-1",
+      "region_name": "South America - São Paulo",
+      "cloud_provider": "AWS",
+      "availability_zones": ["sa-east-1a", "sa-east-1b", "sa-east-1c"],
+      "coordinates": {
+        "latitude": -23.550520,
+        "longitude": -46.633309
+      },
+      "coverage_countries": ["BR", "AR", "CL", "UY", "PY"],
+      "priority": 4,
+      "weight": 5,
+      "latency_target_ms": 60,
+      "infrastructure": {
+        "instance_type": "t3.large",
+        "instance_count": 2,
+        "vcpu": 2,
+        "memory_gb": 8,
+        "storage_gb": 200,
+        "network_performance": "Up to 5 Gigabit"
+      },
+      "services": [
+        "api-server",
+        "extensions-runtime",
+        "session-broker",
+        "cache-layer",
+        "database-replica",
+        "edge-agent"
+      ],
+      "capacity": {
+        "concurrent_users": 50,
+        "requests_per_second": 1600,
+        "storage_capacity_gb": 800
+      },
+      "cost_monthly_usd": 1200,
+      "estimated_users": 400,
+      "deployment_window": "Week 3 (June 9-15)",
+      "health_check_endpoint": "https://br-south.code-server.ai/api/health",
+      "monitoring": {
+        "prometheus_endpoint": "http://br-south-metrics:9090",
+        "grafana_dashboard": "sa-east-1-dashboard",
+        "alert_routing": "br-oncall@code-server.ai"
+      }
+    }
+  },
+  
+  "deployment_phases": {
+    "phase_1": {
+      "name": "North America Rollout",
+      "week": "Week 1 (May 27-31)",
+      "regions": ["us-east-1", "us-west-2"],
+      "parallel_deployment": true,
+      "success_criteria": [
+        "Both regions healthy and serving traffic",
+        "Latency < 50ms for 99th percentile",
+        "Error rate < 0.1%",
+        "Database replication synchronized"
+      ]
+    },
+    "phase_2": {
+      "name": "Europe & APAC Singapore",
+      "week": "Week 2 (June 2-8)",
+      "regions": ["eu-central-1", "ap-southeast-1"],
+      "parallel_deployment": true,
+      "success_criteria": [
+        "Both regions healthy and serving traffic",
+        "Global latency < 50ms for 99% users",
+        "Multi-region failover operational",
+        "CDN edge caches primed"
+      ]
+    },
+    "phase_3": {
+      "name": "Asia Pacific & South America",
+      "week": "Week 3 (June 9-15)",
+      "regions": ["ap-northeast-1", "sa-east-1"],
+      "parallel_deployment": true,
+      "success_criteria": [
+        "All 6 regions healthy and verified",
+        "Global load distribution balanced",
+        "Disaster recovery procedures tested",
+        "Multi-region database sharding verified"
+      ]
+    },
+    "phase_4": {
+      "name": "Optimization & Production Hardening",
+      "week": "Week 4 (June 16-21)",
+      "regions": ["all"],
+      "activities": [
+        "Performance optimization and tuning",
+        "Chaos engineering and resilience testing",
+        "Load testing at 2x expected capacity",
+        "Documentation and runbook completion",
+        "Team training and certification"
+      ],
+      "success_criteria": [
+        "99.99% uptime achieved",
+        "Scalable to 10x current capacity",
+        "All runbooks and procedures documented",
+        "On-call team ready for production"
+      ]
+    }
+  },
+  
+  "infrastructure_provisioning": {
+    "terraform": {
+      "modules": [
+        "aws_eks_cluster",
+        "aws_rds_aurora_multi_region",
+        "aws_elasticache_redis",
+        "aws_s3_regional_buckets",
+        "aws_cloudfront_distribution",
+        "aws_route53_health_checks",
+        "aws_autoscaling_groups"
+      ],
+      "backend": "s3",
+      "state_locking": "dynamodb",
+      "validation": "terraform validate && terraform plan"
+    },
+    "kubernetes": {
+      "distribution": "AWS EKS",
+      "service_mesh": "Istio 1.18.0 (STRICT mTLS)",
+      "helm_charts": [
+        "code-server-enterprise",
+        "prometheus-stack",
+        "jaeger-operator",
+        "fluent-bit",
+        "sealed-secrets"
+      ],
+      "namespaces": ["production", "monitoring", "istio-system"]
+    },
+    "database": {
+      "primary": "Aurora PostgreSQL 15 (Multi-AZ, Multi-Region)",
+      "sharding_strategy": "Hash(user_id) % num_shards",
+      "replicas": 3,
+      "backup_retention_days": 30,
+      "pitr_enabled": true
+    }
+  },
+  
+  "networking_configuration": {
+    "cdn": {
+      "provider": "Cloudflare",
+      "cache_ttl_seconds": 86400,
+      "geo_routing": "Enabled",
+      "ddos_protection": "Advanced"
+    },
+    "load_balancing": {
+      "primary": "Cloudflare",
+      "backup": "AWS Route53",
+      "health_check_interval_seconds": 5,
+      "failover_timeout_seconds": 30
+    },
+    "dns": {
+      "primary_domain": "code-server.ai",
+      "regional_subdomains": [
+        "us-east.code-server.ai",
+        "us-west.code-server.ai",
+        "eu-central.code-server.ai",
+        "apac-sg.code-server.ai",
+        "apac-jp.code-server.ai",
+        "br-south.code-server.ai"
+      ],
+      "ttl_seconds": 120
+    }
+  },
+  
+  "monitoring_and_observability": {
+    "metrics": {
+      "prometheus": {
+        "scrape_interval": "30s",
+        "retention_days": 30,
+        "remote_write": "Grafana Cloud"
+      },
+      "key_metrics": [
+        "http_request_duration_seconds",
+        "http_requests_total",
+        "database_connection_pool_utilization",
+        "cache_hit_rate",
+        "edge_agent_availability",
+        "multi_region_replication_lag_seconds"
+      ]
+    },
+    "logging": {
+      "aggregator": "Fluent Bit",
+      "destination": "AWS CloudWatch",
+      "retention_days": 30
+    },
+    "tracing": {
+      "platform": "Jaeger",
+      "sampling_rate": 0.1,
+      "retention_hours": 72
+    },
+    "dashboards": {
+      "global_overview": "global-regional-dashboard",
+      "regional_details": "region-specific-dashboards",
+      "sla_tracking": "sla-compliance-dashboard",
+      "cost_analysis": "multi-region-cost-dashboard"
+    },
+    "alerting": {
+      "channels": ["email", "slack", "pagerduty"],
+      "critical_alerts": [
+        "Region unavailable",
+        "Error rate > 1%",
+        "Latency P99 > 100ms",
+        "Database replication lag > 5s"
+      ]
+    }
+  },
+  
+  "disaster_recovery": {
+    "rpo_seconds": 300,
+    "rto_seconds": 600,
+    "backup_strategy": "Continuous replication + Daily snapshots",
+    "failover_procedure": "Automatic with manual verification",
+    "testing_frequency": "Monthly"
+  },
+  
+  "cost_estimation": {
+    "total_monthly_usd": {
+      "compute": 14200,
+      "storage": 2500,
+      "network": 3000,
+      "cdn": 1500,
+      "databases": 5000,
+      "monitoring": 800,
+      "misc": 1000,
+      "total": 28000
+    },
+    "cost_per_user_month": 4.67,
+    "breakdown_by_region": {
+      "us-east-1": 3500,
+      "us-west-2": 3200,
+      "eu-central-1": 2800,
+      "ap-southeast-1": 2000,
+      "ap-northeast-1": 1500,
+      "sa-east-1": 1200
+    }
+  },
+  
+  "team_and_handoff": {
+    "deployment_team_leads": [
+      "Infrastructure Engineer (Terraform/Kubernetes)",
+      "Database Administrator (Multi-region setup)",
+      "DevOps Engineer (Monitoring/Observability)",
+      "Network Engineer (DNS/Load Balancing)"
+    ],
+    "training_requirements": [
+      "Multi-region failover procedures",
+      "Database sharding and federation",
+      "Edge agent deployment and scaling",
+      "Disaster recovery activation"
+    ],
+    "runbooks": [
+      "Regional edge agent deployment",
+      "Emergency failover procedures",
+      "Database replication monitoring",
+      "Performance optimization",
+      "Cost analysis and optimization"
+    ]
+  },
+  
+  "success_criteria": {
+    "deployment": {
+      "target_uptime": "99.99%",
+      "latency_p99_ms": 50,
+      "error_rate_percent": 0.1,
+      "user_capacity": 4700
+    },
+    "operational": {
+      "mtbf_hours": 1000,
+      "mttr_minutes": 10,
+      "availability_zones_per_region": 3,
+      "cross_region_failover_seconds": 30
+    },
+    "business": {
+      "users_supported": 4700,
+      "cost_per_user_usd": 4.67,
+      "revenue_potential": 47000,
+      "market_coverage": "100%"
+    }
+  }
+}

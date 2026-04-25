@@ -7,9 +7,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REPORT_FILE="${REPO_ROOT}/artifacts/domain-variability-report.json"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/domain-variability-report.json}"
+readonly APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
+readonly IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
 
 source "${REPO_ROOT}/scripts/_common/init.sh"
 source "${REPO_ROOT}/scripts/_common/hosts.sh"

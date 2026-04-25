@@ -1,21 +1,23 @@
 #!/bin/bash
 
 ################################################################################
-# @file analyze-documentation-gaps.sh
-# @module documentation-analysis
-# @description Automated documentation gap analysis — scans required docs and 
-#              generates issues for missing documentation
-# @governance GOV-002
+# @governance: Documentation gap analysis — audit completeness of technical docs
+# Purpose: Automated documentation gap analysis - scans required docs and generates issues
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1237 (Documentation Standards)
 ################################################################################
 
 set -euo pipefail
 
 ################################################################################
-# Configuration
+# Configuration (all env-var driven)
 ################################################################################
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DOCS_ROOT="${DOCS_ROOT:-${PROJECT_ROOT}/docs}"
+readonly GAPS_REPORT_DIR="${GAPS_REPORT_DIR:-${PROJECT_ROOT}/artifacts/reports}"
 
 # Source common functions
 source "${SCRIPT_DIR}/../_common/init.sh"

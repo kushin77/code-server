@@ -7,14 +7,13 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly COMPOSE_FILE="${COMPOSE_FILE:-${REPO_ROOT}/docker-compose.yml}"
+readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/compose-idempotency-report.txt}"
 
 # Source common logging functions (P3 #1533: consolidated logging)
 source "${REPO_ROOT}/scripts/_common/init.sh"
-
-COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
-REPORT_FILE="${REPO_ROOT}/artifacts/compose-idempotency-report.txt"
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in

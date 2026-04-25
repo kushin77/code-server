@@ -35,8 +35,7 @@ generate_pgbouncer_config() {
 
   cat <<EOF
 # pgBouncer Configuration - Connection Pooling for PostgreSQL
-# Generated: $(date)
-# Epic #1536 Phase 6
+# Epic #1536 Phase 6 - IaC Compliance
 
 [databases]
 ${db_name} = host=${db_host} port=${db_port} dbname=${db_name}
@@ -93,8 +92,7 @@ generate_haproxy_config() {
 
   cat <<EOF
 # HAProxy Configuration - Connection Pooling & Load Balancing
-# Generated: $(date)
-# Epic #1536 Phase 6
+# Epic #1536 Phase 6 - IaC Compliance
 
 global
   maxconn 4096
@@ -157,8 +155,7 @@ generate_caddy_connpool_config() {
 
   cat <<EOF
 # Caddy Configuration with Connection Pooling
-# Generated: $(date)
-# Epic #1536 Phase 6
+# Epic #1536 Phase 6 - IaC Compliance
 
 kushnir.cloud {
   reverse_proxy ${backend_url} {

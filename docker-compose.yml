@@ -1144,14 +1144,14 @@ services:
     volumes:
       - ollama_models:/home/ollama/.ollama
     environment:
+      - HOME=/home/ollama
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_MODELS=/home/ollama/.ollama/models
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:11434/api/tags"
+        - ollama
+        - --version
       interval: 60s
       timeout: 10s
       retries: 3

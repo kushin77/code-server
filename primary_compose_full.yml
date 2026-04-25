@@ -1144,6 +1144,7 @@ services:
     volumes:
       - ollama_models:/home/ollama/.ollama
     environment:
+      - HOME=/home/ollama
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_MODELS=/home/ollama/.ollama/models
     healthcheck:

@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:ff71127c215572121f1991bacf17f39ec5fcfd2de1f1c01a595835495bb9adfc
 
 LABEL org.opencontainers.image.title="env-provisioner" \
       org.opencontainers.image.description="P3-1553 Environment provisioning service" \

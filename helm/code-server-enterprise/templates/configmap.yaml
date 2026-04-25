@@ -1,0 +1,37 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: CONFIGMAP_TEMPLATE
+# PURPOSE: Kubernetes ConfigMap for application configuration
+# IMMUTABILITY: Configuration changes trigger rolling deployment
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+immutable: false
+data:
+  log-level: {{ .Values.global.logLevel | quote }}
+  domain: {{ .Values.global.domain | quote }}
+  environment: "production"
+  application-config.yaml: |
+    ---
+    # Application configuration for code-server-enterprise
+    metadata:
+      version: "1.0.0"
+      governance-policy: "GOV-002"
+    logging:
+      level: {{ .Values.global.logLevel }}
+      format: "json"
+    services:
+    {{- $root := . -}}
+    {{- range $serviceName, $serviceConfig := $root.Values.services }}
+    {{- if $serviceConfig.enabled }}
+      - name: {{ $serviceConfig.name }}
+        port: {{ $serviceConfig.port }}
+        replicas: {{ $serviceConfig.replicas }}
+    {{- end }}
+    {{- end }}

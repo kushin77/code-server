@@ -1,0 +1,33 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: SERVICE_TEMPLATE
+# PURPOSE: Kubernetes Service template for microservices exposure
+# PATTERN: Load-balanced service for each deployed microservice
+
+{{- $root := . -}}
+{{- if $root.Values.services }}
+{{- range $serviceName, $serviceConfig := $root.Values.services }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "code-server-enterprise.fullname" $root }}-{{ $serviceConfig.name }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    {{- toYaml $root.Values.annotations | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "code-server-enterprise.selectorLabels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  ports:
+  - port: {{ $serviceConfig.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+{{- end }}
+{{- end }}
+{{- end }}

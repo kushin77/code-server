@@ -1,0 +1,31 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: INGRESS_TEMPLATE
+# PURPOSE: Kubernetes Ingress for external service exposure
+# PATTERN: TLS termination and routing based on domain/path
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+      - {{ .Values.global.domain | quote }}
+      secretName: {{ include "code-server-enterprise.fullname" . }}-tls
+  rules:
+  - host: {{ .Values.global.domain | quote }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "code-server-enterprise.fullname" . }}-api
+            port:
+              number: 3100

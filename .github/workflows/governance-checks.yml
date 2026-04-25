@@ -282,6 +282,18 @@ jobs:
           chmod +x scripts/ci/validate-windows-artifact-policy.sh
           scripts/ci/validate-windows-artifact-policy.sh
 
+  # ── Prompt Governance Validation ─────────────────────────────────────────────
+  prompt-governance:
+    name: Enforce prompt governance and standardization (P1-1823)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate prompt governance and structure
+        run: |
+          chmod +x scripts/ci/validate-prompt-governance.sh
+          scripts/ci/validate-prompt-governance.sh --check
+
   # ── Repository Branch Hygiene ────────────────────────────────────────────────
   branch-hygiene:
     name: Repository branch hygiene

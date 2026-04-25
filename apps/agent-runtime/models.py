@@ -32,6 +32,7 @@ class ApprovalStatus(str, Enum):
     APPROVED = "approved"
     DENIED = "denied"
     ESCALATED = "escalated"
+    EXPIRED = "expired"
 
 
 class CapabilityScope(str, Enum):

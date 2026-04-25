@@ -19,7 +19,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
 
 # Load canonical config (SSOT for all environment variables)
 if [ -f "${SCRIPT_DIR}/_base-config.env" ]; then
-  source "${SCRIPT_DIR}/_base-config.env"
+  source <(tr -d '\r' < "${SCRIPT_DIR}/_base-config.env")
 else
   echo "⚠️  WARNING: Canonical config not found at ${SCRIPT_DIR}/_base-config.env" >&2
 fi

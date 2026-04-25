@@ -11,6 +11,5 @@ bundles:
       max_delay_seconds: 300
 
 decision_logs:
-  console:
-    level: info
+  console: true
 

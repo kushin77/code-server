@@ -8,7 +8,7 @@ import os
 import secrets
 from typing import Optional
 from fastapi import HTTPException, Depends, Header
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Simple in-memory API key store (in production, use secrets manager)
 VALID_API_KEYS = {
@@ -49,7 +49,7 @@ class SchedulerAuth:
 
         return VALID_API_KEYS[x_api_key]
 
-    async def verify_bearer_token(self, credentials: HTTPAuthCredentials = Depends(HTTPBearer())) -> str:
+    async def verify_bearer_token(self, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> str:
         """
         Verify Bearer token (placeholder for OAuth2).
         

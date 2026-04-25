@@ -33,7 +33,16 @@ log_warning() {
 # Check Docker Compose state vs. code
 check_docker_compose_drift() {
   log_info "Checking Docker Compose drift..."
-  
+
+  if ! command -v jq &>/dev/null; then
+    log_warning "jq not available — skipping Docker Compose drift check"
+    return 0
+  fi
+  if ! docker info &>/dev/null 2>&1; then
+    log_warning "Docker daemon not available — skipping Docker Compose drift check"
+    return 0
+  fi
+
   local drift_items=()
   
   # Compare running containers with docker-compose.yml
@@ -81,10 +90,25 @@ check_docker_compose_drift() {
 # Check Terraform state vs. code
 check_terraform_drift() {
   log_info "Checking Terraform drift..."
-  
+
+  if ! command -v terraform &>/dev/null; then
+    log_warning "terraform not available — skipping Terraform drift check"
+    return 0
+  fi
+  if ! command -v jq &>/dev/null; then
+    log_warning "jq not available — skipping Terraform drift check"
+    return 0
+  fi
+
+  local TERRAFORM_DIR="${REPO_ROOT}/terraform/environments/private"
+  if [[ ! -d "${TERRAFORM_DIR}" ]]; then
+    log_warning "Terraform dir not found at ${TERRAFORM_DIR} — skipping"
+    return 0
+  fi
+
   local drift_items=()
-  
-  cd "${REPO_ROOT}/terraform"
+
+  cd "${TERRAFORM_DIR}"
   
   # Run terraform plan in no-changes mode
   local plan_output=$(terraform plan -json 2>/dev/null | jq -r 'select(.type=="resource_drift") | .address' || echo "")
@@ -110,7 +134,7 @@ check_caddy_drift() {
   fi
   
   # Validate current config
-  if ! caddy validate --config "${REPO_ROOT}/Caddyfile" 2>/dev/null; then
+  if ! caddy validate --config "${REPO_ROOT}/config/caddy/Caddyfile" 2>/dev/null; then
     drift_items+=("caddy-validation-failed")
     log_error "Caddy configuration validation failed"
   fi

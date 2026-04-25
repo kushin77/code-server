@@ -4,6 +4,7 @@
 @governance GOV-002: Immutable execution, deterministic behavior, audit-logged actions
 """
 
+import os
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
@@ -12,12 +13,21 @@ import logging
 
 from models import (
     AgentType, AgentExecutionRequest, AgentExecutionResult, 
-    ApprovalStatus, AgentCapabilities, RiskLevel,
+    ApprovalStatus, AgentCapabilities,
     CODE_REVIEWER_CAPABILITIES, INCIDENT_RESPONDER_CAPABILITIES,
     DOC_WRITER_CAPABILITIES, TEST_GENERATOR_CAPABILITIES,
 )
+from paperclip_client import PaperclipClient
 
 logger = logging.getLogger(__name__)
+
+# Approval gate timeouts (seconds) — configurable via env
+APPROVAL_TIMEOUT_ESCALATE = int(os.environ.get("APPROVAL_TIMEOUT_ESCALATE", "300"))   # 5 min
+APPROVAL_TIMEOUT_DENY = int(os.environ.get("APPROVAL_TIMEOUT_DENY", "900"))            # 15 min
+
+_paperclip = PaperclipClient(
+    paperclip_url=os.environ.get("PAPERCLIP_URL", "http://paperclip-control-plane:8010")
+)
 
 
 class BaseAgent(ABC):
@@ -77,11 +87,42 @@ class BaseAgent(ABC):
                     execution_destination="local",
                 )
 
-            # Step 2: Check approval requirement
+            # Step 2: Check approval requirement — real Paperclip integration
             if request.requires_approval:
-                # This will be integrated with Paperclip in next phase
                 logger.info(f"[{execution_id}] Approval required, submitting to Paperclip...")
-                approval_status = ApprovalStatus.APPROVED  # Placeholder
+                approval_ref = await _paperclip.submit_approval_request(
+                    agent_id=self.agent_id,
+                    user_id=request.parameters.get("user_id", "system"),
+                    action=request.action,
+                    resource=request.parameters.get("resource", "unknown"),
+                    risk_level=str(request.risk_level),
+                    metadata={
+                        "execution_id": execution_id,
+                        "agent_type": str(self.agent_type),
+                        "parameters": request.parameters,
+                    },
+                )
+                if not approval_ref:
+                    logger.error(f"[{execution_id}] Approval submission failed — denying by default")
+                    approval_status = ApprovalStatus.DENIED
+                else:
+                    request_id = approval_ref.get("request_id", "")
+                    logger.info(f"[{execution_id}] Waiting for approval request_id={request_id}")
+                    # Poll with escalation and auto-deny timeouts
+                    raw_status = await _paperclip.wait_for_approval(
+                        request_id=request_id,
+                        timeout_seconds=APPROVAL_TIMEOUT_DENY,
+                        poll_interval_seconds=5,
+                    )
+                    if raw_status == "approved":
+                        approval_status = ApprovalStatus.APPROVED
+                    elif raw_status == "expired":
+                        logger.warning(
+                            f"[{execution_id}] Approval expired after {APPROVAL_TIMEOUT_DENY}s — auto-deny"
+                        )
+                        approval_status = ApprovalStatus.EXPIRED
+                    else:
+                        approval_status = ApprovalStatus.DENIED
             else:
                 approval_status = ApprovalStatus.APPROVED
 

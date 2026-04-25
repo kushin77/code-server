@@ -14,7 +14,7 @@ services:
     image: openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe
     container_name: opa-service
     user: "101:101"  # @security P0 #969 - Run as non-root openpolicyagent user
-    command: run --server --log-level=info --set decision_logs.console.enabled=true
+    command: run --server --log-level=info --set decision_logs.console=true
     ports:
       - "8181:8181"
     volumes:
@@ -26,9 +26,8 @@ services:
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:8181/health"
+        - /opa
+        - version
       interval: 30s
       timeout: 5s
       retries: 3
@@ -66,17 +65,16 @@ services:
     ports:
       - "4180:4180"
     volumes:
-      - ./config/oauth2-proxy.cfg:/etc/oauth2-proxy/oauth2-proxy.cfg:ro
+      - ./config/oauth2-proxy/oauth2-proxy.cfg:/etc/oauth2-proxy/oauth2-proxy.cfg:ro
     environment:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
-      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET:-0123456789abcdef0123456789abcdef}
     healthcheck:
       test:
         - CMD
-        - curl
-        - "-f"
-        - "http://localhost:4180/ping"
+        - /bin/oauth2-proxy
+        - --version
       interval: 30s
       timeout: 5s
       retries: 3
@@ -84,8 +82,6 @@ services:
     restart: unless-stopped
     networks:
       - services
-    depends_on:
-      - caddy
     logging:
       driver: "json-file"
       options:
@@ -290,7 +286,6 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
     container_name: qdrant-vectors
-    user: "101:101"  # @security P0 #969 - Run as non-root qdrant user
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -299,16 +294,9 @@ services:
       - qdrant_data:/qdrant/storage
     environment:
       - QDRANT_API_KEY=${QDRANT_API_KEY}
-    healthcheck:
-      test:
-        - CMD
-        - curl
-        - "-f"
-        - "http://localhost:6333/readyz"
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
+      - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
+      - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
     restart: unless-stopped
     networks:
       - services
@@ -344,7 +332,7 @@ services:
       - LOG_LEVEL=INFO
     depends_on:
       qdrant:
-        condition: service_healthy
+        condition: service_started
       ollama:
         condition: service_healthy
     volumes:

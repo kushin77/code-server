@@ -5,10 +5,9 @@
 
 # Global options
 {
-	admin localhost:2019
 	log {
 		format json
-		output file /var/log/caddy/access.log
+		output stdout
 	}
 	storage file_system /data
 }

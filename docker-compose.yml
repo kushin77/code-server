@@ -546,6 +546,57 @@ services:
       - "governance"
       - "all"
 
+  execution-scheduler:
+    build:
+      context: apps/execution-scheduler
+      dockerfile: Dockerfile
+    container_name: execution-scheduler
+    user: "1003:1003"
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKER=redpanda:9092
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - SCHEDULER_API_KEY=${SCHEDULER_API_KEY:-scheduler-default-key-dev-only}
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    volumes:
+      - ./apps/execution-scheduler:/app
+    restart: unless-stopped
+    networks:
+      - services
+      - database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8080/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "infrastructure"
+      - "all"
+
   # ========================================================================
   # DATA STORES
   # ========================================================================

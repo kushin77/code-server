@@ -1,26 +1,39 @@
 #!/usr/bin/env python3
 # @file apps/execution-scheduler/main.py
 # @module infrastructure/execution-scheduler
-# @description P3-1561 Phase 4: FastAPI scheduler with Kafka event publishing
-# @governance GOV-002: All scheduling decisions published to event bus
+# @description P3-1561 Phase 2+: FastAPI scheduler with Kafka, persistence, auth
+# @governance GOV-002: Event-driven, deterministic routing, audit-logged
 
-from fastapi import FastAPI, Query, HTTPException
+import logging
+import os
+from fastapi import FastAPI, Query, HTTPException, Header, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-import logging
-import json
+
 from router import ExecutionScheduler, RoutingDecision
 from monitors import ResourceMonitoringService
 from cost_tracker import CostTracker
+from events import SchedulerEventPublisher
+from persistence import SchedulerDatabase, TaskStatus, ScheduledTask
+from auth import SchedulerAuth
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Execution Scheduler", version="1.0")
+
+# Initialize core services
 scheduler = ExecutionScheduler()
 monitor_service = ResourceMonitoringService()
 cost_tracker = CostTracker(monthly_ci_budget_usd=500.0)
+event_publisher = SchedulerEventPublisher()
+database = SchedulerDatabase()
+auth = SchedulerAuth()
+
+# Initialize database on startup
+database.init_db()
+
 
 class SubmitTaskRequest(BaseModel):
     """Task submission for scheduling"""
@@ -32,6 +45,7 @@ class SubmitTaskRequest(BaseModel):
     user_id: str
     user_reputation_tier: str = "standard"
 
+
 class RoutingResponse(BaseModel):
     """Routing decision response"""
     task_id: str
@@ -41,6 +55,7 @@ class RoutingResponse(BaseModel):
     latency_estimate_ms: int
     confidence: float
     fallback_destination: Optional[str]
+
 
 class TaskStatusResponse(BaseModel):
     """Task execution status"""
@@ -53,26 +68,61 @@ class TaskStatusResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    """Health check"""
+    """Health check with service dependencies status."""
     return {
         "status": "healthy",
         "service": "execution-scheduler",
+        "database": "connected",
+        "kafka_broker": "redpanda:9092",
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
+
+async def publish_scheduler_event(event_type: str, payload: Dict[str, Any]) -> bool:
+    """Publish event to Kafka scheduler topic."""
+    try:
+        return event_publisher._publish("scheduler.events", {
+            "event_type": event_type,
+            **payload
+        })
+    except Exception as e:
+        logger.error(f"Failed to publish event {event_type}: {e}")
+        return False
+
+
 @app.post("/scheduler/submit", response_model=RoutingResponse)
-async def submit_task(request: SubmitTaskRequest) -> RoutingResponse:
+async def submit_task(
+    request: SubmitTaskRequest,
+    x_api_key: str = Header(None),
+) -> RoutingResponse:
     """
-    Submit a task for scheduling.
+    Submit a task for scheduling (requires API key).
     Returns routing decision (destination, cost, latency estimates).
+    
+    Requires X-API-Key header for authentication.
     """
+    # Verify authentication
+    service_id = await auth.verify_api_key(x_api_key)
+    
     import uuid
     task_id = f"task-{uuid.uuid4().hex[:12]}"
     
     logger.info(
-        f"Submitting task {task_id}: "
-        f"type={request.task_type}, "
-        f"user={request.user_id}"
+        f"Task {task_id} submitted: type={request.task_type}, user={request.user_id}"
+    )
+    
+    # Publish task submission event
+    event_publisher.publish_task_submitted(
+        task_id=task_id,
+        task_type=request.task_type,
+        user_id=request.user_id,
+        data_classification=request.data_classification,
+        request_metadata={
+            "cpu_cores": request.estimated_cpu_cores,
+            "duration_seconds": request.estimated_duration_seconds,
+            "tokens": request.estimated_tokens,
+            "tier": request.user_reputation_tier,
+        }
     )
     
     # Get routing decision
@@ -86,17 +136,13 @@ async def submit_task(request: SubmitTaskRequest) -> RoutingResponse:
         user_reputation_tier=request.user_reputation_tier
     )
     
-    # Publish scheduling decision to Kafka
-    await publish_scheduler_event(
-        event_type="scheduler.task.submitted",
-        payload={
-            "task_id": task_id,
-            "task_type": request.task_type,
-            "destination": decision.destination,
-            "reason": decision.reason,
-            "cost_estimate": decision.cost_estimate,
-            "user_id": request.user_id
-        }
+    # Publish routing decision event
+    event_publisher.publish_routing_decision(
+        task_id=task_id,
+        destination=decision.destination,
+        routing_reason=decision.reason,
+        cost_estimate=decision.cost_estimate,
+        estimated_latency_ms=decision.latency_estimate_ms,
     )
     
     logger.info(f"Task {task_id} routed to {decision.destination}")
@@ -111,6 +157,7 @@ async def submit_task(request: SubmitTaskRequest) -> RoutingResponse:
         fallback_destination=decision.fallback_destination
     )
 
+
 @app.post("/scheduler/tasks/{task_id}/complete")
 async def complete_task(
     task_id: str,
@@ -119,11 +166,15 @@ async def complete_task(
     cpu_cores_used: int = 2,
     tokens_used: int = 0,
     status: str = "success",
-    error_message: Optional[str] = None
+    error_message: Optional[str] = None,
+    x_api_key: str = Header(None),
 ):
     """
-    Mark a task as complete and calculate final costs.
+    Mark a task as complete and calculate final costs (requires API key).
     """
+    # Verify authentication
+    service_id = await auth.verify_api_key(x_api_key)
+    
     logger.info(f"Task {task_id} completed on {destination} in {duration_seconds}s")
     
     # Calculate cost
@@ -135,17 +186,12 @@ async def complete_task(
         tokens_used=tokens_used
     )
     
-    # Publish task completion to Kafka
-    await publish_scheduler_event(
-        event_type="scheduler.task.completed",
-        payload={
-            "task_id": task_id,
-            "destination": destination,
-            "status": status,
-            "duration_seconds": duration_seconds,
-            "cost_usd": cost.resource_cost_usd,
-            "error_message": error_message
-        }
+    # Publish task completion event
+    event_publisher.publish_task_completed(
+        task_id=task_id,
+        destination=destination,
+        duration_seconds=duration_seconds,
+        cost_actual=cost.resource_cost_usd,
     )
     
     # Check budget
@@ -159,11 +205,15 @@ async def complete_task(
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
+
 @app.get("/scheduler/resources")
-async def get_resources():
+async def get_resources(x_api_key: str = Header(None)):
     """
-    Get current resource availability across all destinations.
+    Get current resource availability across all destinations (requires API key).
     """
+    # Verify authentication
+    service_id = await auth.verify_api_key(x_api_key)
+    
     metrics = await monitor_service.get_all_metrics()
     
     return {

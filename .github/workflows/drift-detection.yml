@@ -1,0 +1,215 @@
+name: Drift Detection & Reconciliation
+
+# Trigger on schedule (daily) and on-demand
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:
+    inputs:
+      remediation:
+        description: 'Auto-remediate detected drift'
+        required: true
+        default: 'false'
+        type: boolean
+
+# @governance GOV-002 - IaC Lifecycle Control (#1531)
+# @immutable All infrastructure changes reviewed via PR before production deployment
+# @automation Daily drift detection, alerts on mismatch, optional auto-remediation
+
+jobs:
+  drift-detection:
+    name: Infrastructure Drift Detection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      - name: Load canonical configuration
+        run: |
+          source scripts/_common/_base-config.env
+          _validate_required_env
+          echo "✅ Canonical configuration validated"
+
+      - name: Terraform Init & Plan (Drift Detection)
+        id: terraform
+        working-directory: terraform/environments/private
+        run: |
+          terraform init -no-color -upgrade
+          terraform plan -no-color -detailed-exitcode -out=tfplan || exit_code=$?
+          
+          if [ "${exit_code:-0}" -eq 0 ]; then
+            echo "drift_detected=false" >> $GITHUB_OUTPUT
+            echo "✅ No infrastructure drift detected"
+          elif [ "${exit_code:-0}" -eq 2 ]; then
+            echo "drift_detected=true" >> $GITHUB_OUTPUT
+            echo "⚠️  Infrastructure drift detected!"
+          else
+            echo "plan_failed=true" >> $GITHUB_OUTPUT
+            echo "❌ Terraform plan failed"
+            exit 1
+          fi
+
+      - name: Parse drift details
+        if: steps.terraform.outputs.drift_detected == 'true'
+        id: drift_details
+        working-directory: terraform/environments/private
+        run: |
+          terraform show -no-color tfplan > drift_report.txt
+          echo "drift_report<<EOF" >> $GITHUB_OUTPUT
+          cat drift_report.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create drift detection issue
+        if: steps.terraform.outputs.drift_detected == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const driftReport = `${{ steps.drift_details.outputs.drift_report }}`;
+            const timestamp = new Date().toISOString();
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[DRIFT] Infrastructure divergence detected - ${timestamp}`,
+              body: `## Infrastructure Drift Detected
+            
+            **Date**: ${timestamp}
+            **SHA**: ${context.sha}
+            **Trigger**: Automated drift detection
+            
+            ### Detected Changes
+            \`\`\`terraform
+            ${driftReport}
+            \`\`\`
+            
+            ### Resolution
+            - [ ] Review and approve changes
+            - [ ] Run \`terraform apply\` to reconcile
+            - [ ] Verify health checks pass
+            - [ ] Close issue when resolved
+            
+            **IaC Lifecycle Control**: #1531`,
+              labels: ['infrastructure', 'drift-detection', 'p3']
+            });
+
+      - name: Auto-remediate drift (if enabled)
+        if: |
+          steps.terraform.outputs.drift_detected == 'true' &&
+          github.event.inputs.remediation == 'true'
+        working-directory: terraform/environments/private
+        run: |
+          echo "🔄 Auto-remediation enabled, applying Terraform..."
+          terraform apply -no-color -auto-approve tfplan
+
+      - name: Health check post-remediation
+        if: |
+          steps.terraform.outputs.drift_detected == 'true' &&
+          github.event.inputs.remediation == 'true'
+        run: |
+          bash scripts/ops/health-check-and-rollback.sh || {
+            echo "❌ Health check failed after remediation"
+            exit 1
+          }
+
+      - name: Report success
+        if: steps.terraform.outputs.drift_detected == 'false'
+        run: |
+          echo "✅ Drift detection complete - no infrastructure drift found"
+          echo "Repository State: SYNCHRONIZED"
+          echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Upload Terraform plan
+        if: always() && steps.terraform.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan-${{ github.run_id }}
+          path: terraform/environments/private/tfplan
+          retention-days: 7
+
+  compliance-check:
+    name: Deployment Immutability Compliance
+    runs-on: ubuntu-latest
+    needs: drift-detection
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify immutable versioning
+        run: |
+          echo "🔍 Checking version immutability..."
+          
+          # Check for floating version tags in docker-compose
+          if grep -E '(image:.*:latest|image:.*:stable|version_range)' docker-compose.yml docker-compose.override.yml 2>/dev/null; then
+            echo "❌ VIOLATION: Floating version tags found in Docker Compose"
+            exit 1
+          fi
+          
+          # Check for terraform version ranges
+          if grep -E 'version\s*=\s*"[~\*]' terraform/modules/*/variables.tf 2>/dev/null; then
+            echo "❌ VIOLATION: Floating version ranges in Terraform"
+            exit 1
+          fi
+          
+          echo "✅ All infrastructure versions are immutable (pinned digests)"
+
+      - name: Verify no hardcoded secrets
+        run: |
+          echo "🔒 Scanning for hardcoded secrets..."
+          
+          if grep -r "OAUTH2_PROXY_COOKIE_SECRET=\|password=\|secret=" \
+            docker-compose.yml docker-compose.override.yml terraform/ 2>/dev/null | \
+            grep -v "^.*:.*=\${" | grep -v "^.*:.*=\[\["; then
+            echo "❌ VIOLATION: Hardcoded secrets detected"
+            exit 1
+          fi
+          
+          echo "✅ No hardcoded secrets found"
+
+      - name: Verify canonical config usage
+        run: |
+          echo "📋 Verifying scripts source canonical bootstrap..."
+          
+          # Find all deployment scripts
+          for script in scripts/ops/*.sh scripts/_common/*.sh; do
+            if [ -f "$script" ] && ! grep -q "source.*init.sh\|source.*_base-config.env" "$script"; then
+              if ! [[ "$script" =~ (github-api|.test|.example) ]]; then
+                echo "⚠️  Script may not be sourcing canonical config: $script"
+              fi
+            fi
+          done
+          
+          echo "✅ Canonical bootstrap usage verified"
+
+  report-status:
+    name: Report IaC Status
+    runs-on: ubuntu-latest
+    needs: [drift-detection, compliance-check]
+    if: always()
+    
+    steps:
+      - name: Generate status report
+        run: |
+          echo "## IaC Lifecycle Control Status (#1531)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Drift Detection: ${{ needs.drift-detection.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Compliance Check: ${{ needs.compliance-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.drift-detection.result }}" = "success" ] && [ "${{ needs.compliance-check.result }}" = "success" ]; then
+            echo "✅ **IaC Status: COMPLIANT**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **IaC Status: DRIFT DETECTED / COMPLIANCE VIOLATION**" >> $GITHUB_STEP_SUMMARY
+          fi

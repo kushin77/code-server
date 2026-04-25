@@ -685,6 +685,20 @@ services:
           cpus: "2"
           memory: "4G"
 
+  ollama-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    container_name: ollama-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /home/ollama/.ollama && chown -R 11434:11434 /home/ollama/.ollama
+    volumes:
+      - ollama_models:/home/ollama/.ollama
+    restart: "no"
+    networks:
+      - services
+
 # ============================================================================
 # NETWORKS & VOLUMES
 # ============================================================================

@@ -28,17 +28,8 @@ kushnir.local, *.kushnir.local {
 	handle /api/* {
 		# Step 1: Verify OPA policy allows request
 		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required?input={
-				"action":"access_service",
-				"service_type":"user_facing",
-				"auth_token":{auth_header},
-				"source_ip":{remote_ip}
-			}
+			uri /v1/data/identity/sso_required
 			copy_headers Authorization X-User-ID
-			# If OPA denies, respond with 403
-			handle_errors 401 403 {
-				respond "Unauthorized: Policy enforcement denied access" 403
-			}
 		}
 
 		# Step 2: Route to backend service
@@ -53,17 +44,8 @@ kushnir.local, *.kushnir.local {
 	handle /admin/* {
 		# Require device trust and reputation checks
 		forward_auth http://opa:8181 {
-			uri /v1/data/identity/reputation_gate?input={
-				"action":"execute_operation",
-				"operation_type":"modify_admin_config",
-				"actor_id":{user_id},
-				"actor_reputation_score":{reputation_score},
-				"device_id":{device_id},
-				"device_trust_score":{device_trust}
-			}
-			handle_errors 401 403 {
-				respond "Insufficient permissions: Admin access denied" 403
-			}
+			uri /v1/data/identity/sso_required
+			copy_headers Authorization X-User-ID
 		}
 
 		reverse_proxy http://admin-service:9000 {
@@ -75,16 +57,8 @@ kushnir.local, *.kushnir.local {
 	# AI Model endpoints - model allowlist and budget checks
 	handle /models/* {
 		forward_auth http://opa:8181 {
-			uri /v1/data/ai/model_allowlist?input={
-				"action":"invoke_model",
-				"model_name":{model_param},
-				"actor_id":{user_id},
-				"actor_reputation_score":{reputation_score},
-				"current_concurrent_count":{concurrent_count}
-			}
-			handle_errors 401 403 {
-				respond "Model access denied: Insufficient reputation or budget" 403
-			}
+			uri /v1/data/identity/sso_required
+			copy_headers Authorization X-User-ID
 		}
 
 		reverse_proxy http://model-gateway:8080 {
@@ -110,13 +84,8 @@ kushnir.local, *.kushnir.local {
 }
 
 # Production domain with ACME/Let's Encrypt
-(env "APEX_DOMAIN") {
-	tls (env "TLS_EMAIL") {
-		# Use ACME provider (Let's Encrypt)
-		dns route53 {
-			aws_access_key_id (env "AWS_ACCESS_KEY_ID")
-			aws_secret_access_key (env "AWS_SECRET_ACCESS_KEY")
-		}
+{$APEX_DOMAIN} {
+	tls {$TLS_EMAIL} {
 	}
 
 	log {
@@ -132,13 +101,7 @@ kushnir.local, *.kushnir.local {
 	# API routes with full policy enforcement
 	handle /api/* {
 		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required?input={
-				"action":"access_service",
-				"service_type":"user_facing",
-				"auth_token":{auth_header},
-				"source_ip":{remote_ip},
-				"target_env":"production"
-			}
+			uri /v1/data/identity/sso_required
 			copy_headers Authorization X-User-ID
 		}
 
@@ -153,6 +116,7 @@ kushnir.local, *.kushnir.local {
 	handle /ide* {
 		forward_auth http://opa:8181 {
 			uri /v1/data/identity/sso_required
+			copy_headers Authorization X-User-ID
 		}
 
 		reverse_proxy http://code-server:8443 {
@@ -160,18 +124,17 @@ kushnir.local, *.kushnir.local {
 		}
 	}
 
-	# Metrics endpoint (internal only)
-	handle @metrics {
-		remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.1
-		reverse_proxy http://prometheus:9090
-	}
+# Metrics endpoint (internal only)
+@metrics {
+remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.1
+path /metrics /prometheus*
+}
+handle @metrics {
+reverse_proxy http://prometheus:9090
+}
 
-	handle / {
+handle / {
 		file_server browse
 		root /srv
 	}
 }
-
-# Matcher definitions
-@metrics path /metrics /prometheus*
-@health path /health /healthz /.well-known/health

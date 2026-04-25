@@ -7,8 +7,8 @@ server:
 
 storage:
   storage_path: /qdrant/storage
-  snapshots_path: /qdrant/snapshots
-  wal_path: /qdrant/wal
+  snapshots_path: /qdrant/storage/snapshots
+  wal_path: /qdrant/storage/wal
   # Vector index configuration
   snapshots:
     # Snapshot interval in seconds

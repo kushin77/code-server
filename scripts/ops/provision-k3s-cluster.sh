@@ -98,10 +98,22 @@ remote() {
     ssh "${SSH_OPTS[@]}" "${SSH_USER}@${host}" "${cmd}"
 }
 
-remote_sudo() {
-    # remote_sudo <host> <cmd> — run sudo cmd over SSH
+remote_with_tty() {
+    # remote_with_tty <host> <cmd> — run cmd with TTY allocation (needed for sudo)
     local host="$1"; shift
-    remote "${host}" "sudo $*"
+    local cmd="$*"
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        log "[DRY-RUN] ssh -t ${SSH_USER}@${host}: ${cmd}"
+        return 0
+    fi
+    # Allocate TTY (-t) to enable sudo with pty requirement in sudoers
+    ssh -t "${SSH_OPTS[@]}" "${SSH_USER}@${host}" "${cmd}"
+}
+
+remote_sudo() {
+    # remote_sudo <host> <cmd> — run sudo cmd over SSH with TTY for proper sudo function
+    local host="$1"; shift
+    remote_with_tty "${host}" "sudo $*"
 }
 
 # ---------------------------------------------------------------------------

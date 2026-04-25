@@ -1,0 +1,76 @@
+name: Sync GitHub Projects Board Status
+
+on:
+  issues:
+    types:
+      - opened
+      - closed
+      - reopened
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
+      - ready_for_review
+      - converted_to_draft
+      - review_requested
+  workflow_dispatch:
+    inputs:
+      item_number:
+        description: Issue or PR number
+        required: true
+
+jobs:
+  sync-board:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine item number
+        id: item
+        run: |
+          if [ -n "${{ github.event.issue.number }}" ]; then
+            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+            echo "type=issue" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.pull_request.number }}" ]; then
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "type=pr" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.inputs.item_number }}" >> $GITHUB_OUTPUT
+            echo "type=unknown" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync to GitHub Projects board
+        run: |
+          chmod +x scripts/automation/sync-projects-board-status.sh
+          bash scripts/automation/sync-projects-board-status.sh ${{ steps.item.outputs.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log automation execution
+        if: always()
+        run: |
+          echo "## GitHub Projects Sync" >> $GITHUB_STEP_SUMMARY
+          echo "Item: #${{ steps.item.outputs.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "Type: ${{ steps.item.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d "artifacts/automation-logs" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Logs:" >> $GITHUB_STEP_SUMMARY
+            tail -20 artifacts/automation-logs/*.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          fi
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: projects-sync-logs-${{ steps.item.outputs.number }}
+          path: artifacts/automation-logs/
+          retention-days: 7

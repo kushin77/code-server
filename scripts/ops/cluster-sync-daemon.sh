@@ -70,10 +70,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 readonly TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-readonly LOG_DIR="/var/log"
+readonly LOG_DIR="${HOME:-/tmp}/logs"
 readonly LOG_FILE="$LOG_DIR/cluster-sync.log"
 readonly AUDIT_LOG="$LOG_DIR/cluster-sync-audit.json"
-readonly STATE_DIR="/var/run/cluster-sync"
+readonly STATE_DIR="${HOME:-/tmp}/.cluster-sync"
 readonly LOCK_FILE="$STATE_DIR/sync.lock"
 readonly STATUS_FILE="$STATE_DIR/status.json"
 readonly PREVIOUS_COMMIT_FILE="$STATE_DIR/previous-commit"
@@ -411,20 +411,25 @@ execute_sync() {
 install_cron() {
   log_info "Installing cron job for automatic cluster sync..."
   
-  local cron_entry="*/5 * * * * root cd $PROJECT_ROOT && bash scripts/ops/cluster-sync-daemon.sh --sync >> /var/log/cluster-sync-cron.log 2>&1"
-  local cron_file="/etc/cron.d/cluster-sync"
+  local cron_entry="*/5 * * * * cd $PROJECT_ROOT && PRIMARY_HOST=${PRIMARY_HOST:-} REPLICA_HOST=${REPLICA_HOST:-} NAS_HOST=${NAS_HOST:-} APEX_DOMAIN=${APEX_DOMAIN:-} bash scripts/ops/cluster-sync-daemon.sh --sync >> ${LOG_DIR}/cluster-sync-cron.log 2>&1"
   
-  if [[ ! -w "/etc/cron.d/" ]]; then
-    log_error "Cannot write to /etc/cron.d/ (requires root)"
-    log_info "Install manually with: sudo crontab -e"
-    log_info "Add this line: $cron_entry"
-    return 1
+  if [[ -w "/etc/cron.d/" ]]; then
+    local cron_file="/etc/cron.d/cluster-sync"
+    local system_entry="*/5 * * * * $(whoami) cd $PROJECT_ROOT && PRIMARY_HOST=${PRIMARY_HOST:-} REPLICA_HOST=${REPLICA_HOST:-} NAS_HOST=${NAS_HOST:-} APEX_DOMAIN=${APEX_DOMAIN:-} bash scripts/ops/cluster-sync-daemon.sh --sync >> ${LOG_DIR}/cluster-sync-cron.log 2>&1"
+    echo "$system_entry" | sudo tee "$cron_file" >/dev/null
+    sudo chmod 644 "$cron_file"
+    log_success "Cron job installed system-wide: $cron_file"
+  else
+    # Fall back to user crontab (no root needed)
+    local tmp_cron
+    tmp_cron=$(mktemp)
+    crontab -l 2>/dev/null | grep -v "cluster-sync-daemon.sh" > "$tmp_cron" || true
+    echo "$cron_entry" >> "$tmp_cron"
+    crontab "$tmp_cron"
+    rm -f "$tmp_cron"
+    log_success "Cron job installed in user crontab (runs every 5 minutes)"
   fi
   
-  echo "$cron_entry" | sudo tee "$cron_file" >/dev/null
-  sudo chmod 644 "$cron_file"
-  
-  log_success "Cron job installed: $cron_file"
   log_info "Sync will run every 5 minutes"
   return 0
 }

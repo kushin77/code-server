@@ -24,14 +24,26 @@
     "validate:issues": "python3 scripts/ops/issue_execution_manifest.py validate",
     "issues:queue": "python3 scripts/ops/issue_execution_manifest.py queue",
     "test:e2e:appsmith-login": "bash scripts/ci/run-kushnir-cloud-appsmith-login-e2e.sh",
+    "test:load": "k6 run tests/load/load-test.js",
+    "test:load:stress": "k6 run tests/load/stress-test.js",
+    "test:load:spike": "k6 run tests/load/spike-test.js",
     "redeploy:portal-oauth": "bash scripts/deploy/redeploy-portal-oauth-routing.sh",
-    "redeploy:portal-oauth:dry-run": "bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run"
+    "redeploy:portal-oauth:dry-run": "bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run",
+    "hooks:install": "bash scripts/hooks/install-local-git-hooks.sh",
+    "validate:hooks": "bash scripts/ci/check-local-git-hook-integrity.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0"
   },
   "pnpm": {
     "overrides": {
+      "express@<4.19.2": "^4.19.2",
+      "body-parser@<1.20.3": "^1.20.3",
+      "http-parser@<2.9.4": "^2.9.4",
+      "raw-body@<1.4.2": "^1.4.2",
+      "accepts@<1.3.8": "^1.3.8",
+      "mime-types@<2.1.35": "^2.1.35",
+      "content-type@<1.0.4": "^1.0.4",
       "form-data@<2.5.4": "2.5.5",
       "tough-cookie@<4.1.3": "4.1.3",
       "qs@<6.14.1": "6.14.2",

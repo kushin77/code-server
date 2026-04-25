@@ -21,6 +21,11 @@ log_level: info
 # API key disabled - Qdrant is internal-only
 api_key: null
 
-# Clustering disabled for single-node deployment
-clusters:
-  enabled: false
+# Phase 6: Distributed cluster for multi-tenant organizational memory
+cluster:
+  enabled: true
+  p2p:
+    port: 6335
+  consensus:
+    tick_period_ms: 100
+    bootstrap_timeout_sec: 20

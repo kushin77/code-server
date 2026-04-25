@@ -146,7 +146,7 @@ services:
     user: "101:101"  # @security P0 #969 - Run as non-root openpolicyagent user
     command: run --server --log-level=info --set decision_logs.console=true
     ports:
-      - "8181:8181"
+      - "${OPA_HOST_PORT:-8181}:8181"
     volumes:
       - ./policies:/policies:ro
       - ./config:/opa-src:ro
@@ -246,10 +246,10 @@ services:
       - APEX_DOMAIN=${APEX_DOMAIN}
       - TLS_EMAIL=${TLS_EMAIL}
       - LOG_LEVEL=${LOG_LEVEL}
-      # Multi-node HA: set REPLICA_HOST to enable cross-node load balancing.
+      # Multi-node HA: set REPLICA_UPSTREAM=<host:port> to enable cross-node load balancing.
       # Leave unset for single-node deployments (GOV-002: env-driven, no hardcoded IPs).
-      - REPLICA_HOST=${REPLICA_HOST:-}
-      - REPLICA_BACKEND=${REPLICA_BACKEND:-}
+      - REPLICA_UPSTREAM
+      - REPLICA_UPSTREAM_SCHED
     healthcheck:
       test:
         - CMD
@@ -488,6 +488,7 @@ services:
     ports:
       - "6333:6333"
       - "6334:6334"
+      - "6335:6335"  # P2P cluster port
     volumes:
       - ./config/qdrant-config.yaml:/qdrant/config/local_config.yaml:ro
       - qdrant_data:/qdrant/storage
@@ -496,6 +497,8 @@ services:
       - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
       - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
       - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
+      - QDRANT__CLUSTER__ENABLED=${QDRANT_CLUSTER_ENABLED:-false}
+      - QDRANT__CLUSTER__P2P__PORT=6335
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
       interval: 30s
@@ -506,6 +509,75 @@ services:
     depends_on:
       qdrant-init:
         condition: service_completed_successfully
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+        reservations:
+          cpus: "1.0"
+          memory: 1g
+
+  qdrant-node-2-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    container_name: qdrant-node-2-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - mkdir -p /qdrant/storage; owner="$$(stat -c '%u:%g' /qdrant/storage 2>/dev/null || true)"; [ "$$owner" = "1000:1000" ] || chown -R 1000:1000 /qdrant/storage
+    volumes:
+      - qdrant_node2_data:/qdrant/storage
+    restart: "no"
+    networks:
+      - services
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64m
+        reservations:
+          cpus: "0.1"
+          memory: 32m
+
+  qdrant-node-2:
+    image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
+    container_name: qdrant-node-2
+    user: "1000:1000"  # @security P0 #969 - Run as non-root qdrant user
+    ports:
+      - "6343:6333"  # HTTP REST (secondary node)
+      - "6344:6334"  # gRPC (secondary node)
+      - "6345:6335"  # P2P cluster port
+    volumes:
+      - ./config/qdrant-config.yaml:/qdrant/config/local_config.yaml:ro
+      - qdrant_node2_data:/qdrant/storage
+    environment:
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - QDRANT__STORAGE__STORAGE_PATH=/qdrant/storage
+      - QDRANT__STORAGE__SNAPSHOTS_PATH=/qdrant/storage/snapshots
+      - QDRANT__STORAGE__WAL_PATH=/qdrant/storage/wal
+      - QDRANT__CLUSTER__ENABLED=${QDRANT_CLUSTER_ENABLED:-false}
+      - QDRANT__CLUSTER__P2P__PORT=6335
+      - QDRANT__BOOTSTRAP=http://qdrant:6335
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      qdrant-node-2-init:
+        condition: service_completed_successfully
+      qdrant:
+        condition: service_healthy
     networks:
       - services
     logging:
@@ -1451,6 +1523,51 @@ services:
       - "observability"
       - "all"
 
+  # ── Copilot Engine ─────────────────────────────────────────────────────────
+  # Self-cleaning multi-domain copilot with semantic deduplication
+  # GOV-002: image pinned to SHA256, non-root UID 1010, health check
+  copilot-engine:
+    build:
+      context: apps/copilot-engine
+      dockerfile: Dockerfile
+    container_name: copilot-engine
+    user: "1010:1010"  # @security GOV-002 - non-root copilot user
+    ports:
+      - "8030:8030"
+    environment:
+      - PORT=8030
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8030/health"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.1"
+          memory: 128m
+    profiles:
+      - "ai"
+      - "all"
+
 # ============================================================================
 # NETWORKS & VOLUMES
 # ============================================================================
@@ -1483,6 +1600,8 @@ volumes:
   alertmanager_data:
     driver: local
   qdrant_data:
+    driver: local
+  qdrant_node2_data:
     driver: local
   postgres_data:
     driver: local

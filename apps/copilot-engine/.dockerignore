@@ -1,0 +1,9 @@
+node_modules/
+.git/
+*.log
+*.md
+src/demo.js
+.env
+.env.*
+coverage/
+.nyc_output/

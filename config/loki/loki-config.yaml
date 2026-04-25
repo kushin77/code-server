@@ -70,6 +70,9 @@ limits_config:
   max_entries_limit_per_query: 50000
 
   per_tenant_override_period: 10m
+  # per_tenant_override_config: disabled — no overrides file mounted
+  # (enable by mounting /etc/loki/retention-overrides.yaml and adding:
+  #  per_tenant_override_config: /etc/loki/retention-overrides.yaml)
 
   # Per-label retention: audit and auth streams kept for 365d
   # Applied as stream selector override via ruler/compactor:
@@ -80,7 +83,7 @@ limits_config:
 # ── Stream-level retention overrides ─────────────────────────────────────────
 # These selectors extend retention beyond the global 30d default.
 # Supported in Loki >= 2.9 with retention_enabled=true in compactor.
-per_tenant_override_config: /etc/loki/retention-overrides.yaml
+# (per_tenant_override_config moved to limits_config above)
 
 # ── Query performance ─────────────────────────────────────────────────────────
 query_range:

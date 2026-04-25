@@ -1,5 +1,6 @@
 packages:
   # Application services - core runtime services
+  - "apps/copilot-engine"
   - "apps/agent-registry"
   - "apps/agent-runtime"
   - "apps/api"

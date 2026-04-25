@@ -244,28 +244,18 @@ Please address documentation gaps before merge."
       - name: Install markdown-link-check
         run: npm install -g markdown-link-check
 
-      - name: Check documentation links
-        continue-on-error: true
+      - name: Unified markdown link check
         run: |
           source scripts/_common/init.sh
-          for md_file in $(find docs -name "*.md" 2>/dev/null); do
-            echo "Checking: $md_file"
-            markdown-link-check "$md_file" -c .markdown-link-check.json || true
-          done
+          DOCS_SCOPE=all bash scripts/ci/check-doc-links.sh
 
       - name: Report broken links on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && failure()
         continue-on-error: true
         run: |
           source scripts/_common/init.sh
-          BROKEN=$(for md_file in $(find docs -name "*.md" 2>/dev/null); do
-            markdown-link-check "$md_file" -q || true
-          done | grep -c "ERROR" || echo 0)
-
-          if [ "$BROKEN" -gt 0 ]; then
-            github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" \
-              -b "⚠️ Documentation contains $BROKEN broken links. Please fix before merge." || true
-          fi
+          github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" \
+            -b "⚠️ Unified markdown link-check failed. Run 'bash scripts/ci/check-doc-links.sh' locally and fix broken links before merge." || true
 
   weekly-status-report:
     name: Generate Weekly Status Report

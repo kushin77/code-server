@@ -57,6 +57,7 @@ jobs:
           pip install pytest pytest-asyncio pytest-timeout
 
       - name: Start Docker Compose services
+        if: github.event_name != 'pull_request'
         run: |
           COMPOSE_CMD=""
           if docker compose version > /dev/null 2>&1; then
@@ -77,7 +78,7 @@ jobs:
           ./scripts/ops/chaos-test.sh all
         continue-on-error: true
         env:
-          DRY_RUN: 'false'
+          DRY_RUN: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 
       - name: Collect metrics and logs
         if: always()

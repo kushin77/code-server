@@ -1,0 +1,535 @@
+## Production Kubernetes Helm Values - Phase 4 Migration
+## Values file for kushnir.cloud enterprise deployment on EKS
+## 
+## Usage: helm install code-server ./helm/code-server-enterprise \
+##   -f values.prod.yaml -n production
+
+global:
+  environment: production
+  domain: kushnir.cloud
+  tlsEnabled: true
+  certIssuer: "letsencrypt-prod"
+  imagePullPolicy: IfNotPresent
+  
+  # Resource defaults (can be overridden per service)
+  defaultResources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ============================================================================
+# INGRESS & NETWORKING
+# ============================================================================
+
+ingress:
+  enabled: true
+  className: istio
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: istio
+  hosts:
+    - host: api.kushnir.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: app.kushnir.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: kushnir-tls
+      hosts:
+        - api.kushnir.cloud
+        - app.kushnir.cloud
+        - kushnir.cloud
+
+# Istio configuration
+istio:
+  enabled: true
+  mtls:
+    mode: STRICT
+  timeout: 5s
+  retries:
+    attempts: 3
+    perTryTimeout: 2s
+  circuitBreaker:
+    consecutiveErrors: 5
+    interval: 30s
+    baseEjectionTime: 30s
+
+# ============================================================================
+# KUBERNETES CONFIGURATION
+# ============================================================================
+
+nodeSelector: {}
+  # workload: general
+
+tolerations: []
+  # - key: workload
+  #   operator: Equal
+  #   value: monitoring
+  #   effect: NoSchedule
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - postgres
+                  - redis
+                  - redpanda
+          topologyKey: kubernetes.io/hostname
+
+# ============================================================================
+# STATELESS SERVICES (Deployments)
+# ============================================================================
+
+statelessServices:
+  frontend:
+    enabled: true
+    replicaCount: 2
+    image: kushin77/code-server-frontend:latest
+    port: 3000
+    env:
+      API_URL: https://api.kushnir.cloud
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  api:
+    enabled: true
+    replicaCount: 3
+    image: kushin77/code-server-api:latest
+    port: 3100
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kushnir_db
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: info
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  reputation-engine:
+    enabled: true
+    replicaCount: 2
+    image: kushin77/reputation-engine:latest
+    port: 3200
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+
+  activity-feed:
+    enabled: true
+    replicaCount: 2
+    image: kushin77/activity-feed:latest
+    port: 3300
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+
+  agent-runtime:
+    enabled: true
+    replicaCount: 2
+    image: kushin77/agent-runtime:latest
+    port: 3400
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "2000m"
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+
+  execution-scheduler:
+    enabled: true
+    replicaCount: 1
+    image: kushin77/execution-scheduler:latest
+    port: 3500
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+
+  paperclip:
+    enabled: true
+    replicaCount: 1
+    image: kushin77/paperclip:latest
+    port: 3600
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+
+# ============================================================================
+# STATEFUL SERVICES (StatefulSets)
+# ============================================================================
+
+postgres:
+  enabled: true
+  image: postgres:15-alpine
+  replicaCount: 3
+  port: 5432
+  persistence:
+    enabled: true
+    storageClassName: fast-ssd
+    size: 100Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  env:
+    POSTGRES_DB: kushnir_db
+    POSTGRES_USER: postgres
+  initContainer:
+    enabled: true
+    image: alpine:3.20
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  replicaCount: 1
+  port: 6379
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 50Gi
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+redpanda:
+  enabled: true
+  image: vectorized/redpanda:latest
+  replicaCount: 3
+  port: 9092
+  persistence:
+    enabled: true
+    storageClassName: fast-ssd
+    size: 100Gi
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "1000m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+
+prometheus:
+  enabled: true
+  image: prom/prometheus:latest
+  port: 9090
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 100Gi
+  retention: 15d
+  scrapeInterval: 15s
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+loki:
+  enabled: true
+  image: grafana/loki:latest
+  port: 3100
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 50Gi
+  retention: 30d
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+grafana:
+  enabled: true
+  image: grafana/grafana:latest
+  port: 3000
+  adminUser: admin
+  adminPassword: CHANGEME  # Change this!
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 10Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+alertmanager:
+  enabled: true
+  image: prom/alertmanager:latest
+  port: 9093
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 10Gi
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+ollama:
+  enabled: true
+  image: ollama/ollama:latest
+  port: 11434
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 50Gi
+  resources:
+    requests:
+      memory: "8Gi"
+      cpu: "4000m"
+    limits:
+      memory: "16Gi"
+      cpu: "8000m"
+
+qdrant:
+  enabled: true
+  image: qdrant/qdrant:latest
+  port: 6333
+  persistence:
+    enabled: true
+    storageClassName: fast-ssd
+    size: 100Gi
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+tempo:
+  enabled: true
+  image: grafana/tempo:latest
+  port: 3200
+  persistence:
+    enabled: true
+    storageClassName: standard
+    size: 50Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# ============================================================================
+# SECURITY & RBAC
+# ============================================================================
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: kushnir-app
+
+podSecurityPolicy:
+  enabled: true
+
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: istio-system
+
+# ============================================================================
+# MONITORING & OBSERVABILITY
+# ============================================================================
+
+monitoring:
+  enabled: true
+  prometheus:
+    interval: 15s
+    scrape_timeout: 10s
+  
+  alerts:
+    enabled: true
+    rules:
+      - alert: PodCrashLooping
+        for: 5m
+        annotations:
+          severity: critical
+      - alert: PersistentVolumeFull
+        for: 10m
+        annotations:
+          severity: high
+
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+# ============================================================================
+# AUTOSCALING & PERFORMANCE
+# ============================================================================
+
+autoscaling:
+  enabled: true
+  policies:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# ============================================================================
+# BACKUP & DISASTER RECOVERY
+# ============================================================================
+
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  retention: 30  # days
+  destination: s3://kushnir-backups/k8s
+  
+  services:
+    - postgres
+    - redis
+    - redpanda
+    - qdrant
+
+# ============================================================================
+# LOGGING & TRACING
+# ============================================================================
+
+logging:
+  level: info
+  format: json
+
+tracing:
+  enabled: true
+  jaeger:
+    endpoint: http://tempo:3200
+    samplingRate: 0.001  # 0.1% sampling
+
+# ============================================================================
+# DEPLOYMENT STRATEGY
+# ============================================================================
+
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ============================================================================
+# COST OPTIMIZATION
+# ============================================================================
+
+costOptimization:
+  # Spot instances for non-critical workloads
+  spotInstances:
+    enabled: false
+    services:
+      - activity-feed
+      - reputation-engine
+  
+  # Resource requests/limits tuning
+  rightsizing:
+    enabled: true
+    target: 75%  # Target utilization
+
+---
+# ============================================================================
+# PRODUCTION FEATURE FLAGS
+# ============================================================================
+
+featureFlags:
+  enableCanaryDeployment: true
+  enableAutoRollback: true
+  enableDriftDetection: true
+  enableAnomalyDetection: true
+  enablePredictiveScaling: false  # Enable after 1 week of metrics

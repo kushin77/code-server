@@ -97,6 +97,25 @@ scrape_configs:
       - targets:
           - loki:3100
 
+  # Alertmanager health and routing surface
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+          - alertmanager:9093
+
+  # Promtail log shipper health
+  - job_name: promtail
+    static_configs:
+      - targets:
+          - promtail:3101
+
+  # DCGM exporter GPU metrics
+  - job_name: dcgm-exporter
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - dcgm-exporter:9400
+
   # Service discovery for dynamically registered targets
   - job_name: file-sd
     file_sd_configs:

@@ -310,7 +310,7 @@ fi
 
 echo ""
 echo "Testing Ollama endpoint..."
-if curl -sf "http://192.168.168.31:11434/api/tags" > /dev/null 2>&1; then
+if curl -sf "http://${TARGET_HOST}:11434/api/tags" > /dev/null 2>&1; then
     echo "PASS: Ollama API endpoint responding"
 else
     echo "WARN: Ollama endpoint not reachable (deploy external Ollama separately)"

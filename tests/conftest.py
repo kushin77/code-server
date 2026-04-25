@@ -328,3 +328,133 @@ def multi_tenant_filter_document():
         "created_at": "2026-04-25T12:00:00Z",
         "tags": ["isolation", "filtering"],
     }
+
+
+# ============================================================================
+# FIXTURES: Integration Testing (Phase 2)
+# ============================================================================
+
+@pytest.fixture
+async def async_http_client():
+    """Provide async HTTP client for API testing."""
+    import httpx
+    async with httpx.AsyncClient() as client:
+        yield client
+
+
+@pytest.fixture
+async def authenticated_client(async_http_client, app_env):
+    """Provide authenticated HTTP client with auth token."""
+    # Mock auth token for integration tests
+    auth_token = "test-jwt-token-" + fake.sha1()
+    
+    async_http_client.headers.update({
+        "Authorization": f"Bearer {auth_token}",
+        "X-Tenant-ID": "tenant-int-test-001",
+    })
+    
+    return async_http_client, auth_token
+
+
+@pytest.fixture
+def auth_token(faker):
+    """Provide mock authentication token."""
+    return f"test-token-{faker.sha256()}"
+
+
+@pytest.fixture
+def api_headers(auth_token):
+    """Provide standard API headers with authentication."""
+    return {
+        "Authorization": f"Bearer {auth_token}",
+        "Content-Type": "application/json",
+        "X-Tenant-ID": "tenant-int-test-001",
+        "User-Agent": "test-client/1.0",
+    }
+
+
+# ============================================================================
+# FIXTURES: Mock Responses
+# ============================================================================
+
+@pytest.fixture
+def mock_team_response():
+    """Provide mock team API response."""
+    return {
+        "id": "team-test-001",
+        "name": "Integration Test Team",
+        "slug": "integration-test-team",
+        "description": "Team for integration testing",
+        "org_id": "org-test-001",
+        "created_at": "2026-04-25T12:00:00Z",
+        "created_by": "user-test-001",
+        "member_count": 3,
+    }
+
+
+@pytest.fixture
+def mock_user_response():
+    """Provide mock user API response."""
+    return {
+        "id": "user-test-001",
+        "email": "test@example.com",
+        "username": "testuser",
+        "first_name": "Test",
+        "last_name": "User",
+        "avatar_url": "https://example.com/avatar.png",
+        "created_at": "2026-04-25T12:00:00Z",
+    }
+
+
+@pytest.fixture
+def mock_memory_response():
+    """Provide mock memory API response."""
+    return {
+        "id": "memory-test-001",
+        "title": "Integration Test Memory",
+        "content": "This is a memory entry for integration testing.",
+        "collection": "organizational-memory",
+        "confidence_score": 0.92,
+        "created_at": "2026-04-25T12:00:00Z",
+        "tenant_id": "tenant-int-test-001",
+    }
+
+
+# ============================================================================
+# FIXTURES: Parametrized Test Data
+# ============================================================================
+
+@pytest.fixture(params=["GET", "POST", "PUT", "DELETE", "PATCH"])
+def http_methods(request):
+    """Parametrize HTTP methods for testing."""
+    return request.param
+
+
+@pytest.fixture(params=[
+    "application/json",
+    "application/xml",
+    "text/plain",
+    "application/octet-stream",
+])
+def content_types(request):
+    """Parametrize content types for testing."""
+    return request.param
+
+
+# ============================================================================
+# FIXTURES: Error Scenarios
+# ============================================================================
+
+@pytest.fixture(params=[
+    {"status": 400, "error": "Bad Request", "message": "Invalid request format"},
+    {"status": 401, "error": "Unauthorized", "message": "Authentication required"},
+    {"status": 403, "error": "Forbidden", "message": "Insufficient permissions"},
+    {"status": 404, "error": "Not Found", "message": "Resource not found"},
+    {"status": 409, "error": "Conflict", "message": "Resource already exists"},
+    {"status": 422, "error": "Validation Error", "message": "Invalid input data"},
+    {"status": 429, "error": "Too Many Requests", "message": "Rate limit exceeded"},
+    {"status": 500, "error": "Internal Server Error", "message": "Server error"},
+])
+def error_responses(request):
+    """Parametrize error response scenarios."""
+    return request.param

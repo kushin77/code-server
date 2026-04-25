@@ -1,9 +1,18 @@
 #!/bin/bash
 ###############################################################################
-# Pre-Deployment Validation Report
+# @governance: Pre-deployment validation — comprehensive system readiness check
+# Purpose: Validates system readiness before deployment execution
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1536 (Infrastructure Standards)
 ###############################################################################
 
-# Set environment variables for validation
+set -euo pipefail
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Set environment variables for validation (all overridable)
 export OAUTH2_COOKIE_SECRET="${OAUTH2_COOKIE_SECRET:-test-secret}"
 export SCHEDULER_API_KEY="${SCHEDULER_API_KEY:-test-api-key}"
 export DATABASE_URL="${DATABASE_URL:-postgresql://test:test@localhost:5432/test}"

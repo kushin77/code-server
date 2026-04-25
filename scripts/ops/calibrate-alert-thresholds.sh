@@ -1,34 +1,31 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/calibrate-alert-thresholds.sh
-# @module      ops/calibrate-alert-thresholds
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: Alert threshold calibration — updates Prometheus rules dynamically
+# Purpose: Updates Prometheus alert rules based on collected baseline metrics
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1536 (Infrastructure Standards)
 ###############################################################################
-# @file scripts/ops/calibrate-alert-thresholds.sh
-# @description Updates Prometheus alert rules based on collected baseline metrics.
-# @governance GOV-002
-# Alert Threshold Calibration Script
-# Updates Prometheus alert rules based on collected baseline metrics
 
-set -e
+set -euo pipefail
 
 # Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+readonly GREEN='\033[0;32m'
+readonly BLUE='\033[0;34m'
+readonly YELLOW='\033[1;33m'
+readonly NC='\033[0m' # No Color
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 echo -e "${BLUE}=== ALERT THRESHOLD CALIBRATION ===${NC}"
 echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo ""
 
-# Configuration
-BASELINE_DIR="${1:-artifacts/baseline-latest}"
-PROMETHEUS_CONFIG="/etc/prometheus/prometheus.yml"
-ALERTING_RULES="/etc/prometheus/alert.rules"
+# Configuration (all env-var driven)
+readonly BASELINE_DIR="${BASELINE_DIR:-${1:-artifacts/baseline-latest}}"
+readonly PROMETHEUS_CONFIG="${PROMETHEUS_CONFIG:-/etc/prometheus/prometheus.yml}"
+readonly ALERTING_RULES="${ALERTING_RULES:-/etc/prometheus/alert.rules}"
 
 echo -e "${YELLOW}Analyzing baseline metrics...${NC}"
 
@@ -36,18 +33,18 @@ echo -e "${YELLOW}Analyzing baseline metrics...${NC}"
 # These would be read from the baseline JSON files
 # For now, using recommended defaults
 
-# OPA Policy Engine Thresholds
-OPA_LATENCY_WARNING=200  # ms
-OPA_LATENCY_CRITICAL=500 # ms
-OPA_ERROR_CRITICAL=5     # %
+# OPA Policy Engine Thresholds (all env-var driven)
+readonly OPA_LATENCY_WARNING="${OPA_LATENCY_WARNING:-200}"   # ms
+readonly OPA_LATENCY_CRITICAL="${OPA_LATENCY_CRITICAL:-500}" # ms
+readonly OPA_ERROR_CRITICAL="${OPA_ERROR_CRITICAL:-5}"       # %
 
-# Memory Engine Thresholds
-MEMORY_LATENCY_WARNING=500   # ms
-MEMORY_LATENCY_CRITICAL=1000 # ms
-MEMORY_ERROR_CRITICAL=5      # %
+# Memory Engine Thresholds (all env-var driven)
+readonly MEMORY_LATENCY_WARNING="${MEMORY_LATENCY_WARNING:-500}"     # ms
+readonly MEMORY_LATENCY_CRITICAL="${MEMORY_LATENCY_CRITICAL:-1000}" # ms
+readonly MEMORY_ERROR_CRITICAL="${MEMORY_ERROR_CRITICAL:-5}"         # %
 
-# Kafka Thresholds
-KAFKA_LAG_WARNING=10000  # ms (10 sec)
+# Kafka Thresholds (all env-var driven)
+readonly KAFKA_LAG_WARNING="${KAFKA_LAG_WARNING:-10000}"  # ms (10 sec)
 KAFKA_LAG_CRITICAL=60000 # ms (60 sec)
 KAFKA_ERROR_CRITICAL=5   # %
 

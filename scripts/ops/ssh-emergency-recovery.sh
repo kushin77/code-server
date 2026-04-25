@@ -1,18 +1,17 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/ssh-emergency-recovery.sh
-# @module      ops/ssh-emergency-recovery
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
-###############################################################################
-# SSH Service Emergency Recovery - ${REPLICA_HOST}
+# @governance: SSH emergency recovery — restore SSH daemon on unresponsive hosts
+# Purpose: Fixes SSH daemon on replica nodes experiencing connection resets
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1536 (Infrastructure Standards)
 # Usage: bash /tmp/ssh-emergency-recovery.sh [--dry-run]
-# 
-# This script fixes the SSH daemon on Replica 2 which is resetting connections
+###############################################################################
+
+set -euo pipefail
+
+# This script fixes the SSH daemon on Replica nodes which may reset connections
 # during key exchange. Requires host console, IPMI, or direct shell access.
-#
 # Date: April 25, 2026
 # Related: #1645 (SSH connectivity), Epic #1616 (cluster parity)
 

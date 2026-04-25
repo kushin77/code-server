@@ -1,16 +1,16 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/validate-resource-limits.sh
-# @module      ops/validate-resource-limits
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: Resource limits validation — ensure all services have constraints
+# Purpose: Validates that all services in docker-compose.yml have resource limits
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1536 (Infrastructure Standards)
 ###############################################################################
-# @file scripts/ops/validate-resource-limits.sh
-# @description Validates that all services in docker-compose.yml have resource limits.
-# @governance GOV-002
-# Validate that all services have resource limits configured
+
+set -euo pipefail
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 echo "Checking resource limits in docker-compose.yml..."
 

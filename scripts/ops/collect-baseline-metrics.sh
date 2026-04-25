@@ -1,23 +1,19 @@
 #!/bin/bash
 ###############################################################################
-# @file        scripts/ops/collect-baseline-metrics.sh
-# @module      ops/collect-baseline-metrics
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
+# @governance: Baseline metrics collection — gathers 24h performance data
+# Purpose: Collects hourly performance metrics to establish operational baselines
+# Author: Autonomous Infrastructure
+# Date: 2026-04-25
+# Related issues: #1534 (IaC Governance), #1536 (Infrastructure Standards)
 ###############################################################################
-# @file scripts/ops/collect-baseline-metrics.sh
-# @description Collects performance metrics to establish operational baselines.
-# @governance GOV-002
-# Baseline Metrics Collection Script
-# Collects hourly performance metrics for 24 hours to establish operational baselines
 
-set -e
+set -euo pipefail
 
-ARTIFACT_DIR="artifacts"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONTINUE_MODE="false"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly ARTIFACT_DIR="${ARTIFACT_DIR:-${PROJECT_ROOT}/artifacts}"
+readonly COLLECTION_TIMESTAMP="${COLLECTION_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
+readonly CONTINUE_MODE="${CONTINUE_MODE:-false}"
 BASELINE_DIR=""
 
 while [[ $# -gt 0 ]]; do

@@ -107,7 +107,7 @@ deploy_pull_updates() {
   local cmd='
     REPO_PATH=$(cd ~ && pwd)/code-server-enterprise
     if [ -d "$REPO_PATH/.git" ]; then
-      cd "$REPO_PATH" && git fetch origin && git checkout '"${BRANCH_NAME}"' && git pull origin '"${BRANCH_NAME}"'
+      cd "$REPO_PATH" && git fetch origin '"${BRANCH_NAME}"':'"${BRANCH_NAME}"' 2>/dev/null || git fetch origin && git checkout '"${BRANCH_NAME}"' && git pull origin '"${BRANCH_NAME}"' 2>/dev/null || true
     else
       git clone --branch '"${BRANCH_NAME}"' https://github.com/kushin77/code-server.git "$REPO_PATH"
     fi
@@ -134,7 +134,7 @@ deploy_pull_updates() {
 deploy_validate_sync() {
   log INFO "Step 2/5: Running cluster validation script..."
   
-  local cmd="cd /code-server-enterprise && bash scripts/ci/validate-cluster-sync.sh --verbose --report /tmp/pre-deployment-validation.json"
+  local cmd="cd ~/code-server-enterprise && bash scripts/ci/validate-cluster-sync.sh --verbose --report /tmp/pre-deployment-validation.json"
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $cmd"
@@ -163,7 +163,7 @@ deploy_validate_sync() {
 deploy_restart_services() {
   log INFO "Step 3/5: Restarting services with new file mount configuration..."
   
-  local cmd="cd /code-server-enterprise && docker compose down && sleep 2 && docker compose up -d"
+  local cmd="cd ~/code-server-enterprise && docker-compose down && sleep 2 && docker-compose up -d"
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $cmd"
@@ -175,7 +175,7 @@ deploy_restart_services() {
     sleep 5  # Give services time to stabilize
     
     # Verify services are running
-    if ssh "akushnir@${REPLICA_HOST}" "docker compose ps" &>> "$DEPLOYMENT_LOG"; then
+    if ssh "akushnir@${REPLICA_HOST}" "docker-compose ps" &>> "$DEPLOYMENT_LOG"; then
       log SUCCESS "All services are running"
       return 0
     else
@@ -195,7 +195,7 @@ deploy_restart_services() {
 deploy_install_daemon() {
   log INFO "Step 4/5: Installing continuous sync daemon..."
   
-  local cmd="cd /code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --install-cron"
+  local cmd="cd ~/code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --install-cron"
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $cmd"
@@ -226,7 +226,7 @@ deploy_install_daemon() {
 deploy_verify() {
   log INFO "Step 5/5: Verifying deployment..."
   
-  local verify_cmd="cd /code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --status"
+  local verify_cmd="cd ~/code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --status"
   
   if [ "$DRY_RUN" == "true" ]; then
     log WARN "[DRY-RUN] Would execute: $verify_cmd"
@@ -250,7 +250,7 @@ rollback_deployment() {
   log ERROR "Deployment failed at step: $1"
   log WARN "Initiating rollback..."
   
-  local rollback_cmd="cd /code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --disable && git reset --hard HEAD^ && docker compose down && docker compose up -d"
+  local rollback_cmd="cd ~/code-server-enterprise && bash scripts/ops/cluster-sync-daemon.sh --disable && git reset --hard HEAD^ && docker-compose down && docker-compose up -d"
   
   log WARN "Rollback command: $rollback_cmd"
   

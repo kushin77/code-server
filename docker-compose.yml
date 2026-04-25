@@ -9,7 +9,7 @@ services:
   # ========================================================================
 
   grafana-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: grafana-init
     user: "0:0"
     command:
@@ -31,7 +31,7 @@ services:
           memory: 32m
 
   redis-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: redis-init
     user: "0:0"
     command:
@@ -53,7 +53,7 @@ services:
           memory: 32m
 
   redpanda-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: redpanda-init
     user: "0:0"
     command:
@@ -75,7 +75,7 @@ services:
           memory: 32m
 
   prometheus-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: prometheus-init
     user: "0:0"
     command:
@@ -97,7 +97,7 @@ services:
           memory: 32m
 
   loki-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: loki-init
     user: "0:0"
     command:
@@ -119,7 +119,7 @@ services:
           memory: 32m
 
   alertmanager-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: alertmanager-init
     user: "0:0"
     command:
@@ -460,7 +460,7 @@ services:
   # ========================================================================
 
   qdrant-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: qdrant-init
     user: "0:0"
     command:
@@ -1064,7 +1064,7 @@ services:
   # ========================================================================
 
   postgres-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: postgres-init
     user: "0:0"
     command:
@@ -1381,7 +1381,7 @@ services:
   # Distributed tracing backend — stores and queries traces via OTLP
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
   tempo-init:
-    image: alpine:3.20@sha256:11e21d688290576dda723e6f6d61c4493f6b126f2535af6e6a3efcc3a6e99cb5
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     container_name: tempo-init
     user: "0:0"
     command:

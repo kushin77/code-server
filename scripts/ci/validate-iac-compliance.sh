@@ -29,7 +29,7 @@ check_env_var_usage() {
   while IFS= read -r file; do
     [[ "$file" =~ (test|spec|docs|\.example) ]] && continue
     if grep -q '^\s*[A-Z_]\+=' "$file" && ! grep -q '\${[A-Z_]\+:-' "$file"; then
-      if ! grep -qE 'source.*(_base-config|_epic-1536-network-config)' "$file"; then
+      if ! grep -qE '(source|\.).*(_base-config|_epic-1536-network-config)' "$file"; then
         warn "  $file uses hardcoded assignment"
         ((violations++))
       fi

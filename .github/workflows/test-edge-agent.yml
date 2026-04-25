@@ -104,18 +104,18 @@ jobs:
             -e CONTROL_PLANE=http://localhost:8080 \
             -e EDGE_LOCATION=us-west \
             paperclip/edge-agent:test
-          
+
           # Wait for health check
           sleep 10
-          
+
           # Verify container is running
           docker ps | grep edge-agent-test
-          
+
           # Cleanup
           docker stop edge-agent-test
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5.5.4
         with:
           files: ./coverage.xml
           flags: edge-agent
@@ -151,7 +151,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: 'apps/edge-agent'

@@ -15,7 +15,7 @@ jobs:
     name: Chaos Engineering Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 120  # 2 hours for all chaos scenarios
-    
+
     services:
       postgres:
         image: postgres:14-alpine
@@ -29,7 +29,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7-alpine
         options: >-
@@ -102,7 +102,7 @@ jobs:
 
       - name: Archive test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chaos-test-results
           path: ./artifacts/chaos-testing/

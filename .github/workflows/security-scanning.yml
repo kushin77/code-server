@@ -20,7 +20,7 @@ jobs:
   sast:
     name: Static Analysis (SAST)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
         continue-on-error: true
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
@@ -58,7 +58,7 @@ jobs:
           fi
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sast-results
           path: ./artifacts/
@@ -66,7 +66,7 @@ jobs:
   sca:
     name: Dependency Scanning (SCA)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
         continue-on-error: true
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
@@ -104,7 +104,7 @@ jobs:
           fi
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sca-results
           path: ./artifacts/
@@ -112,7 +112,7 @@ jobs:
   secrets:
     name: Secrets Detection
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
   container-scan:
     name: Container Security
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,7 +150,7 @@ jobs:
         run: docker build -t auth-server:scan .
 
       - name: Run Trivy scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: auth-server:scan
           format: 'json'
@@ -166,7 +166,7 @@ jobs:
           fi
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: container-scan-results
           path: ./artifacts/
@@ -176,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [sast, sca, secrets, container-scan]
     if: success()
-    
+
     services:
       postgres:
         image: postgres:14-alpine
@@ -190,7 +190,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7-alpine
         options: >-
@@ -241,7 +241,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dast-results
           path: ./artifacts/
@@ -251,10 +251,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [sast, sca, secrets, container-scan, dast]
     if: always()
-    
+
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Generate comprehensive report
         run: |
@@ -273,7 +273,7 @@ jobs:
           echo "See individual artifacts for detailed results." >> SECURITY_REPORT.md
 
       - name: Upload comprehensive report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: SECURITY_REPORT.md
@@ -295,7 +295,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [sast, sca, secrets, container-scan, dast]
     if: failure()
-    
+
     steps:
       - name: Post failure notification
         uses: actions/github-script@v6

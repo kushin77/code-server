@@ -11,7 +11,7 @@ jobs:
     name: Disaster Recovery Testing
     runs-on: ubuntu-latest
     timeout-minutes: 180  # 3 hours for all DR drills
-    
+
     services:
       postgres:
         image: postgres:14-alpine
@@ -25,7 +25,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7-alpine
         options: >-
@@ -108,47 +108,47 @@ jobs:
         run: |
           cat > ./artifacts/dr-drills/REPORT.md << 'EOF'
           # Disaster Recovery Drill Report
-          
+
           **Date:** $(date)
           **Run:** ${{ github.run_id }}
-          
+
           ## Drills Executed
-          
+
           1. **Backup Verification**
              - Objective: Verify all backups are present and intact
              - Status: ✅ Passed
              - Finding: All backups verified with checksums
-          
+
           2. **Point-in-Time Restore (PITR)**
              - Objective: Verify system can restore to specific point
              - Status: ✅ Passed
              - RTO: < 5 hours
              - RPO: < 15 minutes
-          
+
           3. **Failover to Replica**
              - Objective: Verify automatic failover works
              - Status: ✅ Passed
              - Failover Time: < 10 seconds
-          
+
           4. **Failback to Primary**
              - Objective: Verify system can failback safely
              - Status: ✅ Passed
              - Failback Time: < 30 seconds
-          
+
           5. **Cluster Health Verification**
              - Objective: Verify cluster is healthy and quorum valid
              - Status: ✅ Passed
              - Replication Lag: < 1 second
-          
+
           ## Recovery Targets Met
-          
+
           - ✅ RTO (Recovery Time Objective): < 5 hours
           - ✅ RPO (Recovery Point Objective): < 15 minutes
           - ✅ Zero Data Loss Verified
           - ✅ Failover Automation Working
-          
+
           ## Recommendations
-          
+
           1. Continue weekly DR drills
           2. Maintain current backup retention policy
           3. Document any issues found during drills
@@ -157,7 +157,7 @@ jobs:
 
       - name: Archive results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dr-drill-results
           path: ./artifacts/dr-drills/

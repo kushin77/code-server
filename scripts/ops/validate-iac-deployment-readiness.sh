@@ -39,6 +39,13 @@ SKIPPED_CHECKS=0
 
 mkdir -p "$REPORT_DIR"
 
+# Load network configuration SSOT
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
+source "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Warning: Network configuration SSOT not found, using defaults"
+}
+
 ################################################################################
 # LOGGING
 ################################################################################

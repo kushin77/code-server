@@ -10,12 +10,18 @@ set -euo pipefail
 
 # Source P3 configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/../_common/_p3-services-config.env"
 
 if [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$CONFIG_FILE"
 fi
+
+# Load network configuration SSOT
+source "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Warning: Network configuration SSOT not found, using defaults"
+}
 
 ################################################################################
 # COLOR CODES

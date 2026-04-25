@@ -12,6 +12,11 @@ readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly COMPOSE_FILE="${COMPOSE_FILE:-${REPO_ROOT}/docker-compose.yml}"
 readonly REPORT_FILE="${REPORT_FILE:-${REPO_ROOT}/artifacts/compose-idempotency-report.txt}"
 
+# Load network configuration SSOT
+source "${REPO_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Warning: Network configuration SSOT not found, using defaults"
+}
+
 # Source common logging functions (P3 #1533: consolidated logging)
 source "${REPO_ROOT}/scripts/_common/init.sh"
 

@@ -34,6 +34,14 @@ warn() {
     echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] ${YELLOW}[⚠]${NC} $*"
 }
 
+# Load network configuration SSOT
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
+source "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 ################################################################################
 # Phase 2: Kubernetes Network Configuration
 ################################################################################

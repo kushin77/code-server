@@ -43,6 +43,14 @@ info() {
 # CONFIGURATION (Environment-Driven)
 ################################################################################
 
+# Load network configuration SSOT
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
+source "${PROJECT_ROOT}/scripts/_common/_epic-1536-network-config.env" || {
+    echo "Error: Network configuration SSOT not found"
+    exit 1
+}
+
 # Service endpoints (environment-driven)
 REPUTATION_ENGINE_URL="${REPUTATION_ENGINE_URL:-http://localhost:8002}"
 EXECUTION_SCHEDULER_URL="${EXECUTION_SCHEDULER_URL:-http://localhost:8080}"

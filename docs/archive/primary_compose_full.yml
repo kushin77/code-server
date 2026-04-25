@@ -109,7 +109,7 @@ services:
     environment:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
-      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET:-0123456789abcdef0123456789abcdef}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET:?OAUTH2_COOKIE_SECRET must be set}
     healthcheck:
       test:
         - CMD
@@ -737,7 +737,7 @@ services:
     environment:
       - KAFKA_BROKER=redpanda:9092
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
-      - SCHEDULER_API_KEY=${SCHEDULER_API_KEY:-scheduler-default-key-dev-only}
+      - SCHEDULER_API_KEY=${SCHEDULER_API_KEY:?SCHEDULER_API_KEY must be set}
       - LOG_LEVEL=INFO
     depends_on:
       postgres:

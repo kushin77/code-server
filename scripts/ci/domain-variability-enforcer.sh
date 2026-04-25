@@ -11,15 +11,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPORT_FILE="${REPO_ROOT}/artifacts/domain-variability-report.json"
 
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/hosts.sh"
+
 # Critical domain and host strings that must be templated
 declare -A REFERENCE_VARS=(
-  ["kushnir.cloud"]='${APEX_DOMAIN}'
-  ["ide.kushnir.cloud"]='${IDE_DOMAIN}'
-  ["auth.kushnir.cloud"]='${AUTH_DOMAIN}'
-  ["api.kushnir.cloud"]='${API_DOMAIN}'
-  ["registry.kushnir.cloud"]='${REGISTRY_DOMAIN}'
-  ["192.168.168.31"]='${PRIMARY_HOST}'
-  ["192.168.168.42"]='${REPLICA_HOST}'
+  ["${APEX_DOMAIN}"]='${APEX_DOMAIN}'
+  ["${IDE_DOMAIN}"]='${IDE_DOMAIN}'
+  ["${AUTH_DOMAIN}"]='${AUTH_DOMAIN}'
+  ["${API_DOMAIN}"]='${API_DOMAIN}'
+  ["${REGISTRY_DOMAIN}"]='${REGISTRY_DOMAIN}'
+  ["${PRIMARY_HOST}"]='${PRIMARY_HOST}'
+  ["${REPLICA_HOST}"]='${REPLICA_HOST}'
 )
 
 TARGET_FILES=(

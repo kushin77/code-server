@@ -10,7 +10,7 @@ import future.keywords.if
 test_deny_ssh_prod_file_modify {
     deny[msg] with input as {
         "action": "ssh_command",
-        "target_host": "prod-primary-192.168.168.31",
+        "target_host": "prod-primary-host",
         "command_type": "file_modify"
     }
     count(deny) > 0

@@ -6,6 +6,12 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/hosts.sh"
+
 REPORT_DIR="${1:-.}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="${REPORT_DIR}/resource-profile-${TIMESTAMP}.json"
@@ -41,7 +47,7 @@ echo "✅ Resource profiling report initialized"
 echo "📍 Location: ${REPORT_FILE}"
 echo ""
 echo "Next Steps (Manual profiling on primary node):"
-echo "1. SSH to 192.168.168.31"
+echo "1. SSH to ${PRIMARY_HOST}"
 echo "2. Run: docker stats --no-stream --format 'table {{.Container}}\t{{.MemUsage}}\t{{.CPUPerc}}\t{{.MemPerc}}'"
 echo "3. Run: docker ps --format '{{.Names}}\t{{.Status}}' to verify all services"
 echo "4. Review Prometheus metrics: http://prometheus:9090/graph"

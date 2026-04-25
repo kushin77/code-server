@@ -41,6 +41,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$REPO_ROOT/scripts/_common/init.sh"
+source "$REPO_ROOT/scripts/_common/hosts.sh"
 
 # Options
 DRY_RUN="${DRY_RUN:-false}"
@@ -139,8 +140,8 @@ declare -A URL_MAPPINGS=(
   ["localhost:3100"]="API_URL (default: localhost:3100)"
   ["localhost:8000"]="MEMORY_ENGINE_URL (default: localhost:8000)"
   ["http://localhost"]="SERVICE_BASE_URL"
-  ["192.168.168.31"]="PRIMARY_NODE_IP"
-  ["192.168.168.42"]="REPLICA_NODE_IP"
+  ["${PRIMARY_HOST}"]="PRIMARY_NODE_IP"
+  ["${REPLICA_HOST}"]="REPLICA_NODE_IP"
 )
 
 readonly URL_PATTERNS=(

@@ -1,6 +1,6 @@
 apex_domain     = "example.com"
-primary_host    = "10.0.0.31"
-replica_host    = "10.0.0.42"
+primary_host    = "primary.example.internal"
+replica_host    = "replica.example.internal"
 nas_host        = "10.0.0.56"
 registry_url    = "registry.internal.example"
 admin_email     = "admin@example.com"

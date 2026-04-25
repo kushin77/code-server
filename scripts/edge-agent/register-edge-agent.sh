@@ -219,7 +219,12 @@ stop_heartbeat_daemon() {
 # Generate agent registration token (for secure authentication)
 generate_registration_token() {
     local agent_id=$1
-    local secret=${AGENT_SECRET:-"default-secret"}
+    if [[ -z "${AGENT_SECRET:-}" ]]; then
+        log_error "AGENT_SECRET must be set"
+        return 1
+    fi
+
+    local secret=$AGENT_SECRET
     
     # Simple token: base64(agent_id:timestamp:hmac)
     local timestamp=$(date -u +%s)

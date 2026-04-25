@@ -6,6 +6,12 @@
 # @idempotent YES - Safe to run for validation, no production impact
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/hosts.sh"
+
 readonly LOG_FILE="./artifacts/dr-drill-$(date +%s).log"
 readonly DR_REPORT="./artifacts/dr-drill-report-$(date +%s).md"
 readonly BACKUP_DIR="./state/backups"
@@ -253,8 +259,8 @@ dr_failover_capability() {
   
   log "Testing: Is failover to replica host possible?"
   
-  local primary_host="${PRIMARY_HOST:-192.168.168.31}"
-  local replica_host="${REPLICA_HOST:-192.168.168.42}"
+  local primary_host="${PRIMARY_HOST}"
+  local replica_host="${REPLICA_HOST}"
   
   log "Primary host: $primary_host"
   log "Replica host: $replica_host"

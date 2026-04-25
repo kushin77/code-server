@@ -12,7 +12,7 @@
 # ============================================================================
 
 apex_domain     = "kushnir.cloud"      # Change to your domain
-primary_host    = "192.168.168.31"     # Change to your primary host IP
+primary_host    = "primary.example.internal"  # Change to your primary host IP or hostname
 admin_email     = "admin@kushnir.cloud" # Change to your admin email
 
 # ============================================================================
@@ -20,10 +20,10 @@ admin_email     = "admin@kushnir.cloud" # Change to your admin email
 # ============================================================================
 
 # Replica host for HA (leave empty if single-node)
-replica_host    = "192.168.168.42"
+replica_host    = "replica.example.internal"
 
 # NAS/storage host (leave empty if using local storage)
-nas_host        = "192.168.168.56"
+nas_host        = "nas.example.internal"
 
 # Enable TLS/HTTPS with Let's Encrypt
 enable_tls      = false  # Set to true if domain is internet-accessible

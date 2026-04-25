@@ -12,9 +12,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)
 
+_scheduler_api_key = os.getenv("SCHEDULER_API_KEY")
+if not _scheduler_api_key:
+    raise RuntimeError("SCHEDULER_API_KEY must be set")
+
 # Simple in-memory API key store (in production, use secrets manager)
 VALID_API_KEYS = {
-    os.getenv("SCHEDULER_API_KEY", "scheduler-default-key-dev-only"): "scheduler-service",
+    _scheduler_api_key: "scheduler-service",
 }
 
 # OAuth2 introspection endpoint (set via env for production)
@@ -61,20 +65,19 @@ class SchedulerAuth:
     ) -> str:
         """
         Verify Bearer token via OAuth2 introspection endpoint.
-
-        Falls back to prefix-based validation when OAUTH2_INTROSPECT_URL is not set
-        (development only).
         """
         token = credentials.credentials
 
-        if _OAUTH2_INTROSPECT_URL:
-            return await self._introspect_token(token)
+        if not _OAUTH2_INTROSPECT_URL:
+            raise HTTPException(
+                status_code=503,
+                detail="OAuth2 introspection is not configured",
+            )
 
-        # Dev-only fallback: accept any non-empty token
         if not token:
             raise HTTPException(status_code=401, detail="Empty bearer token")
-        logger.debug("OAuth2 introspection not configured — dev token accepted")
-        return "dev-user"
+
+        return await self._introspect_token(token)
 
     async def _introspect_token(self, token: str) -> str:
         """Call OAuth2 introspection endpoint to validate token."""

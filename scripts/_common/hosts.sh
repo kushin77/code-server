@@ -12,19 +12,28 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
+  source <(tr -d '\r' < "${REPO_ROOT}/.env.infrastructure")
+fi
+
+source "${SCRIPT_DIR}/init.sh"
+
 # ── Host Configuration (override via environment) ────────────────────────────
 
 # Primary compute node (code-server, Ollama, main services)
-: "${PRIMARY_HOST:=192.168.168.31}"
+: "${PRIMARY_HOST:?PRIMARY_HOST must be set}"
 
 # Replica compute node (HA failover, monitoring)
-: "${REPLICA_HOST:=192.168.168.42}"
+: "${REPLICA_HOST:?REPLICA_HOST must be set}"
 
 # NAS node (persistent storage, backups)
-: "${NAS_HOST:=192.168.168.56}"
+: "${NAS_HOST:?NAS_HOST must be set}"
 
 # Domain root (for FQDN construction)
-: "${DOMAIN:=kushnir.cloud}"
+: "${DOMAIN:=${APEX_DOMAIN:-kushnir.cloud}}"
 
 # SSH user (default: current user)
 : "${SSH_USER:=${USER:-ops}}"

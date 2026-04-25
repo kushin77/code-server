@@ -6,6 +6,12 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/hosts.sh"
+
 # ============================================================================
 # CONFIGURATION (Immutable, Environment-Based)
 # ============================================================================
@@ -14,8 +20,8 @@ readonly SERVICES=("reputation-engine" "execution-scheduler" "paperclip")
 readonly PORTS=(8050 8070 8010)
 readonly HEALTH_PATHS=("/health" "/health" "/health")
 readonly TIMEOUT_SECS=60
-readonly REPLICA_PRIMARY="192.168.168.31"
-readonly REPLICA_SECONDARY="192.168.168.42"
+readonly REPLICA_PRIMARY="${PRIMARY_HOST}"
+readonly REPLICA_SECONDARY="${REPLICA_HOST}"
 
 # Color codes (idempotent logging)
 readonly RED='\033[0;31m'

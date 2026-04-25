@@ -12,16 +12,21 @@ async function globalSetup(config: FullConfig) {
   const baseUrl = process.env.BASE_URL || "https://ide.kushnir.cloud";
   const qaEmail = process.env.QA_EMAIL || "qa@kushnir.cloud";
   const qaPassword = process.env.QA_PASSWORD || "";
+  const primaryHost = process.env.PRIMARY_HOST;
 
   // ── VPN connectivity check ───────────────────────────────────────────────
   if (requireVpn) {
+    if (!primaryHost) {
+      throw new Error("[setup] PRIMARY_HOST must be set for VPN connectivity checks.");
+    }
+
     console.log("[setup] Verifying VPN connectivity...");
     try {
-      execSync("ping -c 1 192.168.168.31", { stdio: "pipe" });
-      console.log("[setup] ✓ VPN active — 192.168.168.31 reachable");
+      execSync(`ping -c 1 ${primaryHost}`, { stdio: "pipe" });
+      console.log(`[setup] ✓ VPN active — ${primaryHost} reachable`);
     } catch {
       throw new Error(
-        "[setup] VPN check FAILED. REQUIRE_VPN=1 but 192.168.168.31 unreachable. " +
+        `[setup] VPN check FAILED. REQUIRE_VPN=1 but ${primaryHost} unreachable. ` +
           "Connect to WireGuard VPN before running E2E tests."
       );
     }

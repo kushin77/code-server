@@ -9,9 +9,9 @@
 # Do NOT hardcode values here - use 'export TF_VAR_apex_domain="kushnir.cloud"'
 # Or set defaults in variables.tf
 # apex_domain     = "kushnir.cloud"     # ← Use TF_VAR_apex_domain instead
-# primary_host    = "192.168.168.31"    # ← Use TF_VAR_primary_host instead
-# replica_host    = "192.168.168.42"    # ← Use TF_VAR_replica_host instead
-# nas_host        = "192.168.168.56"    # ← Use TF_VAR_nas_host instead
+# primary_host    = "primary.example.internal"    # ← Use TF_VAR_primary_host instead
+# replica_host    = "replica.example.internal"    # ← Use TF_VAR_replica_host instead
+# nas_host        = "nas.example.internal"        # ← Use TF_VAR_nas_host instead
 # registry_url    = "registry.kushnir.cloud:5000"  # ← Use TF_VAR_registry_domain
 # admin_email     = "ops@kushnir.cloud" # ← Use TF_VAR_admin_email
 

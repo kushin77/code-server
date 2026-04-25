@@ -95,7 +95,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t paperclip/edge-agent:test -f apps/edge-agent/Dockerfile .
+          docker build -t paperclip/edge-agent:test -f apps/edge-agent/Dockerfile apps/edge-agent
 
       - name: Test Docker image
         run: |

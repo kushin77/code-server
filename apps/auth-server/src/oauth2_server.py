@@ -153,7 +153,8 @@ class OAuth2Server:
         client_id: str,
         user_id: str,
         scope: str,
-        code_challenge: Optional[str] = None
+        code_challenge: Optional[str] = None,
+        redirect_uri: Optional[str] = None,
     ) -> str:
         """Generate authorization code"""
         code = secrets.token_urlsafe(32)
@@ -165,6 +166,7 @@ class OAuth2Server:
             "issued_at": datetime.utcnow(),
             "expires_at": datetime.utcnow() + timedelta(minutes=10),
             "code_challenge": code_challenge,
+            "redirect_uri": redirect_uri,
         }
         
         return code

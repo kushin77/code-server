@@ -159,13 +159,14 @@ services:
     container_name: prometheus
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
-      - "--config.file=/prometheus/prometheus.yml"
+      - "--config.file=/prometheus-config/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=30d"
     ports:
       - "9090:9090"
     volumes:
       - ./config:/prometheus-config:ro
+      - ./monitoring/alerts:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     environment:
       - TZ=UTC

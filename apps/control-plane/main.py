@@ -5,10 +5,11 @@ Orchestrates and manages code-server infrastructure services
 """
 
 import logging
-import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
+
+from apps._shared.python.config import get_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ async def health_check():
 @app.get("/services", response_model=Dict[str, Any])
 async def get_services():
     """Get all managed services status"""
+    config = get_config()
     return {
         "services": [
             "code-server-ide",
@@ -51,7 +53,7 @@ async def get_services():
             "vault",
             "artifact-repository"
         ],
-        "cluster_id": os.getenv("DEPLOYMENT_ID", "primary"),
+        "cluster_id": config.get("DEPLOYMENT_ID", "primary"),
         "timestamp": os.getcwd()
     }
 
@@ -71,10 +73,12 @@ async def metrics():
     }
 
 if __name__ == "__main__":
+    import os
     import uvicorn
+    config = get_config()
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.getenv("CONTROL_PLANE_PORT", 8082)),
+        port=config.get_int("CONTROL_PLANE_PORT", 8082),
         log_level="info"
     )

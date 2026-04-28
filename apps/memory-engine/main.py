@@ -5,13 +5,14 @@
 # @governance GOV-002: All memory queries logged and audited
 
 import json
-import os
 from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
+
+from apps._shared.python.config import get_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -184,4 +185,5 @@ async def memory_stats():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("MEMORY_ENGINE_PORT", "8001")))
+    config = get_config()
+    uvicorn.run(app, host="0.0.0.0", port=config.get_int("MEMORY_ENGINE_PORT", 8001))

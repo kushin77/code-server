@@ -5,7 +5,6 @@
 # @governance GOV-002: Historical seeding ensures organizational memory is comprehensive
 
 import json
-import os
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any
@@ -14,22 +13,25 @@ import hashlib
 from qdrant_client import QdrantMemoryClient, MemoryDocument
 from embedder import OllamaEmbedder
 
+from apps._shared.python.config import get_config
+
 
 class OrganizationalMemorySeeder:
     """Seed Qdrant vector database with historical data"""
 
     def __init__(self, repo_root: str = "."):
         self.repo_root = Path(repo_root)
-        self.qdrant_host = os.getenv("QDRANT_HOST", "localhost")
-        self.qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
-        self.ollama_host = os.getenv("OLLAMA_HOST", "http://ollama:11434")
+        config = get_config()
+        self.qdrant_host = config.get("QDRANT_HOST", "localhost")
+        self.qdrant_port = config.get_int("QDRANT_PORT", 6333)
+        self.ollama_host = config.get("OLLAMA_HOST", "http://ollama:11434")
         self.seed_log = self.repo_root / "artifacts/seeding-log.jsonl"
         self.seed_log.parent.mkdir(parents=True, exist_ok=True)
 
         self._qdrant = QdrantMemoryClient(host=self.qdrant_host, port=self.qdrant_port)
         self._embedder = OllamaEmbedder(
             ollama_host=self.ollama_host,
-            model=os.getenv("EMBED_MODEL", "nomic-embed-text"),
+            model=config.get("EMBED_MODEL", "nomic-embed-text"),
         )
 
     def _log_entry(self, action: str, status: str, details: Dict[str, Any]):

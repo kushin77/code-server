@@ -231,4 +231,15 @@ if [[ -f "${SCRIPT_DIR}/github-api-client.sh" ]]; then
     source "${SCRIPT_DIR}/github-api-client.sh"
 fi
 
+# ==============================================================================
+# PHASE 2.1: Source shared logging module (after all local functions/constants)
+# ==============================================================================
+# The shared logging module provides enhanced logging with JSON/structured support
+# while maintaining backward compatibility with these local functions.
+# Sourced here to avoid conflicts with readonly variables defined in this script.
+
+if [[ -f "${REPO_ROOT}/apps/_shared/test.sh" ]]; then
+  source "${REPO_ROOT}/apps/_shared/test.sh" 2>/dev/null || true
+fi
+
 return 0 2>/dev/null || true

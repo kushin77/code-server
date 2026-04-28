@@ -6,16 +6,16 @@
 
 set -euo pipefail
 
-# Colors (matches Python logging module)
-readonly RED="\033[91m"
-readonly GREEN="\033[92m"
-readonly YELLOW="\033[93m"
-readonly BLUE="\033[94m"
-readonly MAGENTA="\033[95m"
-readonly CYAN="\033[96m"
-readonly GRAY="\033[90m"
-readonly RESET="\033[0m"
-readonly BOLD="\033[1m"
+# Colors (matches Python logging module, but check if already defined via init.sh)
+[[ -z "${RED:-}" ]] && readonly RED="\033[91m" || true
+[[ -z "${GREEN:-}" ]] && readonly GREEN="\033[92m" || true
+[[ -z "${YELLOW:-}" ]] && readonly YELLOW="\033[93m" || true
+[[ -z "${BLUE:-}" ]] && readonly BLUE="\033[94m" || true
+[[ -z "${MAGENTA:-}" ]] && readonly MAGENTA="\033[95m" || true
+[[ -z "${CYAN:-}" ]] && readonly CYAN="\033[96m" || true
+[[ -z "${GRAY:-}" ]] && readonly GRAY="\033[90m" || true
+[[ -z "${RESET:-}" ]] && readonly RESET="\033[0m" || true
+[[ -z "${BOLD:-}" ]] && readonly BOLD="\033[1m" || true
 
 # Test counters
 TESTS_RUN=0
@@ -32,14 +32,14 @@ CURRENT_SUITE=""
 ################################################################################
 
 test_suite() {
-    """Create a new test suite."""
+    # Create a new test suite.
     CURRENT_SUITE="$1"
     echo -e "${CYAN}${BOLD}Test Suite: $CURRENT_SUITE${RESET}"
     echo "─────────────────────────────────────────────────"
 }
 
 test_end_suite() {
-    """Print test suite summary."""
+    # Print test suite summary.
     echo ""
     echo "Suite Results: ${GREEN}$TESTS_PASSED passed${RESET}, ${RED}$TESTS_FAILED failed${RESET}, ${YELLOW}$TESTS_SKIPPED skipped${RESET} (Total: $TESTS_RUN)"
     echo ""
@@ -50,7 +50,7 @@ test_end_suite() {
 ################################################################################
 
 assert_true() {
-    """Assert that command/expression succeeds."""
+    # Assert that command/expression succeeds.
     local test_name="$1"
     local command="${2:-$1}"
     
@@ -70,7 +70,7 @@ assert_true() {
 }
 
 assert_false() {
-    """Assert that command/expression fails."""
+    # Assert that command/expression fails.
     local test_name="$1"
     local command="${2:-$1}"
     
@@ -90,7 +90,7 @@ assert_false() {
 }
 
 assert_equals() {
-    """Assert that two values are equal."""
+    # Assert that two values are equal.
     local test_name="$1"
     local expected="$2"
     local actual="$3"
@@ -112,7 +112,7 @@ assert_equals() {
 }
 
 assert_not_equals() {
-    """Assert that two values are NOT equal."""
+    # Assert that two values are NOT equal.
     local test_name="$1"
     local not_expected="$2"
     local actual="$3"
@@ -134,7 +134,7 @@ assert_not_equals() {
 }
 
 assert_file_exists() {
-    """Assert that file exists."""
+    # Assert that file exists.
     local test_name="$1"
     local filepath="$2"
     
@@ -154,7 +154,7 @@ assert_file_exists() {
 }
 
 assert_file_not_exists() {
-    """Assert that file does NOT exist."""
+    # Assert that file does NOT exist.
     local test_name="$1"
     local filepath="$2"
     
@@ -174,7 +174,7 @@ assert_file_not_exists() {
 }
 
 assert_directory_exists() {
-    """Assert that directory exists."""
+    # Assert that directory exists.
     local test_name="$1"
     local dirpath="$2"
     
@@ -194,7 +194,7 @@ assert_directory_exists() {
 }
 
 assert_contains() {
-    """Assert that string contains substring."""
+    # Assert that string contains substring.
     local test_name="$1"
     local haystack="$2"
     local needle="$3"
@@ -216,7 +216,7 @@ assert_contains() {
 }
 
 assert_not_contains() {
-    """Assert that string does NOT contain substring."""
+    # Assert that string does NOT contain substring.
     local test_name="$1"
     local haystack="$2"
     local needle="$3"
@@ -238,7 +238,7 @@ assert_not_contains() {
 }
 
 assert_matches() {
-    """Assert that string matches regex pattern."""
+    # Assert that string matches regex pattern.
     local test_name="$1"
     local string="$2"
     local pattern="$3"
@@ -264,21 +264,21 @@ assert_matches() {
 ################################################################################
 
 setup_test_env() {
-    """Setup temporary test environment."""
+    # Setup temporary test environment.
     TEST_DIR=$(mktemp -d)
     export TEST_DIR
     trap 'cleanup_test_env' EXIT
 }
 
 cleanup_test_env() {
-    """Clean up test environment."""
+    # Clean up test environment.
     if [[ -n "${TEST_DIR:-}" ]] && [[ -d "$TEST_DIR" ]]; then
         rm -rf "$TEST_DIR"
     fi
 }
 
 setup_docker_test() {
-    """Setup Docker test environment."""
+    # Setup Docker test environment.
     # Check Docker is available
     if ! command -v docker &> /dev/null; then
         echo -e "${YELLOW}⚠${RESET} Docker not available, skipping Docker tests"
@@ -292,7 +292,7 @@ setup_docker_test() {
 ################################################################################
 
 mock_command() {
-    """Create a mock command that returns specified output."""
+    # Create a mock command that returns specified output.
     local cmd_name="$1"
     local mock_output="$2"
     local mock_exit_code="${3:-0}"
@@ -301,7 +301,7 @@ mock_command() {
 }
 
 mock_file() {
-    """Create a mock file with specified content."""
+    # Create a mock file with specified content.
     local filepath="$1"
     local content="$2"
     
@@ -314,7 +314,7 @@ mock_file() {
 ################################################################################
 
 test_report() {
-    """Generate test report."""
+    # Generate test report.
     local total=$((TESTS_PASSED + TESTS_FAILED + TESTS_SKIPPED))
     local pass_rate=0
     
@@ -346,27 +346,27 @@ test_report() {
 ################################################################################
 
 skip_test() {
-    """Skip the current test."""
+    # Skip the current test.
     local reason="${1:-No reason provided}"
     echo -e "  ${YELLOW}⊘${RESET} $CURRENT_TEST (skipped: $reason)"
     TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
 }
 
 fail_fast() {
-    """Fail immediately and exit."""
+    # Fail immediately and exit.
     local message="$1"
     echo -e "${RED}${BOLD}FATAL: $message${RESET}"
     exit 1
 }
 
 test_info() {
-    """Print test info message."""
+    # Print test info message.
     local message="$1"
     echo -e "  ${BLUE}ℹ${RESET} $message"
 }
 
 test_warn() {
-    """Print test warning message."""
+    # Print test warning message.
     local message="$1"
     echo -e "  ${YELLOW}⚠${RESET} $message"
 }

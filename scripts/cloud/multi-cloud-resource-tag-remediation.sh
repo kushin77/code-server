@@ -80,6 +80,7 @@ remediate_tags() {
       \"type\": \"$type\",
       \"resource_id\": \"$rid\",
       \"missing_tag\": \"$tag\",
+      \"remediated_with\": \"${TARGET_TAG}\",
       \"status\": \"$( [ "${ENFORCE}" = "true" ] && echo "FIXED" || echo "DRIFT" )\"
     }]" "${OUTPUT_FILE}" > "${OUTPUT_FILE}.tmp" && mv "${OUTPUT_FILE}.tmp" "${OUTPUT_FILE}"
     

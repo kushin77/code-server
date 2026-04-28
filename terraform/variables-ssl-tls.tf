@@ -69,3 +69,21 @@ variable "ssl_tls_expiration_alarm_threshold_days" {
     error_message = "Must be between 1 and 30 days."
   }
 }
+
+variable "enable_ssl_tls_module" {
+  description = "Enable SSL/TLS automation module from the root Terraform module"
+  type        = bool
+  default     = false
+}
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID used by the SSL/TLS module"
+  type        = string
+  default     = ""
+}
+
+variable "ssl_tls_sns_topic_arn" {
+  description = "SNS topic ARN used for SSL/TLS certificate alerts"
+  type        = string
+  default     = ""
+}

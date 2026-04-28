@@ -37,6 +37,30 @@ variable "database_postgres_version" {
   default     = "16.3"
 }
 
+variable "enable_database_module" {
+  description = "Enable database infrastructure module from the root Terraform module"
+  type        = bool
+  default     = false
+}
+
+variable "database_vpc_id" {
+  description = "VPC ID for database resources when root database module is enabled"
+  type        = string
+  default     = ""
+}
+
+variable "database_private_subnet_ids" {
+  description = "Private subnet IDs for database resources when root database module is enabled"
+  type        = list(string)
+  default     = []
+}
+
+variable "database_application_security_group_id" {
+  description = "Application security group ID allowed to access database resources"
+  type        = string
+  default     = ""
+}
+
 # Redis (ElastiCache) Configuration Variables
 variable "database_redis_node_type" {
   description = "ElastiCache Redis node type"

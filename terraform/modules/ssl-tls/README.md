@@ -90,7 +90,7 @@ module "ssl_tls" {
   # Monitoring
   enable_certificate_monitoring = true
   certificate_expiration_alarm_days = 14
-  renewal_check_frequency = "0 2 * * *"  # Daily at 02:00 UTC
+  renewal_check_frequency = "cron(0 2 * * ? *)"  # Daily at 02:00 UTC
 
   # AWS Resources
   route53_zone_id  = aws_route53_zone.example.zone_id

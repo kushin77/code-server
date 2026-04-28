@@ -7,13 +7,14 @@
 
 # Phase 3: Database Infrastructure Module
 module "database" {
+  count  = var.enable_database_module ? 1 : 0
   source = "./modules/database"
 
   # Environment configuration
   environment                    = var.environment
-  vpc_id                        = module.core.vpc_id
-  private_subnet_ids            = module.core.private_subnets
-  application_security_group_id = module.core.application_security_group_id
+  vpc_id                         = var.database_vpc_id
+  private_subnet_ids             = var.database_private_subnet_ids
+  application_security_group_id  = var.database_application_security_group_id
 
   # PostgreSQL configuration
   postgres_instance_class        = var.database_postgres_instance_class
@@ -49,15 +50,16 @@ module "database" {
 
 # Export database configuration to environment variables file (for scripts)
 resource "local_file" "database_env_file" {
+  count    = var.enable_database_module ? 1 : 0
   filename = "${path.module}/../scripts/_common/database.env"
   
   content = templatefile("${path.module}/templates/database.env.tpl", {
-    postgres_host        = module.database.database_outputs.postgres_host
-    postgres_port        = module.database.database_outputs.postgres_port
-    postgres_db          = module.database.database_outputs.postgres_database
-    postgres_user        = module.database.database_outputs.postgres_username
-    redis_host           = module.database.database_outputs.redis_endpoint
-    redis_port           = module.database.database_outputs.redis_port
+    postgres_host        = module.database[0].database_outputs.postgres_host
+    postgres_port        = module.database[0].database_outputs.postgres_port
+    postgres_db          = module.database[0].database_outputs.postgres_database
+    postgres_user        = module.database[0].database_outputs.postgres_username
+    redis_host           = module.database[0].database_outputs.redis_endpoint
+    redis_port           = module.database[0].database_outputs.redis_port
     environment          = var.environment
   })
 
@@ -70,31 +72,31 @@ resource "local_file" "database_env_file" {
 
 # Output database connection strings for application configuration
 output "database_connection_info" {
-  value = {
+  value = var.enable_database_module ? {
     postgres = {
-      host            = module.database.database_outputs.postgres_host
-      port            = module.database.database_outputs.postgres_port
-      database        = module.database.database_outputs.postgres_database
-      username        = module.database.database_outputs.postgres_username
-      connection_string = "postgresql://${module.database.database_outputs.postgres_username}:***@${module.database.database_outputs.postgres_host}:${module.database.database_outputs.postgres_port}/${module.database.database_outputs.postgres_database}"
+      host              = module.database[0].database_outputs.postgres_host
+      port              = module.database[0].database_outputs.postgres_port
+      database          = module.database[0].database_outputs.postgres_database
+      username          = module.database[0].database_outputs.postgres_username
+      connection_string = "postgresql://${module.database[0].database_outputs.postgres_username}:***@${module.database[0].database_outputs.postgres_host}:${module.database[0].database_outputs.postgres_port}/${module.database[0].database_outputs.postgres_database}"
     }
     redis = {
-      host            = module.database.database_outputs.redis_endpoint
-      port            = module.database.database_outputs.redis_port
-      connection_string = "redis://${module.database.database_outputs.redis_endpoint}:${module.database.database_outputs.redis_port}/0"
+      host              = module.database[0].database_outputs.redis_endpoint
+      port              = module.database[0].database_outputs.redis_port
+      connection_string = "redis://${module.database[0].database_outputs.redis_endpoint}:${module.database[0].database_outputs.redis_port}/0"
     }
-  }
+  } : null
   description = "Database connection information for applications"
   sensitive   = false
 }
 
 # Output Alembic migration instructions
 output "alembic_migration_instructions" {
-  value = templatefile("${path.module}/templates/alembic-instructions.txt", {
-    postgres_host = module.database.database_outputs.postgres_host
-    postgres_port = module.database.database_outputs.postgres_port
-    postgres_db   = module.database.database_outputs.postgres_database
-    postgres_user = module.database.database_outputs.postgres_username
-  })
+  value = var.enable_database_module ? templatefile("${path.module}/templates/alembic-instructions.txt", {
+    postgres_host = module.database[0].database_outputs.postgres_host
+    postgres_port = module.database[0].database_outputs.postgres_port
+    postgres_db   = module.database[0].database_outputs.postgres_database
+    postgres_user = module.database[0].database_outputs.postgres_username
+  }) : null
   description = "Instructions for running Alembic database migrations"
 }

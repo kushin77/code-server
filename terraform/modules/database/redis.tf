@@ -75,15 +75,16 @@ resource "aws_elasticache_parameter_group" "redis" {
 
 # ElastiCache Redis replication group
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_description = "${var.environment} Redis cluster"
-  engine                        = "redis"
-  engine_version               = var.redis_engine_version
-  node_type                    = var.redis_node_type
-  num_cache_clusters           = var.redis_num_cache_nodes
-  parameter_group_name         = aws_elasticache_parameter_group.redis.name
-  port                         = 6379
-  subnet_group_name            = aws_elasticache_subnet_group.redis.name
-  security_group_ids           = [aws_security_group.redis.id]
+  replication_group_id = "${var.environment}-redis"
+  description          = "${var.environment} Redis cluster"
+  engine               = "redis"
+  engine_version       = var.redis_engine_version
+  node_type            = var.redis_node_type
+  num_cache_clusters   = var.redis_num_cache_nodes
+  parameter_group_name = aws_elasticache_parameter_group.redis.name
+  port                 = 6379
+  subnet_group_name    = aws_elasticache_subnet_group.redis.name
+  security_group_ids   = [aws_security_group.redis.id]
 
   # Replication configuration
   automatic_failover_enabled = var.redis_automatic_failover && var.redis_num_cache_nodes > 1
@@ -92,7 +93,6 @@ resource "aws_elasticache_replication_group" "redis" {
   transit_encryption_enabled = false  # Enable only if using Redis AUTH
 
   # Backup configuration
-  automatic_backups_enabled = var.redis_retention_days > 0
   snapshot_retention_limit  = var.redis_retention_days
   snapshot_window           = "03:00-05:00"  # UTC
 
@@ -106,7 +106,6 @@ resource "aws_elasticache_replication_group" "redis" {
     destination_type = "cloudwatch-logs"
     log_format       = "json"
     log_type         = "slow-log"
-    enabled          = true
   }
 
   log_delivery_configuration {
@@ -114,7 +113,6 @@ resource "aws_elasticache_replication_group" "redis" {
     destination_type = "cloudwatch-logs"
     log_format       = "json"
     log_type         = "engine-log"
-    enabled          = true
   }
 
   # Deletion protection

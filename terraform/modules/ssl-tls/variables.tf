@@ -116,12 +116,12 @@ variable "enable_certificate_auto_renewal" {
 }
 
 variable "renewal_check_frequency" {
-  description = "Cron expression for renewal check frequency"
+  description = "AWS EventBridge schedule expression for renewal checks"
   type        = string
-  default     = "0 2 * * *"  # Daily at 02:00 UTC
+  default     = "cron(0 2 * * ? *)"
   validation {
-    condition     = can(regex("^(([^\\s]+\\s){5}([^\\s]+))$", var.renewal_check_frequency))
-    error_message = "Must be a valid cron expression."
+    condition     = can(regex("^(cron|rate)\\(.+\\)$", var.renewal_check_frequency))
+    error_message = "Must be a valid AWS EventBridge schedule expression such as cron(0 2 * * ? *) or rate(1 day)."
   }
 }
 

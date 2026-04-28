@@ -28,10 +28,8 @@ resource "aws_db_instance" "postgres" {
   identifier = "${var.environment}-postgres-primary"
 
   # Engine and version
-  engine               = "postgres"
-  engine_version       = var.postgres_version
-  family               = "postgres16"  # Parameter group family
-  major_engine_version = "16"
+  engine         = "postgres"
+  engine_version = var.postgres_version
 
   # Instance sizing
   instance_class       = var.postgres_instance_class

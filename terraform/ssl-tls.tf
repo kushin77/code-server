@@ -7,6 +7,7 @@
 
 # SSL/TLS Module - Let's Encrypt ACME Automation
 module "ssl_tls" {
+  count  = var.enable_ssl_tls_module ? 1 : 0
   source = "./modules/ssl-tls"
 
   environment             = var.environment
@@ -25,11 +26,11 @@ module "ssl_tls" {
   # Monitoring
   enable_certificate_monitoring   = var.environment != "dev"
   certificate_expiration_alarm_days = var.environment == "production" ? 14 : 21
-  renewal_check_frequency         = "0 2 * * *"  # Daily at 02:00 UTC
+  renewal_check_frequency         = "cron(0 2 * * ? *)"  # Daily at 02:00 UTC
 
   # AWS resources
   route53_zone_id = var.route53_zone_id
-  sns_topic_arn   = module.core.ops_alerts_topic_arn
+  sns_topic_arn   = var.ssl_tls_sns_topic_arn
 
   common_tags = merge(
     var.common_tags,
@@ -40,24 +41,23 @@ module "ssl_tls" {
     }
   )
 
-  depends_on = [module.core]
 }
 
 # Output certificate information for operations
 output "ssl_tls_certificate_info" {
-  value = {
-    certificate_arn     = module.ssl_tls.certificate_details.arn
-    domain              = module.ssl_tls.certificate_details.domain_name
-    subject_alt_names   = module.ssl_tls.certificate_details.subject_alt_names
-    status              = module.ssl_tls.certificate_details.status
-    monitoring_enabled  = var.ssl_tls_enable_monitoring
-    auto_renewal        = var.ssl_tls_enable_auto_renewal
-  }
+  value = var.enable_ssl_tls_module ? {
+    certificate_arn    = module.ssl_tls[0].certificate_details.arn
+    domain             = module.ssl_tls[0].certificate_details.domain_name
+    subject_alt_names  = module.ssl_tls[0].certificate_details.subject_alt_names
+    status             = module.ssl_tls[0].certificate_details.status
+    monitoring_enabled = var.ssl_tls_enable_monitoring
+    auto_renewal       = var.ssl_tls_enable_auto_renewal
+  } : null
   description = "SSL/TLS certificate information"
 }
 
 # Output Caddy integration
 output "caddy_certificate_configuration" {
-  value       = module.ssl_tls.ssl_tls_summary
+  value       = var.enable_ssl_tls_module ? module.ssl_tls[0].ssl_tls_summary : null
   description = "Caddy certificate configuration details"
 }

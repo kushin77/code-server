@@ -7,12 +7,13 @@
 # @governance GOV-002: All deployment gates verified and documented
 ###
 
-# Don't use set -euo pipefail to allow graceful handling of missing tools
-trap 'exit 0' INT TERM
+# Source canonical bootstrap (provides log_info, log_error, and shared configuration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-# ============================================================================
-# Logging Functions
-# ============================================================================
+# Don't use set -euo pipefail to allow graceful handling of missing tools
+set +euo pipefail
+trap 'exit 0' INT TERM
 
 # =============================================================================
 # ERROR HANDLING & CLEANUP

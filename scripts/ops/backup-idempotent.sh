@@ -5,25 +5,20 @@
 # @idempotent YES - Checks backup age before creating new backup
 set -euo pipefail
 
+# Source canonical bootstrap (provides log_info, log_error, and shared configuration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 readonly BACKUP_DIR="./state/backups"
 readonly BACKUP_AGE_HOURS="${BACKUP_AGE_HOURS:-1}"  # Don't backup more than once per hour
-readonly LOG_FILE="./artifacts/backup-$(date +%s).log"
 
 mkdir -p "$BACKUP_DIR"
-
-log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
-}
-
-log_error() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
-}
 
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================
 trap 'log_error "Backup failed at line $LINENO (exit code: $?)"; rm -f "${BACKUP_FILE}" 2>/dev/null || true; exit 1' ERR
-trap 'log "Performing cleanup..."; true' EXIT
+trap 'log_info "Performing cleanup..."; true' EXIT
 
 # Check if recent backup exists
 has_recent_backup() {
@@ -33,7 +28,7 @@ has_recent_backup() {
     if [[ -f "$backup" ]]; then
       local backup_time=$(stat -f %m "$backup" 2>/dev/null || stat -c %Y "$backup")
       if [[ $backup_time -gt $cutoff_time ]]; then
-        log "✅ Recent backup exists: $backup"
+        log_info "✅ Recent backup exists: $backup"
         return 0
       fi
     fi
@@ -43,14 +38,14 @@ has_recent_backup() {
 
 # Perform backup
 backup() {
-  log "Starting idempotent backup"
+  log_info "Starting idempotent backup"
   
   if has_recent_backup; then
-    log "Skipping backup - recent backup exists"
+    log_info "Skipping backup - recent backup exists"
     return 0
   fi
   
-  log "Creating new backup..."
+  log_info "Creating new backup..."
   local backup_file="${BACKUP_DIR}/backup-$(date +%s).tar.gz"
   
   tar czf "$backup_file" \
@@ -61,7 +56,7 @@ backup() {
     --exclude=artifacts \
     --exclude=state
   
-  log "✅ Backup created: $backup_file"
+  log_info "✅ Backup created: $backup_file"
 }
 
 main() {

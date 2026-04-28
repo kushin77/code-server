@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap (provides log_info, log_error, and shared configuration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================
@@ -14,17 +18,13 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 # ============================================================================
-# CONFIGURATION
+# CONFIGURATION (using REPO_ROOT from init.sh)
 # ============================================================================
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CERT_DIR="${REPO_DIR}/vault-tls"
+CERT_DIR="${REPO_ROOT}/vault-tls"
 POSTGRES_CERT_DIR="${CERT_DIR}/postgres"
-LOG_FILE="${REPO_DIR}/logs/database-ssl-setup.log"
 
 # Source canonical service names
-source "${REPO_DIR}/scripts/_common/service-names.env"
+source "${REPO_ROOT}/scripts/_common/service-names.env"
 
 # Certificate configuration
 CERT_VALIDITY_DAYS=365
@@ -37,40 +37,28 @@ ORGANIZATION="ElevatedIQ"
 COMMON_NAME="${POSTGRES_CONTAINER_NAME}"
 
 # Create directories
-mkdir -p "${POSTGRES_CERT_DIR}" "${REPO_DIR}/logs"
-
-# ============================================================================
-# LOGGING
-# ============================================================================
-
-log() {
-  local level=$1
-  shift
-  local message="$@"
-  local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-  echo "[${timestamp}] [${level}] ${message}" | tee -a "${LOG_FILE}"
-}
+mkdir -p "${POSTGRES_CERT_DIR}" "${REPO_ROOT}/logs"
 
 # ============================================================================
 # SSL CERTIFICATE GENERATION
 # ============================================================================
 
 generate_ca_certificate() {
-  log "INFO" "Generating Certificate Authority (CA) certificate..."
+  log_info "Generating Certificate Authority (CA) certificate..."
   
   local ca_key="${POSTGRES_CERT_DIR}/ca-key.pem"
   local ca_cert="${POSTGRES_CERT_DIR}/ca.crt"
   
   # Check if CA already exists
   if [[ -f "${ca_cert}" ]] && [[ -f "${ca_key}" ]]; then
-    log "INFO" "CA certificate already exists, skipping generation"
+    log_info "CA certificate already exists, skipping generation"
     return 0
   fi
   
   # Generate CA private key
   openssl genrsa -out "${ca_key}" 2048 2>/dev/null
   chmod 600 "${ca_key}"
-  log "INFO" "✓ Generated CA private key"
+  log_info "✓ Generated CA private key"
   
   # Generate CA certificate
   openssl req -new -x509 -days "${CERT_VALIDITY_DAYS}" \
@@ -79,11 +67,11 @@ generate_ca_certificate() {
     -subj "/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/CN=PostgreSQL-CA" \
     2>/dev/null
   chmod 644 "${ca_cert}"
-  log "INFO" "✓ Generated CA certificate (valid ${CERT_VALIDITY_DAYS} days)"
+  log_info "✓ Generated CA certificate (valid ${CERT_VALIDITY_DAYS} days)"
 }
 
 generate_server_certificate() {
-  log "INFO" "Generating PostgreSQL server certificate..."
+  log_info "Generating PostgreSQL server certificate..."
   
   local ca_key="${POSTGRES_CERT_DIR}/ca-key.pem"
   local ca_cert="${POSTGRES_CERT_DIR}/ca.crt"
@@ -93,14 +81,14 @@ generate_server_certificate() {
   
   # Check if server certificate already exists
   if [[ -f "${server_cert}" ]] && [[ -f "${server_key}" ]]; then
-    log "INFO" "Server certificate already exists, skipping generation"
+    log_info "Server certificate already exists, skipping generation"
     return 0
   fi
   
   # Generate server private key
   openssl genrsa -out "${server_key}" 2048 2>/dev/null
   chmod 600 "${server_key}"
-  log "INFO" "✓ Generated server private key"
+  log_info "✓ Generated server private key"
   
   # Generate certificate signing request
   openssl req -new \
@@ -108,7 +96,7 @@ generate_server_certificate() {
     -out "${server_csr}" \
     -subj "/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/CN=${DB_HOST}" \
     2>/dev/null
-  log "INFO" "✓ Generated certificate signing request"
+  log_info "✓ Generated certificate signing request"
   
   # Create config for SAN (Subject Alternative Names)
   local san_config=$(mktemp)
@@ -129,11 +117,11 @@ EOF
     2>/dev/null
   chmod 644 "${server_cert}"
   rm -f "${san_config}" "${server_csr}"
-  log "INFO" "✓ Generated server certificate (valid ${CERT_VALIDITY_DAYS} days)"
+  log_info "✓ Generated server certificate (valid ${CERT_VALIDITY_DAYS} days)"
 }
 
 generate_client_certificate() {
-  log "INFO" "Generating PostgreSQL client certificate..."
+  log_info "Generating PostgreSQL client certificate..."
   
   local ca_key="${POSTGRES_CERT_DIR}/ca-key.pem"
   local ca_cert="${POSTGRES_CERT_DIR}/ca.crt"
@@ -144,14 +132,14 @@ generate_client_certificate() {
   
   # Check if client certificate already exists
   if [[ -f "${client_cert}" ]] && [[ -f "${client_key}" ]]; then
-    log "INFO" "Client certificate already exists, skipping generation"
+    log_info "Client certificate already exists, skipping generation"
     return 0
   fi
   
   # Generate client private key
   openssl genrsa -out "${client_key}" 2048 2>/dev/null
   chmod 600 "${client_key}"
-  log "INFO" "✓ Generated client private key"
+  log_info "✓ Generated client private key"
   
   # Generate client certificate signing request
   openssl req -new \
@@ -159,7 +147,7 @@ generate_client_certificate() {
     -out "${client_csr}" \
     -subj "/C=${COUNTRY}/ST=${STATE}/L=${CITY}/O=${ORGANIZATION}/CN=${client_user}" \
     2>/dev/null
-  log "INFO" "✓ Generated client certificate signing request"
+  log_info "✓ Generated client certificate signing request"
   
   # Sign client certificate with CA
   openssl x509 -req -days "${CERT_VALIDITY_DAYS}" \
@@ -171,7 +159,7 @@ generate_client_certificate() {
     2>/dev/null
   chmod 644 "${client_cert}"
   rm -f "${client_csr}"
-  log "INFO" "✓ Generated client certificate (valid ${CERT_VALIDITY_DAYS} days)"
+  log_info "✓ Generated client certificate (valid ${CERT_VALIDITY_DAYS} days)"
 }
 
 # ============================================================================
@@ -179,7 +167,7 @@ generate_client_certificate() {
 # ============================================================================
 
 verify_certificates() {
-  log "INFO" "Verifying SSL certificates..."
+  log_info "Verifying SSL certificates..."
   
   local ca_cert="${POSTGRES_CERT_DIR}/ca.crt"
   local server_cert="${POSTGRES_CERT_DIR}/server.crt"
@@ -187,25 +175,25 @@ verify_certificates() {
   
   # Verify server certificate chain
   if openssl verify -CAfile "${ca_cert}" "${server_cert}" >/dev/null 2>&1; then
-    log "INFO" "✓ Server certificate verified"
+    log_info "✓ Server certificate verified"
   else
-    log "ERROR" "✗ Server certificate verification failed"
+    log_error "✗ Server certificate verification failed"
     return 1
   fi
   
   # Verify client certificate chain
   if openssl verify -CAfile "${ca_cert}" "${client_cert}" >/dev/null 2>&1; then
-    log "INFO" "✓ Client certificate verified"
+    log_info "✓ Client certificate verified"
   else
-    log "ERROR" "✗ Client certificate verification failed"
+    log_error "✗ Client certificate verification failed"
     return 1
   fi
   
   # Display certificate details
-  log "INFO" "Certificate Details:"
-  log "INFO" "  Server Certificate:"
+  log_info "Certificate Details:"
+  log_info "  Server Certificate:"
   openssl x509 -in "${server_cert}" -noout -subject -dates | sed 's/^/    /'
-  log "INFO" "  Client Certificate:"
+  log_info "  Client Certificate:"
   openssl x509 -in "${client_cert}" -noout -subject -dates | sed 's/^/    /'
 }
 
@@ -214,18 +202,18 @@ verify_certificates() {
 # ============================================================================
 
 update_postgres_docker_config() {
-  log "INFO" "Updating PostgreSQL Docker Compose configuration..."
+  log_info "Updating PostgreSQL Docker Compose configuration..."
   
   local compose_file="${REPO_DIR}/docker-compose.yml"
   
   # Check if postgres service already has SSL config
   if grep -q "POSTGRES_HOST_AUTH_METHOD" "${compose_file}"; then
-    log "INFO" "PostgreSQL already configured for SSL, skipping docker-compose update"
+    log_info "PostgreSQL already configured for SSL, skipping docker-compose update"
     return 0
   fi
   
-  log "INFO" "Adding SSL environment variables to PostgreSQL service"
-  log "INFO" "Note: Update docker-compose.yml manually or use CI/CD for configuration"
+  log_info "Adding SSL environment variables to PostgreSQL service"
+  log_info "Note: Update docker-compose.yml manually or use CI/CD for configuration"
 }
 
 # ============================================================================
@@ -235,7 +223,7 @@ update_postgres_docker_config() {
 generate_connection_examples() {
   local output_file="${REPO_DIR}/docs/DATABASE-SSL-CONNECTION-EXAMPLES.md"
   
-  log "INFO" "Generating connection string examples..."
+  log_info "Generating connection string examples..."
   
   mkdir -p "${REPO_DIR}/docs"
   
@@ -434,7 +422,7 @@ Certificates expire after {{CERT_VALIDITY_DAYS}} days. Rotate as follows:
 
 EOF
   
-  log "INFO" "✓ Connection examples generated: ${output_file}"
+  log_info "✓ Connection examples generated: ${output_file}"
 }
 
 # ============================================================================
@@ -442,7 +430,7 @@ EOF
 # ============================================================================
 
 check_database_ssl_health() {
-  log "INFO" "Checking PostgreSQL SSL configuration health..."
+  log_info "Checking PostgreSQL SSL configuration health..."
   
   local cert_dir="${POSTGRES_CERT_DIR}"
   local required_files=("ca.crt" "server.crt" "server-key.pem" "client.crt" "client-key.pem")
@@ -455,18 +443,18 @@ check_database_ssl_health() {
   done
   
   if [[ ${#missing_files[@]} -gt 0 ]]; then
-    log "ERROR" "Missing SSL certificates: ${missing_files[*]}"
+    log_error "Missing SSL certificates: ${missing_files[*]}"
     return 1
   fi
   
-  log "INFO" "✓ All required SSL certificates present"
+  log_info "✓ All required SSL certificates present"
   
   # Check certificate permissions
   if [[ $(stat -c %a "${cert_dir}/server-key.pem" 2>/dev/null || stat -f %OLp "${cert_dir}/server-key.pem" 2>/dev/null || echo "400") != "400" ]]; then
     log "WARN" "Server key has permissive permissions (should be 400)"
   fi
   
-  log "INFO" "✓ PostgreSQL SSL configuration is healthy"
+  log_info "✓ PostgreSQL SSL configuration is healthy"
   return 0
 }
 
@@ -475,10 +463,10 @@ check_database_ssl_health() {
 # ============================================================================
 
 main() {
-  log "INFO" "=========================================="
-  log "INFO" "PostgreSQL SSL Setup - P1 Priority 3"
-  log "INFO" "=========================================="
-  log "INFO" ""
+  log_info "=========================================="
+  log_info "PostgreSQL SSL Setup - P1 Priority 3"
+  log_info "=========================================="
+  log_info ""
   
   # Generate certificates
   generate_ca_certificate
@@ -496,21 +484,21 @@ main() {
   
   # Health check
   if check_database_ssl_health; then
-    log "INFO" ""
-    log "INFO" "✓ PostgreSQL SSL Setup Complete"
-    log "INFO" "=========================================="
-    log "INFO" "Certificate Directory: ${POSTGRES_CERT_DIR}"
-    log "INFO" "Connection Examples: ${REPO_DIR}/docs/DATABASE-SSL-CONNECTION-EXAMPLES.md"
-    log "INFO" ""
-    log "INFO" "Next Steps:"
-    log "INFO" "1. Update docker-compose.yml to mount certificates"
-    log "INFO" "2. Configure PostgreSQL for SSL (postgresql.conf)"
-    log "INFO" "3. Update all client connection strings"
-    log "INFO" "4. Deploy to staging and test"
-    log "INFO" "=========================================="
+    log_info ""
+    log_info "✓ PostgreSQL SSL Setup Complete"
+    log_info "=========================================="
+    log_info "Certificate Directory: ${POSTGRES_CERT_DIR}"
+    log_info "Connection Examples: ${REPO_DIR}/docs/DATABASE-SSL-CONNECTION-EXAMPLES.md"
+    log_info ""
+    log_info "Next Steps:"
+    log_info "1. Update docker-compose.yml to mount certificates"
+    log_info "2. Configure PostgreSQL for SSL (postgresql.conf)"
+    log_info "3. Update all client connection strings"
+    log_info "4. Deploy to staging and test"
+    log_info "=========================================="
     return 0
   else
-    log "ERROR" "PostgreSQL SSL Setup Failed"
+    log_error "PostgreSQL SSL Setup Failed"
     return 1
   fi
 }

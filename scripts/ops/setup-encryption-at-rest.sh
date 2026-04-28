@@ -7,29 +7,27 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap (provides log_info, log_error, and shared configuration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+CONFIG_DIR="${REPO_ROOT}/config"
+LOG_FILE="${REPO_ROOT}/logs/encryption-setup.log"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CONFIG_DIR="${REPO_DIR}/config"
-LOG_FILE="${REPO_DIR}/logs/encryption-setup.log"
+mkdir -p "${CONFIG_DIR}/encryption" "${REPO_ROOT}/logs"
 
-mkdir -p "${CONFIG_DIR}/encryption" "${REPO_DIR}/logs"
-
-log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"
-}
 
 # ============================================================================
 # ENCRYPTION CONFIGURATION
 # ============================================================================
 
 create_encryption_config() {
-  log "Creating encryption configuration..."
+  log_info "Creating encryption configuration..."
   
   cat > "${CONFIG_DIR}/encryption/encryption-config.yaml" <<'EOF'
 ---
@@ -73,7 +71,7 @@ key_management:
 
 EOF
   
-  log "✓ Created encryption configuration"
+  log_info "✓ Created encryption configuration"
 }
 
 # ============================================================================
@@ -81,7 +79,7 @@ EOF
 # ============================================================================
 
 create_postgres_encryption() {
-  log "Creating PostgreSQL encryption setup..."
+  log_info "Creating PostgreSQL encryption setup..."
   
   cat > "${CONFIG_DIR}/encryption/postgres-encryption.sql" <<'EOF'
 -- PostgreSQL Encryption - P1 Priority 7
@@ -113,7 +111,7 @@ FOR EACH ROW EXECUTE FUNCTION encrypt_user_data();
 
 EOF
   
-  log "✓ Created PostgreSQL encryption setup"
+  log_info "✓ Created PostgreSQL encryption setup"
 }
 
 # ============================================================================
@@ -121,7 +119,7 @@ EOF
 # ============================================================================
 
 create_redis_encryption() {
-  log "Creating Redis TLS encryption..."
+  log_info "Creating Redis TLS encryption..."
   
   cat > "${CONFIG_DIR}/encryption/redis-tls.conf" <<'EOF'
 -- Redis TLS Configuration - P1 Priority 7
@@ -137,7 +135,7 @@ save 900 1
 
 EOF
   
-  log "✓ Created Redis encryption configuration"
+  log_info "✓ Created Redis encryption configuration"
 }
 
 # ============================================================================
@@ -145,7 +143,7 @@ EOF
 # ============================================================================
 
 create_key_management_docs() {
-  log "Creating key management documentation..."
+  log_info "Creating key management documentation..."
   
   cat > "${CONFIG_DIR}/encryption/KEY-MANAGEMENT.md" <<'EOF'
 # Key Management - P1 Priority 7
@@ -174,7 +172,7 @@ Backup keys: Every 60 days
 
 EOF
   
-  log "✓ Created key management documentation"
+  log_info "✓ Created key management documentation"
 }
 
 # ============================================================================
@@ -182,7 +180,7 @@ EOF
 # ============================================================================
 
 create_encryption_verification() {
-  log "Creating encryption verification..."
+  log_info "Creating encryption verification..."
   
   source "${REPO_DIR}/scripts/_common/service-names.env"
   
@@ -208,7 +206,7 @@ echo "=============================================="
 
 EOF
   chmod +x "${CONFIG_DIR}/encryption/verify-encryption.sh"
-  log "✓ Created verification script"
+  log_info "✓ Created verification script"
 }
 
 # ============================================================================
@@ -216,10 +214,10 @@ EOF
 # ============================================================================
 
 main() {
-  log "==========================================="
-  log "Encryption at Rest Setup - P1 Priority 7"
-  log "==========================================="
-  log ""
+  log_info "==========================================="
+  log_info "Encryption at Rest Setup - P1 Priority 7"
+  log_info "==========================================="
+  log_info ""
   
   create_encryption_config
   create_postgres_encryption
@@ -227,25 +225,25 @@ main() {
   create_key_management_docs
   create_encryption_verification
   
-  log ""
-  log "✓ Encryption at Rest Setup Complete"
-  log "==========================================="
-  log "Configuration Directory: ${CONFIG_DIR}/encryption"
-  log ""
-  log "Files Created:"
-  log "  - encryption-config.yaml: Master configuration"
-  log "  - postgres-encryption.sql: PostgreSQL setup"
-  log "  - redis-tls.conf: Redis TLS configuration"
-  log "  - KEY-MANAGEMENT.md: Key management guide"
-  log "  - verify-encryption.sh: Verification script"
-  log ""
-  log "Next Steps:"
-  log "1. Apply PostgreSQL encryption schema"
-  log "2. Update Redis configuration with TLS"
-  log "3. Configure key management in GSM"
-  log "4. Run verify-encryption.sh to validate"
-  log "5. Deploy to staging for testing"
-  log "==========================================="
+  log_info ""
+  log_info "✓ Encryption at Rest Setup Complete"
+  log_info "==========================================="
+  log_info "Configuration Directory: ${CONFIG_DIR}/encryption"
+  log_info ""
+  log_info "Files Created:"
+  log_info "  - encryption-config.yaml: Master configuration"
+  log_info "  - postgres-encryption.sql: PostgreSQL setup"
+  log_info "  - redis-tls.conf: Redis TLS configuration"
+  log_info "  - KEY-MANAGEMENT.md: Key management guide"
+  log_info "  - verify-encryption.sh: Verification script"
+  log_info ""
+  log_info "Next Steps:"
+  log_info "1. Apply PostgreSQL encryption schema"
+  log_info "2. Update Redis configuration with TLS"
+  log_info "3. Configure key management in GSM"
+  log_info "4. Run verify-encryption.sh to validate"
+  log_info "5. Deploy to staging for testing"
+  log_info "==========================================="
 }
 
 main "$@"

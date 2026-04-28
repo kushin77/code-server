@@ -7,14 +7,15 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap (provides log_info, log_error, and shared configuration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LOG_FILE="${REPO_DIR}/logs/tls-validation.log"
 
 mkdir -p "${REPO_DIR}/logs"

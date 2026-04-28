@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap (provides log_info, log_error, and shared configuration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # Trap handlers for error handling and cleanup
 trap 'log_error "Deployment failed at line $LINENO"; cleanup; exit 1' ERR
 trap 'log_info "Cleaning up temporary files..."; cleanup' EXIT

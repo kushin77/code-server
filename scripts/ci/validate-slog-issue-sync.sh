@@ -54,6 +54,14 @@ main() {
     log_success "Detected expected grouped markdown incident signal from PRODUCTION_FIX_LOG.md"
   fi
 
+  if ! grep -q "family=deployment" "${output_file}" || ! grep -q "Deployment test suite FAILED\|Phase 5 FAILED: Rollback mechanism verification failed" "${output_file}"; then
+    cat "${output_file}" >&2 || true
+    log_error "Expected deployment-family grouped signal was not emitted"
+    rm -f "${output_file}"
+    return 1
+  fi
+  log_success "Detected expected grouped deployment-family signal from runtime logs"
+
   log_success "Grouped SLOG sync smoke check passed"
   rm -f "${output_file}"
 }

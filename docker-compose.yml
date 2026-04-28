@@ -689,6 +689,16 @@ services:
       - ./config:/app/config:ro
       - ./artifacts:/app/artifacts
       - ./docker-compose.yml:/app/docker-compose.yml:ro
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://env-provisioner:${CONTROL_PLANE_PORT}/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
     networks:
       - ingress
@@ -725,6 +735,16 @@ services:
         condition: service_healthy
     volumes:
       - ./apps/activity_feed:/app
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://activity-feed:${MODEL_SERVER_PORT}/health"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
     networks:
       - services
@@ -1244,7 +1264,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://execution-scheduler:${SCHEDULER_PORT}/"
+        - "http://redpanda-console:8080/overview"
       interval: 30s
       timeout: 5s
       retries: 3

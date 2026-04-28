@@ -14,18 +14,25 @@ source "${REPO_ROOT}/scripts/_common/init.sh"
 
 main() {
   local output_file
+  local report_file
   output_file="$(mktemp)"
+  report_file="${REPO_ROOT}/artifacts/slog-issue-sync-dry-run.txt"
+
+  mkdir -p "$(dirname "${report_file}")"
 
   log_info "Running grouped SLOG sync in dry-run mode"
   if ! (
     cd "${REPO_ROOT}"
     SLOG_DRY_RUN=1 bash sync-slog-to-github.sh >"${output_file}" 2>&1
   ); then
+    cp "${output_file}" "${report_file}" 2>/dev/null || true
     cat "${output_file}" >&2 || true
     log_error "Grouped SLOG sync dry-run failed"
     rm -f "${output_file}"
     return 1
   fi
+
+  cp "${output_file}" "${report_file}"
 
   if ! grep -q "Discovered .* grouped slog issue candidate" "${output_file}"; then
     cat "${output_file}" >&2 || true
@@ -62,6 +69,7 @@ main() {
   fi
   log_success "Detected expected grouped deployment-family signal from runtime logs"
 
+  log_info "SLOG dry-run report saved to ${report_file}"
   log_success "Grouped SLOG sync smoke check passed"
   rm -f "${output_file}"
 }

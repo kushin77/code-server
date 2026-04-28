@@ -17,17 +17,9 @@ readonly LOG_FILE="${REPO_ROOT}/artifacts/phase5/glb-$(date +%Y%m%d-%H%M%S).log"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
-log_info() {
-  echo -e "${BLUE}[INFO]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_success() {
-  echo -e "${GREEN}[✓]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_error() {
-  echo -e "${RED}[ERROR]${NC} $*" | tee -a "$LOG_FILE"
-}
+# Note: Logging functions (log_info, log_success, log_error) are provided by
+# scripts/_common/init.sh which sources apps/_shared/test.sh for enhanced logging.
+# For script-specific file logging, wrap calls with: log_info "msg" | tee -a "$LOG_FILE"
 
 # ============================================================================
 # CLOUDFLARE SETUP (DNS + DDoS Protection)

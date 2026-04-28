@@ -16,33 +16,18 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m'
+
+# Note: Color constants are now provided by scripts/_common/init.sh via apps/_shared/test.sh
+# Log file path should be defined here if needed for script-specific logging:
+# readonly LOG_FILE="${REPO_ROOT}/artifacts/phase5/edge-agents-$(date +%Y%m%d-%H%M%S).log"
 
 # ============================================================================
 # LOGGING
 # ============================================================================
 
-mkdir -p "$(dirname "$LOG_FILE")"
-
-log_info() {
-  echo -e "${BLUE}[INFO]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_success() {
-  echo -e "${GREEN}[✓]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_error() {
-  echo -e "${RED}[ERROR]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_warning() {
-  echo -e "${YELLOW}[WARN]${NC} $*" | tee -a "$LOG_FILE"
-}
+# Note: Logging functions (log_info, log_success, log_error, log_warning) are provided by
+# scripts/_common/init.sh which sources apps/_shared/test.sh for enhanced logging.
+# For script-specific file logging, wrap calls with: log_info "msg" | tee -a "$LOG_FILE"
 
 # ============================================================================
 # VALIDATION

@@ -18,26 +18,11 @@ readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/sharding-$(date +%Y%m%d-%H%M%S
 readonly SHARDS="${SHARDS:-4}"
 readonly SHARD_ALGORITHM="${SHARD_ALGORITHM:-hash-user-id}"
 
-# Colors
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m'
-
 mkdir -p "$(dirname "$LOG_FILE")"
 
-log_info() {
-  echo -e "${BLUE}[INFO]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_success() {
-  echo -e "${GREEN}[✓]${NC} $*" | tee -a "$LOG_FILE"
-}
-
-log_error() {
-  echo -e "${RED}[ERROR]${NC} $*" | tee -a "$LOG_FILE"
-}
+# Note: Logging functions (log_info, log_success, log_error) are provided by
+# scripts/_common/init.sh which sources apps/_shared/test.sh for enhanced logging.
+# For script-specific file logging, wrap calls with: log_info "msg" | tee -a "$LOG_FILE"
 
 # ============================================================================
 # DATABASE SHARDING SCHEMA

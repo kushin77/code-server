@@ -21,26 +21,11 @@ readonly BASELINE_DIR="${SCRIPT_DIR}/artifacts/phase5/performance-baseline"
 readonly REPORT_FILE="${BASELINE_DIR}/baseline-report-$(date +%Y%m%d-%H%M%S).md"
 readonly METRICS_FILE="${BASELINE_DIR}/metrics-$(date +%Y%m%d-%H%M%S).json"
 
-# Colors
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m'
-
 mkdir -p "$BASELINE_DIR"
 
-log_info() {
-  echo -e "${BLUE}[INFO]${NC} $*" | tee -a "$REPORT_FILE"
-}
-
-log_success() {
-  echo -e "${GREEN}[✓]${NC} $*" | tee -a "$REPORT_FILE"
-}
-
-log_error() {
-  echo -e "${RED}[ERROR]${NC} $*" | tee -a "$REPORT_FILE"
-}
+# Note: Logging functions (log_info, log_success, log_error) are provided by
+# scripts/_common/init.sh which sources apps/_shared/test.sh for enhanced logging.
+# For script-specific file logging, wrap calls with: log_info "msg" | tee -a "$REPORT_FILE"
 
 # ============================================================================
 # CODE METRICS ANALYSIS

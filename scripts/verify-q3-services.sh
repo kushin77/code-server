@@ -24,8 +24,6 @@ source "${SCRIPT_DIR}/_common/init.sh"
 # Status: Autonomous Verification Script
 # Date: April 25, 2026
 
-set -euo pipefail
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

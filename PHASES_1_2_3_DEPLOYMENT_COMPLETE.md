@@ -162,12 +162,8 @@ Agent Runtime:      Via API platform                    ✅ Connected
   - Network pre-configuration
   
 - `scripts/ops/deploy-app-and-monitoring.sh` (200 lines)
-  - Phase 2: Application & monitoring services
-  - Prometheus, Grafana, Loki, Jaeger deployment
-  
-- `scripts/ops/deploy-ai-services.sh` (180 lines)
-  - Phase 3: AI/ML services
-  - Ollama, memory engine, agent runtime
+  - Phase 2: Application, monitoring, and AI runtime services
+  - Prometheus, Grafana, Loki, Tempo, Ollama deployment
 
 ### Verification
 - `scripts/ops/verify-deployment.sh` (100 lines)
@@ -210,13 +206,13 @@ ssh akushnir@192.168.168.42 "cd ~/code-server-enterprise-ops && \
 ### Active-Active Cluster
 ```bash
 # Setup cluster mode (DNS + SSL required)
-bash scripts/ops/setup-ha-cluster.sh
+See the current HA handoff notes in this document and the active deployment pipeline.
 ```
 
 ### Integration Services
 ```bash
-# Deploy Sentry, Slack, Code-Server integrations
-bash scripts/ops/deploy-integration-services.sh
+# Integration services are deployed as part of the phased application stack.
+# Keep service definitions aligned with the canonical compose files.
 ```
 
 ---

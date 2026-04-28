@@ -46,14 +46,9 @@ Success Rate:             100% (core infrastructure)
 
 ### Deployment Scripts Created
 1. `scripts/ops/deploy-app-and-monitoring.sh` (200 lines)
-   - 4-phase deployment pipeline for monitoring stack
-   - Automatic network and volume configuration
-   - Health verification and endpoint reporting
-
-2. `scripts/ops/deploy-ai-services.sh` (180 lines)
-   - 4-phase AI/ML service deployment
-   - Ollama initialization and model management
-   - Agent service orchestration
+  - 4-phase deployment pipeline for monitoring and AI runtime
+  - Automatic network and volume configuration
+  - Health verification and endpoint reporting
 
 3. Documentation:
    - `PHASES_1_2_3_DEPLOYMENT_COMPLETE.md` (comprehensive guide)
@@ -205,16 +200,10 @@ Commit 3: 44ab63a5 (This Continuation)
 ## Next Continuation: Phase 4 (Ready to Execute)
 
 ### High Availability Setup
-Deploy replica host (192.168.168.42) with active-active clustering:
-```bash
-bash scripts/ops/setup-ha-cluster.sh
-```
+Deploy replica host (192.168.168.42) with active-active clustering. Follow the phase 4 HA handoff notes in the deployment docs.
 
 ### Integration Services
-Deploy Sentry, Slack, Code-Server integrations:
-```bash
-bash scripts/ops/deploy-integration-services.sh
-```
+Deploy Sentry, Slack, Code-Server integrations as part of the phased application stack.
 
 ### Advanced Orchestration
 Setup auto-scaling and disaster recovery:

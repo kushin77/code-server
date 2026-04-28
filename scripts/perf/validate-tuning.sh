@@ -15,6 +15,10 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # Error handling traps
 trap 'log_error "Validation failed at line $LINENO"; cleanup_validation || true; exit 1' ERR
 trap 'log_info "Cleanup..."; cleanup_validation || true' EXIT

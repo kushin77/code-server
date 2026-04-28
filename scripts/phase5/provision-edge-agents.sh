@@ -6,18 +6,16 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/edge-provisioning-$(date +%Y%m%d-%H%M%S).log"
-readonly EDGE_IMAGE="kushin77/kushnir-edge-agent:latest"
-readonly INSTANCE_TYPE="${INSTANCE_TYPE:-t3.xlarge}"
-readonly REGION="${REGION:-us-east-1}"
-readonly COUNT="${COUNT:-1}"
-
-# Colors
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'

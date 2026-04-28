@@ -18,6 +18,14 @@
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
+set -euo pipefail
+
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "Checking resource limits in docker-compose.yml..."
 
 compose_file="./docker-compose.yml"

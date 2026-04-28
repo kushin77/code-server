@@ -6,18 +6,14 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-readonly LOG_FILE="${SCRIPT_DIR}/artifacts/phase5/glb-$(date +%Y%m%d-%H%M%S).log"
-readonly CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
-readonly CLOUDFLARE_ZONE_ID="${CLOUDFLARE_ZONE_ID:-}"
-readonly CADDY_CONFIG_DIR="/etc/caddy"
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-# Colors
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m'
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
+readonly LOG_FILE="${REPO_ROOT}/artifacts/phase5/glb-$(date +%Y%m%d-%H%M%S).log"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 

@@ -13,15 +13,18 @@ from typing import Dict, List, Optional
 
 import httpx
 
+from apps._shared.python.config import get_config
+
 logger = logging.getLogger(__name__)
 
 # Configuration via environment (never hardcoded)
-_VISION_BACKEND = os.getenv("VISION_BACKEND", "ollama")           # ollama | openai
-_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-_OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "llava:13b")
-_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-_OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
-_VISION_TIMEOUT_SEC = int(os.getenv("VISION_TIMEOUT_SEC", "60"))
+config = get_config()
+_VISION_BACKEND = config.get("VISION_BACKEND", "ollama")           # ollama | openai
+_OLLAMA_BASE_URL = config.get("OLLAMA_BASE_URL", "http://ollama:11434")
+_OLLAMA_VISION_MODEL = config.get("OLLAMA_VISION_MODEL", "llava:13b")
+_OPENAI_API_KEY = config.get("OPENAI_API_KEY", "")
+_OPENAI_VISION_MODEL = config.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
+_VISION_TIMEOUT_SEC = config.get_int("VISION_TIMEOUT_SEC", 60)
 
 _ERROR_ANALYSIS_PROMPT = """You are a DevOps/SRE assistant analyzing an error screenshot.
 Identify:

@@ -9,6 +9,8 @@ import requests
 import logging
 from typing import Dict, Any, Optional
 
+from apps._shared.python.config import get_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +18,8 @@ class ReputationTierManager:
     """Query Reputation Engine for user tier and approval authority."""
 
     def __init__(self, reputation_url: Optional[str] = None):
-        self.reputation_url = reputation_url or os.getenv("REPUTATION_ENGINE_URL", "http://reputation-engine:8000")
+        config = get_config()
+        self.reputation_url = reputation_url or config.get("REPUTATION_ENGINE_URL", "http://reputation-engine:8000")
         self.timeout = 10
 
     def get_user_tier(self, user_id: str) -> Optional[str]:

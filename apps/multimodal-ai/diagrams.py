@@ -13,15 +13,18 @@ from typing import Dict, List, Optional
 
 import httpx
 
+from apps._shared.python.config import get_config
+
 logger = logging.getLogger(__name__)
 
 # Configuration via environment
-_LLM_BACKEND = os.getenv("DIAGRAM_LLM_BACKEND", "ollama")       # ollama | openai
-_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:8b")
-_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-_LLM_TIMEOUT_SEC = int(os.getenv("LLM_TIMEOUT_SEC", "45"))
+config = get_config()
+_LLM_BACKEND = config.get("DIAGRAM_LLM_BACKEND", "ollama")       # ollama | openai
+_OLLAMA_BASE_URL = config.get("OLLAMA_BASE_URL", "http://ollama:11434")
+_OLLAMA_MODEL = config.get("OLLAMA_MODEL", "llama3:8b")
+_OPENAI_API_KEY = config.get("OPENAI_API_KEY", "")
+_OPENAI_MODEL = config.get("OPENAI_MODEL", "gpt-4o-mini")
+_LLM_TIMEOUT_SEC = config.get_int("LLM_TIMEOUT_SEC", 45)
 _MERMAID_LIVE_BASE = "https://mermaid.live/view#base64:"
 
 _GENERATE_PROMPT_TMPL = """You are an expert software architect. Convert the following description to a Mermaid diagram.

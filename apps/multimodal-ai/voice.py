@@ -11,14 +11,17 @@ import os
 import tempfile
 from typing import Dict, Optional
 
+from apps._shared.python.config import get_config
+
 logger = logging.getLogger(__name__)
 
 # Configurable via environment
-_WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-_TTS_BACKEND = os.getenv("TTS_BACKEND", "gtts")          # gtts | azure
-_AZURE_TTS_KEY = os.getenv("AZURE_TTS_KEY", "")
-_AZURE_TTS_REGION = os.getenv("AZURE_TTS_REGION", "eastus")
-_AZURE_TTS_VOICE = os.getenv("AZURE_TTS_VOICE", "en-US-JennyNeural")
+config = get_config()
+_WHISPER_MODEL = config.get("WHISPER_MODEL", "base")
+_TTS_BACKEND = config.get("TTS_BACKEND", "gtts")          # gtts | azure
+_AZURE_TTS_KEY = config.get("AZURE_TTS_KEY", "")
+_AZURE_TTS_REGION = config.get("AZURE_TTS_REGION", "eastus")
+_AZURE_TTS_VOICE = config.get("AZURE_TTS_VOICE", "en-US-JennyNeural")
 
 
 def _load_whisper():

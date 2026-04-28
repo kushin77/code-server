@@ -2,12 +2,16 @@
 Email Service - SendGrid Integration
 Issue #1545: Enterprise SSO Portal - Email Service Configuration
 """
-import logging
 import os
 from typing import Optional, Dict, Any, List
 from abc import ABC, abstractmethod
 
-logger = logging.getLogger(__name__)
+from apps._shared.python.logging import get_logger
+from apps._shared.python.exceptions import (
+    EmailServiceError, ServiceException
+)
+
+logger = get_logger(__name__)
 
 
 class EmailProvider(ABC):

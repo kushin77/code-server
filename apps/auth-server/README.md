@@ -284,6 +284,20 @@ pytest -v tests/
 - [x] Request logging and monitoring
 - [x] Audit log retention policy (>1 year)
 
+### Phase 3 Enhancements (Shared Module Migration)
+
+- [x] Migrated to `apps._shared.python.logging` (CodeServerLogger)
+  - All modules now use centralized logging: oauth2_server.py, request_logging.py, audit_logging.py, email_service.py
+  - Supports JSON/text/structured formats with ANSI colors
+  - Consistent logging across all auth-server components
+
+- [x] Integrated `apps._shared.python.exceptions`
+  - oauth2_server.py: Uses InvalidToken, TokenExpired, AuthenticationFailure, MissingConfig
+  - request_logging.py: Compatible with exception hierarchy
+  - audit_logging.py: Uses DatabaseException, ServiceException
+  - email_service.py: Uses EmailServiceError, ServiceException
+  - All exceptions include error codes for tracking and monitoring
+
 ### Docker Deployment
 
 ```bash

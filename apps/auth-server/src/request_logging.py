@@ -3,17 +3,17 @@ Request Logging and Monitoring Middleware
 Issue #1545: Enterprise SSO Portal - Request Logging & Monitoring
 """
 import json
-import logging
 import time
 from typing import Optional, Dict, Any
 from datetime import datetime
 
+from apps._shared.python.logging import get_logger
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):

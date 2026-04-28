@@ -3,9 +3,12 @@ OAuth2 Authorization Server - Week 1 Implementation
 Issue #1545: Enterprise SSO Portal Architecture
 """
 import os
-import logging
 from datetime import datetime, timedelta
 from apps._shared.python.config import get_config
+from apps._shared.python.logging import get_logger
+from apps._shared.python.exceptions import (
+    InvalidToken, TokenExpired, AuthenticationFailure, MissingConfig
+)
 from typing import Optional, Dict, Any
 import json
 import secrets
@@ -25,7 +28,7 @@ from cryptography.hazmat.backends import default_backend
 import jwt
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ============================================================================
 # Data Models

@@ -2,11 +2,15 @@
 Audit Log Retention & Cleanup Service
 Issue #1545: Enterprise SSO Portal - Audit Log Retention Policy
 """
-import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-logger = logging.getLogger(__name__)
+from apps._shared.python.logging import get_logger
+from apps._shared.python.exceptions import (
+    DatabaseException, ServiceException
+)
+
+logger = get_logger(__name__)
 
 
 class AuditLogRetentionPolicy:

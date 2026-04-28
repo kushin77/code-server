@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================
@@ -16,8 +20,6 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 AUDIT_LOG_DIR="${REPO_DIR}/logs/audit"
 AUDIT_CONFIG="${REPO_DIR}/config/audit-config.json"

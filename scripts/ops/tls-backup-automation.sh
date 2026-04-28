@@ -6,6 +6,10 @@
 # @idempotent YES - Safe to run continuously
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================

@@ -85,6 +85,12 @@ jobs:
             echo "✅ docker-compose.yml variables properly templated"
           fi
 
+      - name: Enforce docker-compose templates
+        run: |
+          echo "🔍 Enforcing docker-compose template standards..."
+          bash scripts/ci/enforce-compose-templates.sh
+        continue-on-error: false
+
       - name: Verify Kubernetes helm templating
         run: |
           echo "🔍 Checking helm values for templating..."

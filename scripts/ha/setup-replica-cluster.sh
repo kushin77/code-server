@@ -16,11 +16,12 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 trap 'log_error "Setup failed at line $LINENO"; cleanup_setup || true; exit 1' ERR
 trap 'log_info "Cleanup..."; cleanup_setup || true' EXIT
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Configuration
 REPLICA_HOST="192.168.168.32"

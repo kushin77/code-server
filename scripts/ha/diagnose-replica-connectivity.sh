@@ -11,17 +11,18 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 trap 'log_error "Diagnostic failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Diagnostic cleanup..."; cleanup_diagnostic || true' EXIT
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Configuration
 REPLICA_HOST="192.168.168.32"
 REPLICA_SSH_PORT="22"
 REPLICA_USER="deployment"
-DIAGNOSTIC_DIR="$PROJECT_ROOT/artifacts/ha-diagnostics"
+DIAGNOSTIC_DIR="$REPO_ROOT/artifacts/ha-diagnostics"
 
 # Colors
 RED='\033[0;31m'

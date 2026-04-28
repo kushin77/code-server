@@ -7,18 +7,15 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-source "${REPO_ROOT}/.env.infrastructure"
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
-}
+# Load infrastructure configuration
+source "${REPO_ROOT}/.env.infrastructure" 2>/dev/null || true
 
 # Create Grafana dashboard JSON
 generate_grafana_dashboard() {

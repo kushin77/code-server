@@ -5,6 +5,13 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 # ===== CONFIGURATION =====
 ENVIRONMENT="${1:-production}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
@@ -15,12 +22,6 @@ NODE_GROUP_MAX=10
 NODE_GROUP_DESIRED=5
 NODE_INSTANCE_TYPE="t3.xlarge"
 NODE_DISK_SIZE=50
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
 
 echo -e "${GREEN}[INFO]${NC} Starting EKS cluster provisioning for ${ENVIRONMENT}"
 

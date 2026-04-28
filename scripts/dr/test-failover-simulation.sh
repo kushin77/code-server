@@ -12,16 +12,17 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 # Error handling traps
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Cleanup on exit..."; cleanup_on_exit || true' EXIT
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
 # Configuration
-DOCKER_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
-RESULTS_DIR="$PROJECT_ROOT/artifacts/failover-results"
+DOCKER_COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
+RESULTS_DIR="$REPO_ROOT/artifacts/failover-results"
 HEALTH_CHECK_URL="${HEALTH_CHECK_URL:-http://localhost:3100/health}"
 MAX_FAILOVER_TIME=300  # 5 minutes
 

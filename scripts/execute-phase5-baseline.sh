@@ -8,6 +8,9 @@
 
 set -euo pipefail
 
+# Source canonical configuration (SSOT)
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../_common/init.sh" && pwd)"
+
 trap 'echo "[ERROR] Test interrupted at line $LINENO"; exit 1' ERR
 trap 'echo "[INFO] Cleaning up..."; exit 0' EXIT
 

@@ -5,19 +5,16 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 CUTOVER_PERCENT="${1:-100}"
 DNS_ZONE_ID="${DNS_ZONE_ID:-Z123456789ABC}"
 PRIMARY_DOMAIN="${API_DOMAIN:?API_DOMAIN must be set}"
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 if [ "${CUTOVER_PERCENT}" != "10" ] && [ "${CUTOVER_PERCENT}" != "50" ] && [ "${CUTOVER_PERCENT}" != "100" ]; then

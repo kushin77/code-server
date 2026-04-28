@@ -16,8 +16,26 @@ trap 'log_error "Tag remediation failed at line $LINENO"; exit 1' ERR
 trap ':' EXIT
 
 # Configuration
-ENFORCE="${1:-false}"
-TARGET_TAG="${2:-Owner=Infrastructure-Team}"
+ENFORCE="false"
+TARGET_TAG="Owner=Infrastructure-Team"
+
+# Fix positional argument parsing for --enforce and --tag
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --enforce)
+      ENFORCE="true"
+      shift
+      ;;
+    --tag)
+      TARGET_TAG="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
 REPORT_ID="TAG-FIX-$(date +%Y%m%d-%H%M%S)"
 OUTPUT_FILE="${ARTIFACTS_DIR}/tag-remediation-${REPORT_ID}.json"
 

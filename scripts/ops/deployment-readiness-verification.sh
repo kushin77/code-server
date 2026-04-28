@@ -18,6 +18,24 @@ trap ':' EXIT
 # Configuration
 ENV_TYPE="${1:-prod}"
 SKIP_CLOUD="${2:-false}"
+
+# Fix positional argument parsing for --env and --skip-cloud
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --env)
+      ENV_TYPE="$2"
+      shift 2
+      ;;
+    --skip-cloud)
+      SKIP_CLOUD="true"
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
 REPORT_ID="READY-$(date +%Y%m%d-%H%M%S)"
 OUTPUT_FILE="${ARTIFACTS_DIR}/readiness-report-${REPORT_ID}.json"
 

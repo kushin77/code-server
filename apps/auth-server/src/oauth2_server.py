@@ -15,6 +15,9 @@ import base64
 from fastapi import FastAPI, HTTPException, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, EmailStr
+
+from src.request_logging import setup_request_logging
+from src.audit_logging import setup_audit_logging
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -336,6 +339,12 @@ config = get_config(validate_required=False)
 
 # Register providers from canonical shared config values.
 register_default_oauth_providers(oauth2_server, config)
+
+# Setup request logging and monitoring
+setup_request_logging(app, config)
+
+# Setup audit logging with retention policy
+audit_service = setup_audit_logging(config)
 
 
 # ============================================================================

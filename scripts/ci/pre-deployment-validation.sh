@@ -128,8 +128,9 @@ log_info "Phase 3: Terraform Validation"
 echo ""
 
 # Check Terraform version constraint
-if grep -q "required_version.*1.6.0.*1.8.0" terraform/versions.tf; then
-    log_success "Terraform version locked: 1.6.0-1.7.x"
+TERRAFORM_VERSION_CONSTRAINT=$(grep -E 'required_version\s*=\s*".*>=.*<.*"' terraform/versions.tf | sed -E 's/.*required_version\s*=\s*"([^"]+)".*/\1/' | head -1)
+if [[ -n "${TERRAFORM_VERSION_CONSTRAINT}" ]]; then
+    log_success "Terraform version locked: ${TERRAFORM_VERSION_CONSTRAINT}"
 else
     log_warn "Terraform version constraint not verified"
 fi

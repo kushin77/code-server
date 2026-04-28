@@ -150,8 +150,9 @@ def scan_code_tasks(path: Path):
 
 
 def build_issue(path: Path, line_no: int, text: str, task_type: str):
-    clean = re.sub(r"\s+", " ", text).strip()
-    title = f"[{path.name}] {clean}"
+    clean = strip_markdown_emphasis(re.sub(r"\s+", " ", text).strip())
+    display_source = path.as_posix() if path.name.lower() in {"readme.md", "index.md", "start_here.md"} else path.name
+    title = f"[{display_source}] {clean}"
     if len(title) > 110:
         title = title[:107] + "..."
     marker = f"task-sync-source: {path.as_posix()}:{line_no}"

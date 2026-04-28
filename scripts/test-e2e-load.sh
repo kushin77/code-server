@@ -1,4 +1,14 @@
 #!/bin/bash
+
+set -euo pipefail
+
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 # E2E and Load Test Runner
 # Issue #1537 Week 3: E2E + Load Testing
 # 
@@ -19,9 +29,7 @@
 #   all        - Run full suite (setup, e2e, load, cleanup)
 #
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APP_ROOT="$PROJECT_ROOT/apps/auth-server"
 

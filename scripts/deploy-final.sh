@@ -1,4 +1,10 @@
 #!/bin/bash
+
+set -euo pipefail
+
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 # Deployment Completion Script - Final Step
 # This script creates and merges a PR to trigger production deployment
 # 

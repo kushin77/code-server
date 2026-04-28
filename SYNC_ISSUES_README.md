@@ -1,5 +1,12 @@
 # Sync Issues to GitHub
 
+This workspace has two GitHub issue sync paths:
+
+1. Task sync: backlog and task markers to GitHub issues.
+2. SLOG sync: grouped warning/error/critical/issue log signals to GitHub issues.
+
+## Task Sync
+
 Two methods to sync local task markers to GitHub Issues.
 
 ## Method 1: Using GCP Secret Manager (Recommended)
@@ -12,7 +19,7 @@ bash sync-issues-now.sh
 
 What it does:
 1. Tries `github-token`, then `github-fine-grained-token` from GCP Secret Manager.
-2. Scans markdown checkboxes and TODO headings, plus code `TODO`, `FIXME`, and `HACK` markers.
+2. Scans approved markdown checkboxes and TODO headings.
 3. Creates GitHub issues with a `task-sync-source: path:line` marker in the body.
 4. Skips tasks that already exist by searching for that source marker.
 5. Stops immediately if GitHub starts returning rate-limit errors.
@@ -79,8 +86,71 @@ Summary: created=25 skipped=18 failed=0
 ## What Gets Synced
 
 - Markdown tasks: unchecked checkboxes and TODO headings.
-- Code tasks: `TODO`, `FIXME`, and `HACK` markers in `.sh`, `.py`, `.js`, `.jsx`, `.ts`, and `.tsx` files.
+- Code tasks: `TODO`, `FIXME`, and `HACK` markers only when `SYNC_INCLUDE_CODE_TASKS=1` is set.
 - Duplicate detection: source-marker search using `task-sync-source: path:line`.
+
+## Grouped SLOG Sync
+
+Use this to sync repeated runtime warnings, errors, critical events, and issue-style log entries into one GitHub issue per normalized signature.
+
+### Recommended
+
+```bash
+bash sync-slog-now.sh
+```
+
+What it does:
+1. Uses `GITHUB_TOKEN` from the environment if present.
+2. Otherwise tries `github-token`, then `github-fine-grained-token` from GCP Secret Manager.
+3. Otherwise falls back to the git credential helper.
+4. Scans runtime log files plus markdown incident logs.
+5. Groups repeated events by normalized severity plus message signature.
+6. Updates an existing GitHub issue when the same signature already exists.
+7. Creates a new issue only when that signature has not been triaged yet.
+
+### Manual Token
+
+```bash
+export GITHUB_TOKEN="your-github-token-here"
+bash sync-slog-to-github.sh
+```
+
+### Defaults
+
+```bash
+bash sync-slog-now.sh
+```
+
+- Runtime sources: `logs/*.log`, `logs/**/*.log`, root `*.log`, `artifacts/**/*.log`
+- Markdown incident logs: enabled by default
+- Default severities: `warning,error,critical,issue`
+- Duplicate detection: `slog-sync-signature: <hash>` marker in the issue body
+- Routing: grouped issues are classified into families such as `drift`, `deployment`, `health-checks`, `database`, `docker`, `caddy`, or `runtime-logs`
+
+### Common Overrides
+
+```bash
+SLOG_DRY_RUN=1 bash sync-slog-to-github.sh
+SLOG_SEVERITIES=error,critical,issue bash sync-slog-now.sh
+SLOG_INCLUDE_MARKDOWN_LOGS=0 bash sync-slog-now.sh
+SLOG_PATH_FILTER=logs/ bash sync-slog-now.sh
+SLOG_MAX_CREATE=5 bash sync-slog-now.sh
+```
+
+- `SLOG_DRY_RUN`: print grouped candidates without creating or updating issues.
+- `SLOG_SEVERITIES`: override the default severity set.
+- `SLOG_INCLUDE_MARKDOWN_LOGS`: set to `0` to exclude markdown incident logs.
+- `SLOG_PATH_FILTER`: only consider sources whose path contains the provided substring.
+- `SLOG_MAX_CREATE`: cap only new issue creation; existing grouped issues are still updated.
+
+### Expected Output
+
+```text
+Discovered 8 grouped slog issue candidate(s).
+Updated existing slog issue #2043: [slog][warning] Caddy not available, skipping Caddy drift check
+Updated existing slog issue #2048: [slog][warning] Docker daemon not available — skipping Docker Compose drift check
+SLOG sync complete. created=0 updated=8 grouped=8
+```
 
 ## Skipped Paths
 

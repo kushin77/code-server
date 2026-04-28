@@ -27,6 +27,13 @@
 
 set -euo pipefail
 
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_.common/init.sh"
+
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 readonly SCRIPT_VERSION="1.0"
 readonly PERIOD="${1:-30}"  # Default 30 days
 readonly OUTPUT_FORMAT="${2:-json}"

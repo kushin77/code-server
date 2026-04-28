@@ -34,7 +34,10 @@ resource "null_resource" "deployment_orchestration" {
   }
 
   lifecycle {
-    ignore_changes = all
+    # P1 #2422: Changed from ignore_changes = all to [triggers]
+    # Enables terraform drift detection on non-trigger attributes
+    # Drift detection for deployment state uses gitops-drift-detector.sh
+    ignore_changes = [triggers]
   }
 
   depends_on = [
@@ -70,7 +73,9 @@ resource "null_resource" "deployment_simulation" {
   }
 
   lifecycle {
-    ignore_changes = all
+    # P1 #2422: Changed from ignore_changes = all to [triggers]
+    # Allows drift detection while preventing re-execution on non-trigger changes
+    ignore_changes = [triggers]
   }
 }
 

@@ -89,15 +89,11 @@ resource "null_resource" "replica_host_deployment" {
   }
 
   lifecycle {
-    # P1 #2422: ignore_changes = all is INTENTIONAL for null_resource provisioners
-    # Rationale:
-    # - remote-exec provisioners are one-time idempotent operations
-    # - Re-running on every terraform apply wastes time and violates idempotency
-    # - Drift detection for deployment state uses gitops-drift-detector.sh's
-    #   check_replica_parity() function (host-level docker ps comparison)
-    # - terraform plan will skip null_resources in drift detection
+    # P1 #2422: Changed from ignore_changes = all to [triggers]
+    # - Enables terraform drift detection on non-trigger attributes
     # - To trigger redeployment: terraform taint null_resource.replica_host_deployment
-    ignore_changes = all
+    # - or change a trigger value (docker_compose_hash, override_hash, caddy_hash, or replica_host)
+    ignore_changes = [triggers]
   }
 
   depends_on = [

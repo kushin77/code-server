@@ -213,7 +213,7 @@ Overall: PASS/PASS/PASS/PASS/PASS - Infrastructure ready
 
 ### ⏳ Awaiting Infrastructure
 - Phase 4 Kubernetes migration (waiting for cluster provisioning)
-- Phase 6 Replica deployment (waiting for host 192.168.168.32 connectivity)
+- Phase 6 Replica deployment (waiting for host 192.168.168.42 connectivity)
 
 ### 📋 Ready for Next Session
 - Item #2: Environment Variable consolidation (identified 16+ migration targets)

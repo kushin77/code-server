@@ -1,9 +1,9 @@
 # Replica Host Connectivity Diagnostic Report
 **Date**: 2026-04-28  
-**Status**: 🔴 CRITICAL - Replica host (192.168.168.32) unreachable
+**Status**: 🔴 CRITICAL - Replica host (192.168.168.42) unreachable
 
 ## Executive Summary
-The replica host at 192.168.168.32 is currently inaccessible via SSH (port 22), preventing:
+The replica host at 192.168.168.42 is currently inaccessible via SSH (port 22), preventing:
 - Cluster replication status verification
 - High availability failover testing
 - Multi-node deployment validation
@@ -12,7 +12,7 @@ The replica host at 192.168.168.32 is currently inaccessible via SSH (port 22), 
 ## Issue Details
 
 ### Observed Symptoms
-1. **SSH Connection Timeout**: `ssh akushnir@192.168.168.32` times out after 30 seconds
+1. **SSH Connection Timeout**: `ssh akushnir@192.168.168.42` times out after 30 seconds
 2. **Service Verification**: Unable to run remote diagnostics on replica
 3. **Container Status**: Unknown if replica containers are running or have failed
 4. **Network Reachability**: Potential network isolation or incorrect routing
@@ -27,26 +27,26 @@ The replica host at 192.168.168.32 is currently inaccessible via SSH (port 22), 
 ### 1. Network Connectivity Check (Local Environment)
 ```bash
 # Test DNS resolution
-getent hosts 192.168.168.32
-nslookup 192.168.168.32
+getent hosts 192.168.168.42
+nslookup 192.168.168.42
 
 # Test basic ICMP connectivity
-ping -c 3 192.168.168.32
+ping -c 3 192.168.168.42
 
 # Test TCP connectivity to SSH port
-nc -zv 192.168.168.32 22
+nc -zv 192.168.168.42 22
 
 # Test ARP connectivity
-arp -a | grep 192.168.168.32
+arp -a | grep 192.168.168.42
 ```
 
 ### 2. SSH Configuration Review
 ```bash
 # Check SSH config for explicit overrides
-cat ~/.ssh/config | grep -A 5 "192.168.168.32"
+cat ~/.ssh/config | grep -A 5 "192.168.168.42"
 
 # Test SSH with verbose output
-ssh -vvv akushnir@192.168.168.32 'echo ok' 2>&1 | head -50
+ssh -vvv akushnir@192.168.168.42 'echo ok' 2>&1 | head -50
 
 # Check SSH key accessibility
 ls -la ~/.ssh/id_rsa ~/.ssh/id_ed25519
@@ -58,7 +58,7 @@ chmod 600 ~/.ssh/id_rsa
 ### 3. Remote Infrastructure Investigation (if accessible)
 ```bash
 # Once connected via SSH:
-ssh akushnir@192.168.168.32 << 'EOF'
+ssh akushnir@192.168.168.42 << 'EOF'
   echo "=== System Status ==="
   uptime
   uname -a
@@ -81,7 +81,7 @@ EOF
 ```
 
 ### 4. Network Configuration Checks
-- **Verify IP Address**: Is 192.168.168.32 correct per infrastructure documentation?
+- **Verify IP Address**: Is 192.168.168.42 correct per infrastructure documentation?
 - **Check Subnet Mask**: Should be on same /24 network as primary (192.168.168.31)
 - **Verify Routing**: Check if all traffic is correctly routed to replica subnet
 - **Check Firewall Rules**: Ensure port 22 is not blocked on local firewall
@@ -109,10 +109,10 @@ sudo fail2ban-client set sshd unbanip akushnir@<YOUR_IP>
 ### Immediate Action (If infrastructure access available)
 ```bash
 # Check if host is reachable from local network
-ping -c 1 192.168.168.32
+ping -c 1 192.168.168.42
 
 # If ping works, try SSH with extended timeout
-ssh -o ConnectTimeout=60 akushnir@192.168.168.32 'uptime'
+ssh -o ConnectTimeout=60 akushnir@192.168.168.42 'uptime'
 
 # If fail2ban blocks exist:
 # Coordinate with infrastructure team to unban IP
@@ -121,7 +121,7 @@ ssh -o ConnectTimeout=60 akushnir@192.168.168.32 'uptime'
 
 ### Escalation Path
 1. **Infrastructure Team**: Verify replica host is powered on and network accessible
-2. **Network Team**: Confirm routing between primary (192.168.168.31) and replica (192.168.168.32)
+2. **Network Team**: Confirm routing between primary (192.168.168.31) and replica (192.168.168.42)
 3. **Security Team**: Check if SSH port is blocked by organizational firewall
 4. **Ops Team**: Verify docker-compose files are deployed on replica; restart if needed
 
@@ -152,7 +152,7 @@ ssh -o ConnectTimeout=60 akushnir@192.168.168.32 'uptime'
 #!/bin/bash
 # Test replica connectivity every 5 minutes
 while true; do
-  if timeout 10 ssh -o ConnectTimeout=5 akushnir@192.168.168.32 'echo ok' &>/dev/null; then
+  if timeout 10 ssh -o ConnectTimeout=5 akushnir@192.168.168.42 'echo ok' &>/dev/null; then
     echo "[$(date)] ✅ Replica host is reachable"
     break
   else
@@ -169,7 +169,7 @@ done
 
 ## References
 - Primary Host: 192.168.168.31 (✅ Accessible)
-- Replica Host: 192.168.168.32 (❌ Inaccessible)
+- Replica Host: 192.168.168.42 (❌ Inaccessible)
 - Previous Status: [CLUSTER-SHUTDOWN-REPORT-2026-04-27.md](CLUSTER-SHUTDOWN-REPORT-2026-04-27.md)
 - Infrastructure Documentation: See terraform/environments/
 

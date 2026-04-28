@@ -52,9 +52,9 @@
 
 ### ❌ Phase 6 Multi-Cluster HA (Replica Deployment)
 **Status**: Blocked  
-**Reason**: Replica host (192.168.168.32) is unreachable  
+**Reason**: Replica host (192.168.168.42) is unreachable  
 **Last Status**: "Destination Host Unreachable" - infrastructure issue  
-**Action Required**: Infrastructure team must restore network connectivity to 192.168.168.32  
+**Action Required**: Infrastructure team must restore network connectivity to 192.168.168.42  
 **Readiness**: Complete deployment package prepared (REPLICA_DEPLOYMENT_PACKAGE.md)  
 **Timeline**: ~30 minutes after infrastructure team restores access
 

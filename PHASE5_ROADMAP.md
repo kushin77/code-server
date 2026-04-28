@@ -125,13 +125,13 @@ Transform the code-server infrastructure from a single-node production-ready dep
 **Diagnostic Steps** (from REPLICA_HOST_DIAGNOSTIC.md):
 ```bash
 # 1. Verify host status
-ping 192.168.168.32
+ping 192.168.168.42
 
 # 2. Test SSH connectivity with verbose logging
-ssh -vvv akushnir@192.168.168.32
+ssh -vvv akushnir@192.168.168.42
 
 # 3. If SSH fails, check for fail2ban lockout
-ssh -vvv akushnir@192.168.168.32 "sudo fail2ban-client status sshd"
+ssh -vvv akushnir@192.168.168.42 "sudo fail2ban-client status sshd"
 
 # 4. If locked out, request unlock from infrastructure team
 # See: REPLICA_HOST_DIAGNOSTIC.md
@@ -159,7 +159,7 @@ ssh -vvv akushnir@192.168.168.32 "sudo fail2ban-client status sshd"
 ```
 ┌─────────────────────┐       ┌─────────────────────┐
 │ Primary Host        │◄────►│ Replica Host        │
-│ 192.168.168.31      │       │ 192.168.168.32      │
+│ 192.168.168.31      │       │ 192.168.168.42      │
 ├─────────────────────┤       ├─────────────────────┤
 │ PostgreSQL Primary  │       │ PostgreSQL Standby  │
 │ Redis Cluster Master│       │ Redis Cluster Slave │
@@ -523,7 +523,7 @@ Total: 6 months, 3-5 person-months effort
 
 ### Hard Blockers
 - 🔴 **Replica Host Connectivity** (Phase 6)
-  - Status: SSH timeout to 192.168.168.32
+  - Status: SSH timeout to 192.168.168.42
   - Owner: Infrastructure team
   - Expected Resolution: 1-2 weeks
   - Impact: Blocks all Phase 6 work

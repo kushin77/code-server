@@ -179,7 +179,7 @@ Update your load balancer/DNS to route traffic to:
 
 ```
 Primary:   192.168.168.31:8080
-Replica:   192.168.168.32:8080  (once connectivity restored)
+Replica:   192.168.168.42:8080  (once connectivity restored)
 ```
 
 ### Verify Production Connectivity

@@ -126,7 +126,7 @@ Manages multi-cluster state synchronization:
 POST /clusters/register
 {
     "cluster_id": "cluster-replica-32",
-    "host": "192.168.168.32",
+    "host": "192.168.168.42",
     "role": "replica",
     "primary_host": "192.168.168.31",
     "capabilities": {
@@ -278,7 +278,7 @@ GET /resources/{allocation_id}/metrics?interval=5m
 POST /clusters/register
 {
     "cluster_id": "cluster-id",
-    "host": "192.168.168.32",
+    "host": "192.168.168.42",
     "role": "replica"
 }
 

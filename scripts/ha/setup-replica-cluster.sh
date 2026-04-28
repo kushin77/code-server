@@ -24,7 +24,7 @@ trap 'log_error "Setup failed at line $LINENO"; cleanup_setup || true; exit 1' E
 trap 'log_info "Cleanup..."; cleanup_setup || true' EXIT
 
 # Configuration
-REPLICA_HOST="192.168.168.32"
+REPLICA_HOST="192.168.168.42"
 REPLICA_USER="deployment"
 PRIMARY_HOST="192.168.168.221"
 CLUSTER_NETWORK="192.168.168.0/24"

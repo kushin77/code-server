@@ -356,7 +356,7 @@ services:
 ### External Blockers (Non-Autonomous Work)
 
 **Issue #2030: Phase 6 Replica Deployment (Infrastructure Blocked)**
-- Status: Waiting for infrastructure team to restore connectivity to 192.168.168.32
+- Status: Waiting for infrastructure team to restore connectivity to 192.168.168.42
 - Estimated impact: 30-min deployment once connectivity available
 - All automation scripts ready in scripts/phase6/
 
@@ -435,7 +435,7 @@ services:
 - Custom metrics and alerting configured
 
 ✅ **Resilience & HA**
-- Multi-replica architecture (192.168.168.31 + 192.168.168.32)
+- Multi-replica architecture (192.168.168.31 + 192.168.168.42)
 - Pod Disruption Budgets and anti-affinity configured
 - Circuit breakers and outlier detection in service mesh
 

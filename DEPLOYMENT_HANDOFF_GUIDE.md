@@ -70,7 +70,7 @@ The Code Server Enterprise infrastructure deployment program is **100% complete*
   - Configured load balancer automation
   - Prepared replica synchronization procedures
   - Created health monitoring for dual cluster
-- **Status**: ✅ READY (awaiting 192.168.168.32 connectivity restoration)
+- **Status**: ✅ READY (awaiting 192.168.168.42 connectivity restoration)
 
 ---
 
@@ -224,7 +224,7 @@ Once deployment completes successfully:
 ```bash
 # Update production DNS/load balancer to route traffic to:
 # Primary: 192.168.168.31:8080
-# Replica: 192.168.168.32:8080 (once connectivity restored)
+# Replica: 192.168.168.42:8080 (once connectivity restored)
 
 # Verify connectivity
 curl -v http://192.168.168.31:8080/health

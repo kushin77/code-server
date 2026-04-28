@@ -430,7 +430,7 @@ Performance Tuning
 - Run validation scenarios
 
 **Phase 6 - Multi-Cluster HA Architecture:**
-- Requires replica host connectivity (192.168.168.32)
+- Requires replica host connectivity (192.168.168.42)
 - Pending fail2ban unlock or key authorization
 - Cross-cluster replication setup
 - Distributed monitoring deployment

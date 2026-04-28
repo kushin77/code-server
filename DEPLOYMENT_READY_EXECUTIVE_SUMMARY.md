@@ -94,7 +94,7 @@ The code-server enterprise infrastructure has successfully completed comprehensi
 - **Requirements**: All verified ✅
 - **Estimated Time**: 2-3 hours ✅
 
-### Replica Host (192.168.168.32) 🔴
+### Replica Host (192.168.168.42) 🔴
 - **Status**: Unreachable (External blocker)
 - **Impact**: Single-node deployment possible; multi-node testing blocked
 - **Resolution**: Awaiting infrastructure team intervention

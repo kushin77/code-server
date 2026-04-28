@@ -66,7 +66,7 @@ The code-server enterprise infrastructure has been comprehensively audited, hard
    - Status: Clean commit e9c9236e
 
 5. **Replica Host Connectivity** 🔴 EXTERNAL BLOCKER
-   - Issue: 192.168.168.32 SSH timeout
+   - Issue: 192.168.168.42 SSH timeout
    - Root causes: Documented (5 probable causes)
    - Diagnostic scripts: Provided
    - Status: Awaiting infrastructure team
@@ -286,7 +286,7 @@ The code-server enterprise infrastructure has been comprehensively audited, hard
 - Terraform: v1.14.9 verified
 - Network: Accessible from management network
 
-### Replica Host (192.168.168.32) 🔴
+### Replica Host (192.168.168.42) 🔴
 - Status: UNREACHABLE (external blocker)
 - SSH: Timeout on connection attempts
 - Impact: Single-node deployment possible, multi-node testing blocked

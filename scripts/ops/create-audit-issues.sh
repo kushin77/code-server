@@ -81,8 +81,8 @@ create_issue() {
 }
 
 # Issue 1: Replica Host
-create_issue "[INFRA] Replica Host (192.168.168.32) Connection Timeout" \
-"The replica host `192.168.168.32` is currently unreachable via SSH (Port 22 timeout). This prevents cluster-wide operations and failover validation.
+create_issue "[INFRA] Replica Host (192.168.168.42) Connection Timeout" \
+"The replica host `192.168.168.42` is currently unreachable via SSH (Port 22 timeout). This prevents cluster-wide operations and failover validation.
 
 **Evidence:**
 - Reported in [CLUSTER-SHUTDOWN-REPORT-2026-04-27.md](https://github.com/$REPO/blob/main/CLUSTER-SHUTDOWN-REPORT-2026-04-27.md)

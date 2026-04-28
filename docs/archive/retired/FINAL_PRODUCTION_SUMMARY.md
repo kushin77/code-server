@@ -91,7 +91,7 @@ The system has been:
 ## External Blockers (Not Agent-Completable)
 
 1. **GitHub PR Approval**: Requires user/admin manual review of PR #1982
-2. **Replica Host Access**: Requires infrastructure team to restore 192.168.168.32 connectivity
+2. **Replica Host Access**: Requires infrastructure team to restore 192.168.168.42 connectivity
 
 These do not block production operation.
 
@@ -105,7 +105,7 @@ For **User/Operations Team**:
 3. Request infrastructure team restore replica host when Phase 6 multi-cluster HA desired
 
 For **Infrastructure Team**:
-1. Restore 192.168.168.32 connectivity when available
+1. Restore 192.168.168.42 connectivity when available
 2. Follow REPLICA_DEPLOYMENT_PACKAGE.md for Phase 6 activation
 
 ---

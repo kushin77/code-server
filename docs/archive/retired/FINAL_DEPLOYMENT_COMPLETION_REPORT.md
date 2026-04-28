@@ -98,7 +98,7 @@ The comprehensive deployment program has been successfully completed with all ph
   - HAProxy VIP load balancing
   - Prometheus federation
 - **Deployment State**: Ready for execution when replica connectivity restored
-- **Current Blocker**: Replica host (192.168.168.32) unreachable (likely fail2ban)
+- **Current Blocker**: Replica host (192.168.168.42) unreachable (likely fail2ban)
 
 ## Production Infrastructure Status
 
@@ -239,7 +239,7 @@ This deployment is CERTIFIED as Production Ready.
 4. ✅ Keep DR backup procedure current (20-second RTO)
 
 ### For Next Steps
-1. **Replica Connectivity**: Restore access to 192.168.168.32
+1. **Replica Connectivity**: Restore access to 192.168.168.42
    - Current blocker: Host unreachable (fail2ban?)
    - Action: Contact infrastructure team for fail2ban exception
    - Unblock: Whitelist primary IP or temporarily disable fail2ban

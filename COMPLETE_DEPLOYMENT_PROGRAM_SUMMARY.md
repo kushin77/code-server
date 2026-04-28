@@ -307,7 +307,7 @@ This comprehensive deployment program implements three critical modernization ph
 ### Cluster Topology
 
 ```
-Primary (192.168.168.221) ←→ Replica (192.168.168.32)
+Primary (192.168.168.221) ←→ Replica (192.168.168.42)
   ↓ Replication ↓              ↓ Replication ↓
   PostgreSQL     Redis         PostgreSQL    Redis
   Message Broker Web Services  Message Broker Web Services
@@ -348,7 +348,7 @@ Primary (192.168.168.221) ←→ Replica (192.168.168.32)
 - Failover procedures documented
 
 **Blocked On: Infrastructure Access**
-- Replica host unreachable (192.168.168.32)
+- Replica host unreachable (192.168.168.42)
 - Requires fail2ban unlock or network restoration
 - Infrastructure team coordination needed
 

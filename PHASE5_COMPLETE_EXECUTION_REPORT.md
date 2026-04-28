@@ -157,7 +157,7 @@ All tests passed with the infrastructure performing at A+ grade levels (excellen
 - ✅ Optimization validated (Week 4)
 
 ### Phase 6 Execution
-When replica host (192.168.168.32) becomes accessible:
+When replica host (192.168.168.42) becomes accessible:
 1. Execute connectivity diagnostics
 2. Configure replica cluster setup
 3. Deploy active-active replication

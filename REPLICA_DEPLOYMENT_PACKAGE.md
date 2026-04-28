@@ -3,7 +3,7 @@
 **Status**: Ready for Deployment (awaiting replica host connectivity)  
 **Date Created**: April 28, 2026  
 **Primary Host**: 192.168.168.31 (OPERATIONAL)  
-**Replica Host**: 192.168.168.32 (AWAITING CONNECTIVITY)  
+**Replica Host**: 192.168.168.42 (AWAITING CONNECTIVITY)  
 
 ---
 
@@ -11,8 +11,8 @@
 
 ### Prerequisites Check
 ```bash
-# When 192.168.168.32 becomes reachable, execute:
-ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.32 "echo '✅ Replica host accessible'"
+# When 192.168.168.42 becomes reachable, execute:
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42 "echo '✅ Replica host accessible'"
 
 # Expected: Connection successful
 # If: "No route to host" → Contact infrastructure team
@@ -23,10 +23,10 @@ ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.32 "echo '✅ Replica host acce
 ```bash
 # Execute from primary host (192.168.168.31):
 cd ~/code-server-deploy && \
-  bash scripts/ops/full-deployment-test.sh --replica-host 192.168.168.32
+  bash scripts/ops/full-deployment-test.sh --replica-host 192.168.168.42
 
 # OR manually:
-ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.32 << 'REPLICA_DEPLOY'
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42 << 'REPLICA_DEPLOY'
 cd /tmp && \
   git clone https://github.com/kushin77/code-server.git code-server-replica && \
   cd code-server-replica && \
@@ -48,7 +48,7 @@ REPLICA_DEPLOY
 ├── Database: PostgreSQL operational
 └── Cache: Redis operational
 
-192.168.168.32 (REPLICA) ⏳ AWAITING CONNECTIVITY
+192.168.168.42 (REPLICA) ⏳ AWAITING CONNECTIVITY
 └── Ready to deploy (scripts prepared)
 ```
 
@@ -58,7 +58,7 @@ REPLICA_DEPLOY
 ├── Services: Running
 └── Load: 60%
 
-192.168.168.32 (REPLICA) ✅
+192.168.168.42 (REPLICA) ✅
 ├── Services: Running (mirrored from primary)
 └── Load: 40%
 
@@ -74,11 +74,11 @@ HAProxy/Load Balancer (VIP)
 
 Before deploying replica, verify:
 
-- [ ] Replica host (192.168.168.32) is reachable via SSH
+- [ ] Replica host (192.168.168.42) is reachable via SSH
 - [ ] Replica host has Docker installed and running
 - [ ] Replica host has 32GB+ available disk space
 - [ ] Network connectivity: Primary ↔ Replica latency <10ms (LAN)
-- [ ] SSH key access: `ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.32` works
+- [ ] SSH key access: `ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42` works
 - [ ] Primary host is stable (no recent restarts or errors)
 
 ---
@@ -155,7 +155,7 @@ scripts/ops/
 ### Quick Rollback to Primary-Only
 ```bash
 # If replica deployment causes issues:
-ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.32 "docker compose down -v"
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42 "docker compose down -v"
 # Services revert to primary-only operation (no downtime)
 ```
 
@@ -186,10 +186,10 @@ docker compose down -v && docker compose up -d
 
 ```bash
 # Check replica connectivity
-ping -c 1 192.168.168.32
+ping -c 1 192.168.168.42
 
 # Deploy replica
-ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.32 \
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42 \
   "cd /tmp && git clone ... && bash scripts/ops/full-deployment-test.sh"
 
 # Verify replication
@@ -235,5 +235,5 @@ bash scripts/ops/full-deployment-test.sh --failover-test
 
 **Package Created**: 2026-04-28  
 **Ready for Replica**: YES ✅  
-**Awaiting**: 192.168.168.32 connectivity restoration  
+**Awaiting**: 192.168.168.42 connectivity restoration  
 **Estimated Time to Completion**: ~30 minutes after replica host available

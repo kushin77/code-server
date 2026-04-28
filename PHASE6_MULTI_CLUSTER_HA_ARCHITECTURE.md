@@ -18,7 +18,7 @@ Phase 6 implements a high-availability multi-cluster architecture enabling activ
 - Complete documentation and procedures
 
 ### ⏸️ Blocked On
-- Replica host connectivity: `192.168.168.32` currently unreachable
+- Replica host connectivity: `192.168.168.42` currently unreachable
 - **Root Cause:** Likely fail2ban block on replica or network configuration issue
 - **Resolution Required:** Infrastructure team to:
   1. SSH to replica and verify connectivity
@@ -35,7 +35,7 @@ Phase 6 implements a high-availability multi-cluster architecture enabling activ
 │                                                               │
 │  ┌──────────────────────┐         ┌──────────────────────┐  │
 │  │  PRIMARY CLUSTER     │         │  REPLICA CLUSTER     │  │
-│  │  192.168.168.221     │◄────────│  192.168.168.32      │  │
+│  │  192.168.168.221     │◄────────│  192.168.168.42      │  │
 │  │  (Active-Active)     │─────────│  (Active-Active)     │  │
 │  │                      │         │                      │  │
 │  │ ┌────────────────┐   │  Sync   │ ┌────────────────┐   │  │

@@ -108,7 +108,7 @@ All phases have been implemented, deployed, tested with 1750+ real requests, and
 **Current Status**: 
 - ✅ Syntax validated
 - ✅ Deployment procedures documented
-- ⏳ Blocked: Replica host (192.168.168.32) currently unreachable
+- ⏳ Blocked: Replica host (192.168.168.42) currently unreachable
 - **Next Step**: Execute Phase 6 once replica connectivity restored (~30 minutes execution time)
 
 ---
@@ -238,7 +238,7 @@ All phases have been implemented, deployed, tested with 1750+ real requests, and
 ### Phase 6 Replica Connectivity (External, Non-Blocking)
 **Status**: ⏳ Awaiting infrastructure team intervention
 
-**Issue**: Replica host (192.168.168.32) currently unreachable
+**Issue**: Replica host (192.168.168.42) currently unreachable
 - **Root Cause**: Likely fail2ban security policy blocking primary IP
 - **Resolution Path**: Contact infrastructure team to whitelist primary IP or temporarily disable fail2ban
 - **Timeline**: Once restored, Phase 6 executes in ~30 minutes

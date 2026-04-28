@@ -322,7 +322,7 @@ Post-Deployment Validation Script
 ## Known Limitations & Future Enhancements
 
 ### Current Limitations
-1. **Replica Host Access**: 192.168.168.32 still unreachable (external blocker)
+1. **Replica Host Access**: 192.168.168.42 still unreachable (external blocker)
 2. **Manual Hook Installation**: Requires developer action (can be automated via CI)
 3. **Health Check Template**: Service health checks need manual review in compose files
 4. **Monitoring Setup**: Prometheus/Grafana configuration must be pre-existing

@@ -12,7 +12,7 @@ This session successfully concluded the delivery and verification of the 100-too
 
 ## 3. Infrastructure Status
 - **Primary Host**: 192.168.168.31 (Ready for Production)
-- **Replica Host**: 192.168.168.32 (Awaiting connectivity restoration)
+- **Replica Host**: 192.168.168.42 (Awaiting connectivity restoration)
 - **Apex Domain**: kushnir.cloud
 - **Services**: 33+ containerized services validated via idempotency checks.
 
@@ -22,7 +22,7 @@ This session successfully concluded the delivery and verification of the 100-too
 - **Rollback**: Verified successful dry-run for both Docker and Terraform components.
 
 ## 5. Next Steps (Session 4)
-- **Replica Initialization**: Execute [`scripts/phase6/`](scripts/phase6/) once the infrastructure team restores connectivity to 192.168.168.32.
+- **Replica Initialization**: Execute [`scripts/phase6/`](scripts/phase6/) once the infrastructure team restores connectivity to 192.168.168.42.
 - **Production Cutover**: Proceed with the final production launch once all health checks pass with live traffic.
 
 **Status**: MISSION ACCOMPLISHED. All autonomous development tasks are complete.

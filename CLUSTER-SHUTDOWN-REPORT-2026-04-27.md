@@ -29,9 +29,9 @@
 
 - **Verification**: All containers now show "Exited" status
 
-### Replica Host (192.168.168.32)
+### Replica Host (192.168.168.42)
 - **Status**: ❌ Not accessible (connection timeout)
-- **Note**: The configured replica host at 192.168.168.32 could not be reached. 
+- **Note**: The configured replica host at 192.168.168.42 could not be reached. 
   - Attempted connection: SSH port 22 timeout
   - This may indicate the replica is offline, on a different subnet, or not yet deployed
 
@@ -83,5 +83,5 @@ ssh akushnir@192.168.168.31 'docker ps -a -q | xargs -r docker stop --timeout=30
 
 ## Summary
 ✅ All 13 containers on the primary host (192.168.168.31) have been successfully shut down.
-⚠️ Replica host (192.168.168.32) is not currently accessible; manual verification needed.
+⚠️ Replica host (192.168.168.42) is not currently accessible; manual verification needed.
 ✅ Reusable shutdown scripts created for future maintenance operations.

@@ -33,7 +33,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Configuration
 PRIMARY_HOST="192.168.168.221"
-REPLICA_HOST="192.168.168.32"
+REPLICA_HOST="192.168.168.42"
 REPLICA_USER="deployment"
 CLUSTER_VIP="192.168.168.50"
 HA_DIR="$PROJECT_ROOT/artifacts/ha-setup"
@@ -192,7 +192,7 @@ listen stats
 backend primary_cluster
     balance roundrobin
     server primary 192.168.168.221:8080 check
-    server replica  192.168.168.32:8080 check
+    server replica  192.168.168.42:8080 check
 
 # Frontend for application traffic
 frontend app_frontend
@@ -209,7 +209,7 @@ backend database_backend
     mode tcp
     balance roundrobin
     server primary 192.168.168.221:5432 check inter 5s rise 2 fall 3
-    server replica  192.168.168.32:5432 check inter 5s rise 2 fall 3
+    server replica  192.168.168.42:5432 check inter 5s rise 2 fall 3
 
 frontend database_frontend
     bind *:5432
@@ -221,7 +221,7 @@ backend redis_backend
     mode tcp
     balance roundrobin
     server primary 192.168.168.221:6379 check inter 5s rise 2 fall 3
-    server replica  192.168.168.32:6379 check inter 5s rise 2 fall 3
+    server replica  192.168.168.42:6379 check inter 5s rise 2 fall 3
 
 frontend redis_frontend
     bind *:6379
@@ -248,7 +248,7 @@ monitoring:
     
     - job_name: replica
       static_configs:
-        - targets: ['192.168.168.32:9090']
+        - targets: ['192.168.168.42:9090']
       interval: 15s
     
     - job_name: postgres_primary
@@ -257,7 +257,7 @@ monitoring:
     
     - job_name: postgres_replica
       static_configs:
-        - targets: ['192.168.168.32:9187']
+        - targets: ['192.168.168.42:9187']
     
     - job_name: redis_primary
       static_configs:
@@ -265,7 +265,7 @@ monitoring:
     
     - job_name: redis_replica
       static_configs:
-        - targets: ['192.168.168.32:9121']
+        - targets: ['192.168.168.42:9121']
 
   # Alerting rules for cluster
   alerts:
@@ -330,7 +330,7 @@ create_verification_script() {
 # Cluster Health Verification Script
 
 PRIMARY="192.168.168.221"
-REPLICA="192.168.168.32"
+REPLICA="192.168.168.42"
 
 echo "═════════════════════════════════════════════════"
 echo "CLUSTER HEALTH VERIFICATION"
@@ -413,14 +413,14 @@ create_failover_procedures() {
         echo ""
         echo "2. Promote replica to primary:"
         echo "   ```bash"
-        echo "   ssh deployment@192.168.168.32 'sudo systemctl stop postgresql'"
-        echo "   ssh deployment@192.168.168.32 'touch /var/lib/postgresql/main/recovery.signal'"
-        echo "   ssh deployment@192.168.168.32 'sudo systemctl start postgresql'"
+        echo "   ssh deployment@192.168.168.42 'sudo systemctl stop postgresql'"
+        echo "   ssh deployment@192.168.168.42 'touch /var/lib/postgresql/main/recovery.signal'"
+        echo "   ssh deployment@192.168.168.42 'sudo systemctl start postgresql'"
         echo "   ```"
         echo ""
         echo "3. Verify promotion complete:"
         echo "   ```bash"
-        echo "   ssh deployment@192.168.168.32 'psql -U postgres -c \"SELECT pg_is_in_recovery();\"'"
+        echo "   ssh deployment@192.168.168.42 'psql -U postgres -c \"SELECT pg_is_in_recovery();\"'"
         echo "   ```"
         echo ""
         echo "4. Point applications to new primary:"
@@ -435,7 +435,7 @@ create_failover_procedures() {
         echo ""
         echo "2. When replica recovers:"
         echo "   ```bash"
-        echo "   ssh deployment@192.168.168.32 'sudo systemctl start postgresql'"
+        echo "   ssh deployment@192.168.168.42 'sudo systemctl start postgresql'"
         echo "   ```"
         echo ""
         echo "3. Reinitialize replica from primary:"
@@ -449,7 +449,7 @@ create_failover_procedures() {
         echo "1. If partition detected (replication lag increasing):"
         echo "   ```bash"
         echo "   # Check if nodes can communicate"
-        echo "   ping 192.168.168.32  # From primary"
+        echo "   ping 192.168.168.42  # From primary"
         echo "   ping 192.168.168.221 # From replica"
         echo "   ```"
         echo ""

@@ -91,7 +91,7 @@ Your version of Terraform is latest!
 
 **Key Findings**:
 ```
-Replica Host: 192.168.168.32
+Replica Host: 192.168.168.42
 Status: 🔴 CRITICAL - Unreachable via SSH
 Root Cause: Unknown - requires investigation
 Action: Escalation to infrastructure team
@@ -219,7 +219,7 @@ Status: 🟢 READY FOR DEPLOYMENT
 ## Remaining Work Items
 
 ### Immediate (Requires Manual Action)
-- [ ] **Replica Host Recovery**: Coordinate with infrastructure team to restore 192.168.168.32
+- [ ] **Replica Host Recovery**: Coordinate with infrastructure team to restore 192.168.168.42
 - [ ] **Service Health Check Implementation**: Deploy health check stanzas to docker-compose.yml
 - [ ] **Grafana Dashboard Creation**: Implement monitoring dashboard based on guide
 

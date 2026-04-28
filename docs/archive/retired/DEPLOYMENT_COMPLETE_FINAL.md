@@ -94,7 +94,7 @@ Code Server Enterprise deployment to production is complete and fully operationa
 
 ## Known Limitations
 
-- ⏳ **Phase 6 Multi-Cluster HA**: Blocked awaiting replica host (192.168.168.32) connectivity - infrastructure team to restore access
+- ⏳ **Phase 6 Multi-Cluster HA**: Blocked awaiting replica host (192.168.168.42) connectivity - infrastructure team to restore access
 - ⚠️ **GitHub PR**: Still open for formal review/approval (not required for production operation)
 
 ---
@@ -107,7 +107,7 @@ Code Server Enterprise deployment to production is complete and fully operationa
 3. Validate user traffic patterns and performance
 
 ### Short Term (2-3 days)
-1. Request infrastructure team restore replica host (192.168.168.32) connectivity
+1. Request infrastructure team restore replica host (192.168.168.42) connectivity
 2. Complete Phase 6 multi-cluster HA setup once replica is accessible
 3. Formal PR review and merge (if organization requires audit trail)
 

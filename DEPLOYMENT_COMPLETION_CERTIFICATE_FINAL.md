@@ -47,7 +47,7 @@
 ### ✅ Phase 6: Multi-Cluster HA Architecture
 - **Scripts**: 37 automation scripts created and validated
 - **Primary Host**: 192.168.168.31 (operational, 38 services running)
-- **Replica Host**: 192.168.168.32 (scripts ready, awaiting connectivity)
+- **Replica Host**: 192.168.168.42 (scripts ready, awaiting connectivity)
 - **HA Procedures**: Complete failover/rebalancing procedures documented
 - **Status**: ✅ SCRIPTS COMPLETE (blocked on replica host access)
 

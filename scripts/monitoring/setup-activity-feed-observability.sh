@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
@@ -15,14 +18,6 @@ source "${REPO_ROOT}/scripts/_common/init.sh"
 
 # Source infrastructure configuration
 source_env_file "${REPO_ROOT}/.env.infrastructure"
-
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
-}
 
 # Generate Prometheus alert rules
 generate_alert_rules() {

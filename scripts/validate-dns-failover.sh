@@ -25,6 +25,9 @@
 
 set -euo pipefail
 
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -43,19 +46,6 @@ REPORT_FLAG=0
 
 [ "$VERBOSE" == "--verbose" ] && VERBOSE_FLAG=1
 [ "$VERBOSE" == "--report" ] && REPORT_FLAG=1
-
-# Color output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# Logging functions
-log_info() { echo -e "${BLUE}ℹ️  $*${NC}"; }
-log_pass() { echo -e "${GREEN}✅ $*${NC}"; }
-log_warn() { echo -e "${YELLOW}⚠️  $*${NC}"; }
-log_fail() { echo -e "${RED}❌ $*${NC}"; }
 
 # Test results tracking
 TESTS_RUN=0

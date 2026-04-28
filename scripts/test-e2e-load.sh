@@ -47,23 +47,6 @@ K6_TIMEOUT="5m"
 E2E_TIMEOUT="30s"
 COMPOSE_CMD=()
 
-# Functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
 check_prerequisites() {
     log_info "Checking prerequisites..."
     

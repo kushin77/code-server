@@ -10,6 +10,9 @@
 
 set -euo pipefail
 
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -36,23 +39,6 @@ readonly PORTS=(8050 8070 8010)
 readonly HEALTH_ENDPOINTS=("/health" "/health" "/health")
 readonly REQUIRED_FILES=("Dockerfile" "requirements.txt" "main.py")
 readonly TIMEOUT_SECS=30
-
-# Logging functions (idempotent, append-only)
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[✅]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[❌]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[⚠️ ]${NC} $1"
-}
 
 # Verification functions
 

@@ -23,25 +23,7 @@ trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 ###############################################################################
-# LOGGING FUNCTIONS
-###############################################################################
-
-log_info() {
-    echo -e "\033[36m[INFO]\033[0m $*" >&2
-}
-
-log_success() {
-    echo -e "\033[32m[SUCCESS]\033[0m $*" >&2
-}
-
-log_warning() {
-    echo -e "\033[33m[WARNING]\033[0m $*" >&2
-}
-
-log_error() {
-    echo -e "\033[31m[ERROR]\033[0m $*" >&2
-}
-
+# Note: logging functions provided by scripts/_common/init.sh
 ###############################################################################
 # SAST: Static Application Security Testing
 ###############################################################################

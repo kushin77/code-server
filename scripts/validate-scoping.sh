@@ -8,6 +8,9 @@
 
 set -euo pipefail
 
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}" && pwd)"
 
@@ -40,23 +43,7 @@ WARNINGS=0
 DESCRIPTIVE_SUFFIX_REGEX='^code-server-.*-(service|gateway|logs|db|cache|models|vectors|dashboards|traces|broker|control-plane)$'
 
 # Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --fix) FIX_MODE=true; shift ;;
-    --strict) STRICT_MODE=true; shift ;;
-    *) echo "Unknown option: $1"; exit 1 ;;
-  esac
-done
 
-# Logging functions
-log_info() { echo -e "${BLUE}ℹ${NC} $1"; }
-log_success() { echo -e "${GREEN}✓${NC} $1"; }
-log_warning() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS=$((WARNINGS+1)); }
-log_error() { echo -e "${RED}✗${NC} $1"; VIOLATIONS=$((VIOLATIONS+1)); }
-
-# =============================================================================
-# SECTION 1: TERRAFORM VALIDATION
-# =============================================================================
 validate_terraform() {
   log_info "Checking Terraform configuration..."
 

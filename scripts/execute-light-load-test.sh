@@ -18,15 +18,6 @@ PRIMARY_HOST="192.168.168.31"
 RESULTS_DIR="/tmp/phase5-load-results"
 mkdir -p "$RESULTS_DIR"
 
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $1"; }
-log_test() { echo -e "${YELLOW}[TEST]${NC} $1"; }
-
 echo "═══════════════════════════════════════════════════════════════"
 echo "PHASE 5 WEEK 1: LIGHT LOAD TEST EXECUTION"
 echo "Target: http://$PRIMARY_HOST:80"

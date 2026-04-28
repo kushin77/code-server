@@ -17,16 +17,6 @@ trap 'echo "[INFO] Cleaning up..."; exit 0' EXIT
 PRIMARY_HOST="192.168.168.31"
 PRIMARY_USER="akushnir"
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $1"; }
-log_step() { echo -e "${YELLOW}[STEP]${NC} $1"; }
-
 echo "═══════════════════════════════════════════════════════════════"
 echo "PHASE 5 WEEK 1: PERFORMANCE BASELINE TEST"
 echo "Target: Production infrastructure on $PRIMARY_HOST"

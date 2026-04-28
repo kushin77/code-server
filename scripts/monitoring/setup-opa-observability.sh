@@ -18,10 +18,6 @@ OPA_METRICS="${REPO_ROOT}/artifacts/opa_metrics.prom"
 
 mkdir -p "$(dirname "${OPA_METRICS}")"
 
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
-}
-
 # Export OPA metrics to Prometheus format
 export_opa_metrics() {
   log_info "Exporting OPA decision metrics..."

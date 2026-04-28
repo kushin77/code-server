@@ -99,17 +99,9 @@ readonly MANIFEST_FILE="${BACKUP_ROOT}/backup-manifest-${TIMESTAMP}.json"
 # Helper Functions
 # ============================================================================
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*" | tee -a "$BACKUP_LOG"
-}
-
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" | tee -a "$BACKUP_LOG" >&2
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] ✓ $*" | tee -a "$BACKUP_LOG"
-}
+# Note: Logging functions (log_info, log_error, log_success) are provided by
+# scripts/_common/init.sh which sources apps/_shared/test.sh for enhanced logging.
+# For backup-specific file logging, wrap calls with: log_info "msg" | tee -a "$BACKUP_LOG"
 
 verify_checksum() {
   local file="$1"

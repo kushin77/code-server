@@ -51,6 +51,10 @@
 
 set -euo pipefail
 
+# Error handling
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap ':' EXIT
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -79,17 +83,8 @@ readonly BACKUP_DIR="/var/paperclip/.backup-$(date +%s)"
 # Helper Functions
 # ============================================================================
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
-}
-
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] ✓ $*"
-}
+# Note: Logging functions (log_info, log_error, log_success) are provided by
+# scripts/_common/init.sh which sources apps/_shared/test.sh for enhanced logging.
 
 verify_file() {
   local path="$1"

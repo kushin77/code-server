@@ -42,10 +42,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -102,7 +102,7 @@ jobs:
 
       - name: Archive test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: chaos-test-results
           path: ./artifacts/chaos-testing/
@@ -110,7 +110,7 @@ jobs:
 
       - name: Post results to PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        uses: actions/github-script@b90eb5796049df15f23064b3a3e1ff3ac79b25d9
         with:
           script: |
             github.rest.issues.createComment({

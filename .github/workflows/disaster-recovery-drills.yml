@@ -38,10 +38,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -157,7 +157,7 @@ jobs:
 
       - name: Archive results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: dr-drill-results
           path: ./artifacts/dr-drills/
@@ -165,7 +165,7 @@ jobs:
 
       - name: Post Slack notification
         if: always()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@36ea3efed3f4e9b6e7c9b9d8f7c6e5d4c3b2a1f9
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |

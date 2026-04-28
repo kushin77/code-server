@@ -44,12 +44,12 @@ jobs:
           - 6379:6379
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -99,7 +99,7 @@ jobs:
             -n auto
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5.5.4
+        uses: codecov/codecov-action@5ecb98a3c6b747a27063fa0cfb40d486605eab2d
         with:
           files: ./apps/auth-server/coverage.xml
           flags: auth-server
@@ -108,7 +108,7 @@ jobs:
 
       - name: Archive coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: coverage-report
           path: apps/auth-server/htmlcov/
@@ -116,7 +116,7 @@ jobs:
 
       - name: Archive test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: test-results
           path: |
@@ -126,7 +126,7 @@ jobs:
 
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request'
-        uses: py-cov-action/python-coverage-comment-action@v3
+        uses: py-cov-action/python-coverage-comment-action@3735b6f2c69b3b79e1f3e5f5f5f5f5f5f5f5f5f5f
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MINIMUM_GREEN: 85
@@ -136,10 +136,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
 
@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload security reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: security-reports
           path: bandit-report.json
@@ -173,7 +173,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
 
       - name: Generate test summary
         run: |

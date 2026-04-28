@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 
@@ -45,7 +45,7 @@ jobs:
 
       - name: Upload gap analysis artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: documentation-gap-reports
           path: artifacts/documentation-gap-*.{json,md}
@@ -86,7 +86,7 @@ Please address documentation gaps before merge."
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Check PR has issue reference
         run: |
@@ -128,7 +128,7 @@ Please address documentation gaps before merge."
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 
@@ -239,7 +239,7 @@ Please address documentation gaps before merge."
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Install markdown-link-check
         run: npm install -g markdown-link-check

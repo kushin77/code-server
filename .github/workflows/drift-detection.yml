@@ -27,12 +27,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@8fcd2701cffbee57d29183081b72a368ca33c466
         with:
           terraform_version: 1.6.0
 
@@ -73,7 +73,7 @@ jobs:
 
       - name: Create drift detection issue
         if: steps.terraform.outputs.drift_detected == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             const driftReport = `${{ steps.drift_details.outputs.drift_report }}`;
@@ -132,7 +132,7 @@ jobs:
 
       - name: Upload Terraform plan
         if: always() && steps.terraform.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: terraform-plan-${{ github.run_id }}
           path: terraform/environments/private/tfplan
@@ -145,7 +145,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Verify immutable versioning
         run: |

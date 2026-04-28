@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Set up OPA
         run: |
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Set up conftest
         run: |
@@ -60,7 +60,7 @@ jobs:
       
       - name: Upload Policy Evaluation Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: policy-evaluation-report
           path: artifacts/policy-evaluation-*
@@ -73,7 +73,7 @@ jobs:
       - infrastructure-policy-check
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Start OPA service
         run: docker compose up -d opa

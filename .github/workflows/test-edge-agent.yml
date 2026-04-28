@@ -55,10 +55,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -117,7 +117,7 @@ jobs:
           docker stop edge-agent-test
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v5.5.4
+        uses: codecov/codecov-action@5ecb98a3c6b747a27063fa0cfb40d486605eab2d
         with:
           files: ./coverage.xml
           flags: edge-agent
@@ -126,7 +126,7 @@ jobs:
 
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             github.rest.issues.createComment({
@@ -150,10 +150,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@f9d7f7ce84b5ff6c1db95dfeb2f9b7e7c1a7e9b1
         with:
           scan-type: 'fs'
           scan-ref: 'apps/edge-agent'
@@ -162,7 +162,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@47b3685406db198331def50aa2487e3ff62b5776
         with:
           sarif_file: 'trivy-results.sarif'
         if: always()
@@ -171,10 +171,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Validate Markdown
-        uses: nosborn/github-action-markdown-cli@v3.3.0
+        uses: nosborn/github-action-markdown-cli@c0c9b1f4f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5
         with:
           files: docs/edge-agent/PHASE-3-*.md
         continue-on-error: true

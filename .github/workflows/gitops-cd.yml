@@ -22,10 +22,10 @@ jobs:
       terraform-changes: ${{ steps.tf-plan.outputs.changes }}
       docker-changes: ${{ steps.docker-check.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@8fcd2701cffbee57d29183081b72a368ca33c466
         with:
           terraform_version: 1.6.0
       
@@ -63,15 +63,15 @@ jobs:
     environment: production
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@8fcd2701cffbee57d29183081b72a368ca33c466
         with:
           terraform_version: 1.6.0
       
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@50585c9de93a6e35bab1da4a1e8f5e5e0f5a5a5a
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
@@ -111,7 +111,7 @@ jobs:
       
       - name: Notify Deployment
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             const status = context.payload.pull_request ? 'completed' : 'triggered';
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Run Reconciliation Check
         run: |
@@ -150,7 +150,7 @@ jobs:
       
       - name: Report Drift
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             github.rest.issues.create({

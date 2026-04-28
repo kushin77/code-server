@@ -18,7 +18,7 @@ jobs:
     name: No loose markdown files in root
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Check for loose markdown files in root
         run: |
@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 
@@ -87,7 +87,7 @@ jobs:
     name: Docker Compose file naming convention
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Verify docker-compose files follow naming convention
         run: |
@@ -116,7 +116,7 @@ jobs:
     name: Shell script naming convention (kebab-case)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Check shell scripts use kebab-case naming
         run: |
@@ -147,7 +147,7 @@ jobs:
     name: Validate env.yaml schema
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Install jsonschema
         run: pip install jsonschema pyyaml
@@ -180,7 +180,7 @@ jobs:
     name: Single Caddyfile source of truth
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Check for duplicate Caddyfile variants in root
         run: |
@@ -202,13 +202,13 @@ jobs:
     name: Validate pnpm workspace configuration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@d882fdcb13051f27cbff3c36183f5d1d9b6cad20
         with:
           version: 9.15.4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
           node-version: 20
           cache: pnpm
@@ -240,7 +240,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 

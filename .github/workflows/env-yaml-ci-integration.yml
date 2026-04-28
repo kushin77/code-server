@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
       
@@ -57,13 +57,13 @@ jobs:
         mode: [local, ci]
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@f03ce48e964e37f7fa9e2ab6b8a3654c19f40762
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
       
@@ -84,7 +84,7 @@ jobs:
       
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: provisioner-logs-${{ matrix.mode }}
           path: artifacts/provisioner.log
@@ -93,10 +93,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
       
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
       
       - name: Generate environment fingerprint
         run: |
@@ -121,7 +121,7 @@ jobs:
           cat artifacts/env-fingerprint.txt
       
       - name: Upload fingerprint
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: env-fingerprint
           path: artifacts/env-fingerprint.txt

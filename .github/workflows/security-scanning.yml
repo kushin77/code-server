@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
 
@@ -39,7 +39,7 @@ jobs:
         continue-on-error: true
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
           node-version: '18'
           cache: 'npm'
@@ -58,7 +58,7 @@ jobs:
           fi
 
       - name: Upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: sast-results
           path: ./artifacts/
@@ -69,10 +69,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
 
@@ -85,7 +85,7 @@ jobs:
         continue-on-error: true
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
           node-version: '18'
           cache: 'npm'
@@ -104,7 +104,7 @@ jobs:
           fi
 
       - name: Upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: sca-results
           path: ./artifacts/
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
         with:
           fetch-depth: 0
 
@@ -144,13 +144,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Build Docker image
         run: docker build -t auth-server:scan .
 
       - name: Run Trivy scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@f9d7f7ce84b5ff6c1db95dfeb2f9b7e7c1a7e9b1
         with:
           image-ref: auth-server:scan
           format: 'json'
@@ -166,7 +166,7 @@ jobs:
           fi
 
       - name: Upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: container-scan-results
           path: ./artifacts/
@@ -203,10 +203,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -228,7 +228,7 @@ jobs:
         continue-on-error: true
 
       - name: Run OWASP ZAP scan
-        uses: zaproxy/action-full-scan@v0.4.0
+        uses: zaproxy/action-full-scan@80ca0157b19ad01efda6c2fb4e8b3b8c3b7f7e7d
         with:
           target: 'http://localhost:3100'
           rules_file_name: '.zap/rules.tsv'
@@ -241,7 +241,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: dast-results
           path: ./artifacts/
@@ -254,7 +254,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
 
       - name: Generate comprehensive report
         run: |
@@ -273,14 +273,14 @@ jobs:
           echo "See individual artifacts for detailed results." >> SECURITY_REPORT.md
 
       - name: Upload comprehensive report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
         with:
           name: security-report
           path: SECURITY_REPORT.md
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        uses: actions/github-script@b90eb5796049df15f23064b3a3e1ff3ac79b25d9
         with:
           script: |
             github.rest.issues.createComment({
@@ -298,7 +298,7 @@ jobs:
 
     steps:
       - name: Post failure notification
-        uses: actions/github-script@v6
+        uses: actions/github-script@b90eb5796049df15f23064b3a3e1ff3ac79b25d9
         with:
           script: |
             github.rest.issues.createComment({

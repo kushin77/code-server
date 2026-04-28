@@ -128,6 +128,85 @@ check_terraform_drift() {
   return $([ ${#drift_items[@]} -eq 0 ] && echo 0 || echo 1)
 }
 
+# Check replica host service parity (P1 #2420)
+check_replica_parity() {
+  log_info "Checking cluster replica parity..."
+  
+  # Load cluster hosts from canonical config
+  if [[ -z "${PRIMARY_HOST:-}" ]] || [[ -z "${REPLICA_HOST:-}" ]]; then
+    log_warning "PRIMARY_HOST or REPLICA_HOST not set — skipping replica parity check"
+    return 0
+  fi
+  
+  if [[ "${PRIMARY_HOST}" == "${REPLICA_HOST}" ]]; then
+    log_info "Single-node cluster (primary==replica) — skipping parity check"
+    return 0
+  fi
+  
+  local drift_items=()
+  
+  # Get primary host service list (local)
+  local primary_services
+  if ! command -v docker &>/dev/null; then
+    log_warning "Docker not available — skipping replica parity check"
+    return 0
+  fi
+  
+  primary_services=$(docker ps --format json 2>/dev/null | jq -r '.[].Names' | sort | tr '\n' ' ' || echo "")
+  
+  if [[ -z "${primary_services}" ]]; then
+    log_warning "No Docker services found on primary host — skipping replica parity check"
+    return 0
+  fi
+  
+  # Get replica host service list (remote SSH)
+  local replica_services
+  replica_services=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
+    "akushnir@${REPLICA_HOST}" \
+    "docker ps --format json 2>/dev/null | jq -r '.[].Names' | sort | tr '\n' ' '" 2>/dev/null || echo "")
+  
+  if [[ -z "${replica_services}" ]]; then
+    log_error "Unable to query Docker services on replica host ${REPLICA_HOST}"
+    drift_items+=("replica-parity-query-failed")
+  else
+    # Compare service lists
+    local primary_array=(${primary_services})
+    local replica_array=(${replica_services})
+    
+    # Find services on primary but not on replica
+    local missing_on_replica=""
+    for svc in "${primary_array[@]}"; do
+      if ! printf '%s\n' "${replica_array[@]}" | grep -q "^${svc}$"; then
+        missing_on_replica+="${svc} "
+      fi
+    done
+    
+    # Find services on replica but not on primary
+    local extra_on_replica=""
+    for svc in "${replica_array[@]}"; do
+      if ! printf '%s\n' "${primary_array[@]}" | grep -q "^${svc}$"; then
+        extra_on_replica+="${svc} "
+      fi
+    done
+    
+    if [[ -n "${missing_on_replica}" ]]; then
+      log_error "Cluster parity: services missing on replica: ${missing_on_replica}"
+      drift_items+=("replica-parity-missing:${missing_on_replica}")
+    fi
+    
+    if [[ -n "${extra_on_replica}" ]]; then
+      log_error "Cluster parity: extra services on replica: ${extra_on_replica}"
+      drift_items+=("replica-parity-extra:${extra_on_replica}")
+    fi
+  fi
+  
+  if [[ ${#drift_items[@]} -gt 0 ]]; then
+    log_error "Cluster divergence detected: primary and replica service sets do not match"
+  fi
+  
+  return $([ ${#drift_items[@]} -eq 0 ] && echo 0 || echo 1)
+}
+
 # Check Caddy config vs. running state
 check_caddy_drift() {
   log_info "Checking Caddy configuration drift..."
@@ -183,8 +262,9 @@ generate_report() {
   local compose_drift="$1"
   local terraform_drift="$2"
   local caddy_drift="$3"
+  local replica_parity="$4"
   
-  local total_drift=$((compose_drift + terraform_drift + caddy_drift))
+  local total_drift=$((compose_drift + terraform_drift + caddy_drift + replica_parity))
   local status=$([ ${total_drift} -eq 0 ] && echo "IN_SYNC" || echo "DRIFTED")
   
   mkdir -p "$(dirname "${DRIFT_REPORT}")"
@@ -195,14 +275,16 @@ generate_report() {
     --argjson compose_drift "${compose_drift}" \
     --argjson terraform_drift "${terraform_drift}" \
     --argjson caddy_drift "${caddy_drift}" \
+    --argjson replica_parity "${replica_parity}" \
     '{
       timestamp: $timestamp,
       status: $status,
-      total_drift_items: ($compose_drift + $terraform_drift + $caddy_drift),
+      total_drift_items: ($compose_drift + $terraform_drift + $caddy_drift + $replica_parity),
       details: {
         docker_compose: $compose_drift,
         terraform: $terraform_drift,
-        caddy: $caddy_drift
+        caddy: $caddy_drift,
+        replica_parity: $replica_parity
       }
     }' > "${DRIFT_REPORT}"
   
@@ -218,14 +300,16 @@ main() {
   local compose_drift=0
   local terraform_drift=0
   local caddy_drift=0
+  local replica_parity=0
   
   check_docker_compose_drift && compose_drift=0 || compose_drift=1
   check_terraform_drift && terraform_drift=0 || terraform_drift=1
   check_caddy_drift && caddy_drift=0 || caddy_drift=1
+  check_replica_parity && replica_parity=0 || replica_parity=1
   
-  local total_drift=$((compose_drift + terraform_drift + caddy_drift))
+  local total_drift=$((compose_drift + terraform_drift + caddy_drift + replica_parity))
   
-  generate_report "${compose_drift}" "${terraform_drift}" "${caddy_drift}"
+  generate_report "${compose_drift}" "${terraform_drift}" "${caddy_drift}" "${replica_parity}"
   
   case "${mode}" in
     --check)

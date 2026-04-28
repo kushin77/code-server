@@ -1,0 +1,211 @@
+---
+# Phase 5: Performance Baselines Configuration
+# Defines performance targets and test scenarios for code-server infrastructure
+# Version: 1.0
+# Last Updated: 2026-04-28
+
+performance_baselines:
+  # Response time targets (milliseconds)
+  response_time:
+    p50_target_ms: 100
+    p95_target_ms: 500
+    p99_target_ms: 1000
+    max_target_ms: 2000
+    description: "API response time targets for all endpoints"
+  
+  # Throughput targets (requests per second)
+  throughput:
+    minimum_req_sec: 1000
+    target_req_sec: 1500
+    burst_req_sec: 3000
+    description: "Requests per second capacity targets"
+  
+  # Error rate targets (percentage)
+  error_rate:
+    maximum_percent: 0.1
+    acceptable_percent: 0.05
+    alert_threshold_percent: 0.2
+    description: "Error rate targets across all endpoints"
+  
+  # Resource utilization targets
+  resource_utilization:
+    cpu_warning_percent: 70
+    cpu_critical_percent: 85
+    memory_warning_percent: 75
+    memory_critical_percent: 90
+    disk_io_warning_percent: 75
+    disk_io_critical_percent: 90
+    description: "Container resource utilization thresholds"
+
+# Test scenario definitions
+test_scenarios:
+  light:
+    description: "Baseline load test for development verification"
+    users: 50
+    spawn_rate: 5
+    duration_minutes: 5
+    request_rate_target: 50
+    use_case: "Development environment testing, basic functionality verification"
+    success_criteria:
+      response_time_p95_ms: 300
+      error_rate_percent: 0.05
+      throughput_req_sec: 100
+  
+  medium:
+    description: "Normal production load simulation"
+    users: 200
+    spawn_rate: 20
+    duration_minutes: 10
+    request_rate_target: 200
+    use_case: "Typical business hours load, standard usage patterns"
+    success_criteria:
+      response_time_p95_ms: 500
+      error_rate_percent: 0.1
+      throughput_req_sec: 250
+  
+  heavy:
+    description: "Peak load during business hours"
+    users: 500
+    spawn_rate: 50
+    duration_minutes: 15
+    request_rate_target: 500
+    use_case: "Peak traffic, high concurrent users, feature adoption surge"
+    success_criteria:
+      response_time_p95_ms: 700
+      error_rate_percent: 0.15
+      throughput_req_sec: 600
+  
+  spike:
+    description: "Sudden traffic surge scenario"
+    users: 1000
+    spawn_rate: 200
+    duration_minutes: 5
+    request_rate_target: 1000
+    ramp_up_seconds: 5
+    sustain_seconds: 120
+    ramp_down_seconds: 10
+    use_case: "Viral content, major announcement, product launch"
+    success_criteria:
+      response_time_p95_ms: 1000
+      error_rate_percent: 0.3
+      throughput_req_sec: 1200
+      recovery_time_seconds: 300
+  
+  sustained:
+    description: "Long-running load for memory leak and resource detection"
+    users: 300
+    spawn_rate: 30
+    duration_minutes: 30
+    request_rate_target: 300
+    use_case: "Overnight load test, memory leak detection, stability validation"
+    success_criteria:
+      response_time_p95_ms: 600
+      error_rate_percent: 0.1
+      memory_leak_detected: false
+      cpu_degradation_percent: 5
+
+# Traffic distribution across endpoints
+traffic_distribution:
+  POST /api/v1/activities: 0.40
+  GET /api/v1/activities: 0.30
+  GET /api/v1/reputation/score: 0.20
+  GET /api/v1/executions/status: 0.10
+
+# Success criteria weighted scoring
+success_criteria:
+  - metric: "response_time_p95"
+    target_ms: 500
+    weight: 30
+    description: "95th percentile response time must be under 500ms"
+  
+  - metric: "throughput"
+    target_req_sec: 1000
+    weight: 30
+    description: "Minimum throughput must be 1000 requests per second"
+  
+  - metric: "error_rate"
+    target_percent: 0.1
+    weight: 25
+    description: "Error rate must be less than 0.1%"
+  
+  - metric: "resource_efficiency"
+    target_utilization_percent: 80
+    weight: 15
+    description: "No resource utilization should exceed 80%"
+
+# Alert thresholds
+alerting:
+  response_time_p95_ms:
+    warning: 600
+    critical: 1000
+    action: "Investigate query performance and database indexes"
+  
+  error_rate_percent:
+    warning: 0.2
+    critical: 1.0
+    action: "Check error logs and service health"
+  
+  throughput_req_sec:
+    warning: 800
+    critical: 500
+    action: "Investigate bottlenecks and resource constraints"
+  
+  cpu_utilization_percent:
+    warning: 70
+    critical: 85
+    action: "Scale horizontally or optimize CPU usage"
+  
+  memory_utilization_percent:
+    warning: 75
+    critical: 90
+    action: "Check for memory leaks or scale vertically"
+
+# Baseline metrics (collected from first successful run)
+baseline_metrics:
+  light_scenario:
+    response_time_p95_ms: 250
+    error_rate_percent: 0.01
+    throughput_req_sec: 100
+    cpu_utilization_percent: 25
+    memory_utilization_percent: 40
+    timestamp: null
+  
+  medium_scenario:
+    response_time_p95_ms: 450
+    error_rate_percent: 0.05
+    throughput_req_sec: 250
+    cpu_utilization_percent: 45
+    memory_utilization_percent: 60
+    timestamp: null
+  
+  heavy_scenario:
+    response_time_p95_ms: 650
+    error_rate_percent: 0.1
+    throughput_req_sec: 600
+    cpu_utilization_percent: 75
+    memory_utilization_percent: 80
+    timestamp: null
+
+# Performance regression thresholds
+regression_detection:
+  response_time_increase_percent: 10
+  error_rate_increase_percent: 50
+  throughput_decrease_percent: 10
+  action: "Investigate root cause and revert if critical"
+
+# Database performance considerations
+database_considerations:
+  connection_pool_size: 20
+  query_timeout_seconds: 5
+  slow_query_threshold_ms: 1000
+  indexes_required:
+    - "activities.user_id"
+    - "activities.created_at"
+    - "executions.status"
+    - "reputation_scores.user_id"
+
+# Caching strategy
+caching_strategy:
+  redis_cache_ttl_seconds: 300
+  cache_warmed_before_test: true
+  cache_hit_ratio_target: 0.80

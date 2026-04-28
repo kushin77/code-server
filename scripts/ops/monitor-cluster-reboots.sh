@@ -21,6 +21,7 @@ SSH_USER="${SSH_USER:-akushnir}"
 SSH_CONNECT_TIMEOUT="${SSH_CONNECT_TIMEOUT:-10}"
 SSH_IDENTITY_FILE="${SSH_IDENTITY_FILE:-}"
 CRON_SCHEDULE="${REBOOT_MONITOR_CRON_SCHEDULE:-*/5 * * * *}"
+RECENT_BOOT_LOOKBACK_SECONDS="${RECENT_BOOT_LOOKBACK_SECONDS:-7200}"
 DRY_RUN="false"
 PRINT_CRON="false"
 SETUP_CRON="false"
@@ -136,17 +137,31 @@ save_current_state() {
 
 issue_exists() {
   local marker="$1"
-  local query
-  query=$(run_python <<'PY' "$marker"
-import sys, urllib.parse
-print(urllib.parse.quote(f'repo:kushin77/code-server type:issue "{sys.argv[1]}"'))
-PY
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    printf '0\n'
+    return 0
+  fi
+
+  local token
+  token="$(github_get_token)"
+  run_python <<'PY' "$token" "$GITHUB_REPO_SLUG" "$marker"
+import json
+import sys
+import urllib.parse
+import urllib.request
+
+token, repo_slug, marker = sys.argv[1:4]
+query = urllib.parse.quote(f'repo:{repo_slug} type:issue "{marker}"')
+request = urllib.request.Request(
+    f'https://api.github.com/search/issues?q={query}&per_page=1',
+    headers={
+        'Authorization': f'token {token}',
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'code-server-cluster-reboot-monitor',
+    },
 )
-  local response
-  response=$(github_api_call GET "/search/issues?q=${query}&per_page=1" || echo '{}')
-  run_python <<'PY' "$response"
-import json, sys
-data = json.loads(sys.argv[1] or '{}')
+with urllib.request.urlopen(request, timeout=30) as response:
+    data = json.loads(response.read().decode() or '{}')
 print('1' if data.get('total_count', 0) > 0 else '0')
 PY
 }
@@ -172,7 +187,28 @@ print(json.dumps({
 PY
 )
 
-  github_api_call POST "/repos/${GITHUB_REPO_SLUG}/issues" "${payload}" >/dev/null
+  local token
+  token="$(github_get_token)"
+  run_python <<'PY' "$token" "$GITHUB_REPO_SLUG" "$payload"
+import json
+import sys
+import urllib.request
+
+token, repo_slug, payload_json = sys.argv[1:4]
+request = urllib.request.Request(
+    f'https://api.github.com/repos/{repo_slug}/issues',
+    data=payload_json.encode(),
+    headers={
+        'Authorization': f'token {token}',
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'code-server-cluster-reboot-monitor',
+    },
+    method='POST',
+)
+with urllib.request.urlopen(request, timeout=30) as response:
+    response.read()
+PY
   log_info "Created GitHub issue: ${title}"
 }
 
@@ -288,10 +324,11 @@ PY
 )
 
   local events
-  events=$(run_python <<'PY' "$previous_state_json" "$snapshots"
+  events=$(run_python <<'PY' "$previous_state_json" "$snapshots" "$RECENT_BOOT_LOOKBACK_SECONDS"
 import json, sys
 previous = json.loads(sys.argv[1] or '{}')
 snapshots = json.loads(sys.argv[2])
+recent_boot_lookback_seconds = int(sys.argv[3])
 events = []
 for current in snapshots:
     host = current['host']
@@ -299,6 +336,8 @@ for current in snapshots:
     prev_reachable = bool(prev.get('reachable', False))
     cur_reachable = bool(current.get('reachable', False))
     if not prev and cur_reachable:
+        if int(current.get('uptime_seconds', 0)) <= recent_boot_lookback_seconds:
+            events.append({'event_type': 'rebooted', 'host': host, 'current': current, 'previous': prev})
         continue
     if prev_reachable and not cur_reachable:
         events.append({'event_type': 'down', 'host': host, 'current': current, 'previous': prev})

@@ -7,10 +7,6 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "= 3.0.2"
     }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "= 5.26.0"
-    }
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = "= 2.23.0"
@@ -29,18 +25,6 @@ terraform {
 # Provider configurations
 provider "docker" {
   host = "unix:///var/run/docker.sock"
-}
-
-provider "aws" {
-  region = var.aws_region
-  default_tags {
-    tags = {
-      Environment = var.environment
-      Project     = "code-server-enterprise"
-      Governance  = "GOV-002"
-      ManagedBy   = "Terraform"
-    }
-  }
 }
 
 provider "kubernetes" {

@@ -27,9 +27,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
 # Configuration
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
+NAS_HOST="${NAS_HOST:?NAS_HOST must be set}"
 SSH_USER="${SSH_USER:-akushnir}"
 SSH_PORT="${SSH_PORT:-22}"
 VALIDATION_MODE="${1:-baseline}"

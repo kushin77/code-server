@@ -28,9 +28,9 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 # CONFIGURATION
 # ============================================================================
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
+NAS_HOST="${NAS_HOST:?NAS_HOST must be set}"
 SSH_USER="${SSH_USER:-akushnir}"
 SSH_PORT="${SSH_PORT:-22}"
 CLUSTER_NETWORK="${CLUSTER_NETWORK:-192.168.168.0/24}"
@@ -225,7 +225,7 @@ PRIMARY_POSTGRES_SCRIPT
         -o ConnectTimeout=10 \
         -o StrictHostKeyChecking=no \
         -p "$SSH_PORT" \
-        "${SSH_USER}@${REPLICA_HOST}" << 'REPLICA_POSTGRES_SCRIPT'
+        "${SSH_USER}@${REPLICA_HOST}" "PRIMARY_HOST='${PRIMARY_HOST}' bash -s" << 'REPLICA_POSTGRES_SCRIPT'
         set -euo pipefail
         
         echo "[INFO] Configuring PostgreSQL replica for streaming replication..."
@@ -238,7 +238,7 @@ PRIMARY_POSTGRES_SCRIPT
         echo "[INFO] Taking base backup from primary..."
         docker exec -e PGPASSWORD=replication_secret_key code-server-postgres bash -c '
         rm -rf /var/lib/postgresql/data/*
-        pg_basebackup -h 192.168.168.31 -U replication_user -D /var/lib/postgresql/data -Pv -W --wal-method=stream
+        pg_basebackup -h "$PRIMARY_HOST" -U replication_user -D /var/lib/postgresql/data -Pv -W --wal-method=stream
         ' || echo "[WARN] Base backup may need manual intervention"
         
         # Create standby.signal
@@ -272,7 +272,7 @@ setup_redis_sentinel() {
         -o ConnectTimeout=10 \
         -o StrictHostKeyChecking=no \
         -p "$SSH_PORT" \
-        "${SSH_USER}@${PRIMARY_HOST}" << 'SENTINEL_PRIMARY_SCRIPT'
+        "${SSH_USER}@${PRIMARY_HOST}" "PRIMARY_HOST='${PRIMARY_HOST}' bash -s" << 'SENTINEL_PRIMARY_SCRIPT'
         set -euo pipefail
         
         echo "[INFO] Setting up Redis Sentinel on primary..."
@@ -284,7 +284,7 @@ port 26379
 daemonize no
 logfile ""
 
-sentinel monitor redis-cluster 192.168.168.31 6379 1
+sentinel monitor redis-cluster ${PRIMARY_HOST} 6379 1
 sentinel down-after-milliseconds redis-cluster 5000
 sentinel parallel-syncs redis-cluster 1
 sentinel failover-timeout redis-cluster 10000
@@ -310,7 +310,7 @@ SENTINEL_PRIMARY_SCRIPT
         -o ConnectTimeout=10 \
         -o StrictHostKeyChecking=no \
         -p "$SSH_PORT" \
-        "${SSH_USER}@${REPLICA_HOST}" << 'SENTINEL_REPLICA_SCRIPT'
+        "${SSH_USER}@${REPLICA_HOST}" "PRIMARY_HOST='${PRIMARY_HOST}' bash -s" << 'SENTINEL_REPLICA_SCRIPT'
         set -euo pipefail
         
         echo "[INFO] Setting up Redis Sentinel on replica..."
@@ -322,7 +322,7 @@ port 26379
 daemonize no
 logfile ""
 
-sentinel monitor redis-cluster 192.168.168.31 6379 1
+sentinel monitor redis-cluster ${PRIMARY_HOST} 6379 1
 sentinel down-after-milliseconds redis-cluster 5000
 sentinel parallel-syncs redis-cluster 1
 sentinel failover-timeout redis-cluster 10000
@@ -349,7 +349,7 @@ setup_dns_failover() {
     
     log_info "Creating Caddy multi-master load balancing configuration..."
     
-    cat > "${PHASE1_ARTIFACTS}/Caddyfile.ha" << 'CADDY_HA_CONFIG'
+        cat > "${PHASE1_ARTIFACTS}/Caddyfile.ha" << CADDY_HA_CONFIG
 # Caddy multi-master load balancing for HA
 {
   admin :2019
@@ -366,7 +366,7 @@ setup_dns_failover() {
   }
 
   # Load balance across both hosts
-  reverse_proxy 192.168.168.31:8080 192.168.168.42:8080 {
+    reverse_proxy ${PRIMARY_HOST}:8080 ${REPLICA_HOST}:8080 {
     # Health check every 5 seconds
     health_uri /health
     health_interval 5s
@@ -382,7 +382,7 @@ setup_dns_failover() {
 
   # Websocket support
   handle /ws* {
-    reverse_proxy 192.168.168.31:8080 192.168.168.42:8080 {
+        reverse_proxy ${PRIMARY_HOST}:8080 ${REPLICA_HOST}:8080 {
       health_uri /health
       health_interval 5s
     }
@@ -392,7 +392,7 @@ setup_dns_failover() {
 # HTTPS (requires certificate)
 # :443 {
 #   tls /path/to/cert.pem /path/to/key.pem
-#   reverse_proxy 192.168.168.31:8080 192.168.168.42:8080
+#   reverse_proxy ${PRIMARY_HOST}:8080 ${REPLICA_HOST}:8080
 # }
 CADDY_HA_CONFIG
     

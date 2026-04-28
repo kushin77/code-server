@@ -16,6 +16,16 @@ REPORT_FILE="${REPORT_DIR}/$(date -u +%Y%m%d-%H%M%S)-report.md"
 
 log_info "Validating storage hygiene & resource cleanup..."
 
+count_docker_items() {
+  local count="0"
+
+  if command -v docker >/dev/null 2>&1; then
+    count=$("$@" 2>/dev/null | wc -l | tr -d '[:space:]' || true)
+  fi
+
+  printf '%s' "${count:-0}"
+}
+
 mkdir -p "$REPORT_DIR"
 {
   echo "# Phase 11: Storage Hygiene & Resource Cleanup Report"
@@ -32,16 +42,16 @@ mkdir -p "$REPORT_DIR"
   echo ""
   
   # Docker images
-  IMG_COUNT=$(docker images --all 2>/dev/null | wc -l || echo 0)
-  echo "- Docker images: $((IMG_COUNT - 1)) total (including dangling)"
+  IMG_COUNT=$(count_docker_items docker images --all)
+  echo "- Docker images: $(( IMG_COUNT > 0 ? IMG_COUNT - 1 : 0 )) total (including dangling)"
   
   # Volumes
-  VOL_COUNT=$(docker volume ls 2>/dev/null | wc -l || echo 0)
-  echo "- Docker volumes: $((VOL_COUNT - 1)) total"
+  VOL_COUNT=$(count_docker_items docker volume ls)
+  echo "- Docker volumes: $(( VOL_COUNT > 0 ? VOL_COUNT - 1 : 0 )) total"
   
   # Containers (stopped)
-  STOPPED=$(docker ps -a --filter status=exited 2>/dev/null | wc -l || echo 0)
-  echo "- Stopped containers: $((STOPPED - 1)) (can be pruned)"
+  STOPPED=$(count_docker_items docker ps -a --filter status=exited)
+  echo "- Stopped containers: $(( STOPPED > 0 ? STOPPED - 1 : 0 )) (can be pruned)"
   
   echo ""
   echo "## Cleanup Procedures"

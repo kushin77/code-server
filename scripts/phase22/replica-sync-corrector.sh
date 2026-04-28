@@ -17,10 +17,11 @@ REPO_ROOT="$(cd "${SCRIPT_DIR%/scripts*}" && pwd)"
 source "${REPO_ROOT}/scripts/_common/init.sh" || exit 1
 
 # Configuration
-REPLICA_SSH_HOSTS=("192.168.168.31" "192.168.168.32")  # Primary, Replica
 SYNC_LOG="${REPO_ROOT}/logs/replica-sync.log"
 CONFIG_HASH_THRESHOLD=0.95  # 95% match required
 REPLICATION_LAG_THRESHOLD=500  # 500ms
+REPLICA_SSH_HOSTS_CSV="${REPLICA_SSH_HOSTS_CSV:?REPLICA_SSH_HOSTS_CSV must be set}"
+IFS=',' read -r -a REPLICA_SSH_HOSTS <<< "$REPLICA_SSH_HOSTS_CSV"
 mkdir -p "$(dirname "${SYNC_LOG}")"
 
 log_sync() {

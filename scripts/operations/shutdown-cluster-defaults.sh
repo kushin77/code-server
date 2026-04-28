@@ -32,9 +32,9 @@ if [[ -f .env.infrastructure ]] && grep -q "PRIMARY_HOST\|REPLICA_HOST" .env.inf
     set -e
 fi
 
-# Use environment variables or defaults from terraform examples
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+# Use environment variables or values sourced from .env.infrastructure
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
 SSH_USER="${SSH_USER:-akushnir}"
 SSH_KEY="${SSH_KEY:-}"
 SSH_PORT="${SSH_PORT:-22}"

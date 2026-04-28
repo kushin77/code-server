@@ -21,6 +21,7 @@ from agent import (
 )
 from execution_router import ExecutionRouter, ExecutionDestination
 from paperclip_client import PaperclipClient
+import main as agent_runtime_main
 
 
 class TestAgents:
@@ -288,6 +289,43 @@ class TestModels:
         assert heartbeat.agent_id == "agent-1"
         assert heartbeat.status == "running"
         assert heartbeat.memory_usage_mb == 256.5
+
+
+class TestRuntimeDiagnostics:
+    """Test runtime error evidence capture."""
+
+    def test_execute_failure_is_recorded_for_diagnostics(self, monkeypatch):
+        agent_runtime_main.execution_failures.clear()
+        agent_runtime_main.agents["code-reviewer"] = CodeReviewerAgent()
+
+        async def no_killswitch(agent_id):
+            return False
+
+        async def raise_error(request):
+            raise RuntimeError("simulated execution failure")
+
+        monkeypatch.setattr(agent_runtime_main.paperclip_client, "check_killswitch", no_killswitch)
+        monkeypatch.setattr(agent_runtime_main.execution_router, "route", lambda request: ExecutionDestination.LOCAL)
+        monkeypatch.setattr(agent_runtime_main.agents["code-reviewer"], "execute", raise_error)
+
+        request = AgentExecutionRequest(
+            agent_id="agent-code-reviewer",
+            agent_type=AgentType.CODE_REVIEWER,
+            task_type="review",
+            action="list_prs",
+            risk_level=RiskLevel.LOW,
+            parameters={},
+            submitted_by="user-1"
+        )
+
+        response = client.post("/execute", json=request.dict())
+        assert response.status_code == 200
+
+        diagnostics = client.get("/diagnostics/executions")
+        assert diagnostics.status_code == 200
+        payload = diagnostics.json()
+        assert payload["failure_count"] >= 1
+        assert payload["recent_failures"][-1]["error_message"] == "simulated execution failure"
 
 
 if __name__ == "__main__":

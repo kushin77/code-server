@@ -104,14 +104,14 @@ generate_architecture_documentation() {
 The elite enterprise platform is built on a 3-tier distributed architecture:
 
 ### Tier 1: Compute Nodes
-- Primary (192.168.168.31): 35 microservices
-- Replica (192.168.168.42): 33 microservices (94% parity)
+- Primary (PRIMARY_HOST): 35 microservices
+- Replica (REPLICA_HOST): 33 microservices (94% parity)
 - Pattern: Active-Active with DNS-based routing
 
 ### Tier 2: Storage
 - PostgreSQL 16.13: Master/Replica streaming replication
 - Redis 7-alpine: Primary/Sentinel failover
-- NAS (192.168.168.56): Persistent shared state
+- NAS (NAS_HOST): Persistent shared state
 
 ### Tier 3: Observability
 - OpenSearch: Centralized log indexing

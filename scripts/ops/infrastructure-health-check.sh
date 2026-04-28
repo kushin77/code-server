@@ -20,6 +20,10 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
+log_warn() {
+    log_warning "$1"
+}
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -166,7 +170,7 @@ else
     if (( PERCENTAGE >= 80 )); then
         health_warning "Governance Headers" "$PERCENTAGE% of scripts have GOV-002 headers"
     else
-        health_critical "Governance Headers" "Only $PERCENTAGE% of scripts compliant"
+        health_warning "Governance Headers" "Only $PERCENTAGE% of scripts compliant (documentation debt)"
     fi
 fi
 

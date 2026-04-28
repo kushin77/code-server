@@ -18,6 +18,9 @@ trap 'log_error "Script failed at line $LINENO"' ERR
 log_info() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $*"; }
 log_error() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $*"; }
 
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
+
 log_info "========================================"
 log_info "Configuring Caddy Health-Based Failover"
 log_info "========================================"
@@ -37,7 +40,7 @@ cat > /tmp/caddy-health-failover.conf << 'CADDYEOF'
 
 upstream_health {
   # Primary backend health check
-  reverse_proxy 192.168.168.31:8080 {
+  reverse_proxy ${PRIMARY_HOST}:8080 {
     # Health check endpoint
     health_uri /health
     health_interval 5s
@@ -48,7 +51,7 @@ upstream_health {
   }
   
   # Replica backend (automatic failover)
-  reverse_proxy 192.168.168.42:8080 {
+  reverse_proxy ${REPLICA_HOST}:8080 {
     health_uri /health
     health_interval 5s
     health_timeout 2s

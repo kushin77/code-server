@@ -15,8 +15,8 @@ set -euo pipefail
 trap 'log_error "Fluentd deployment failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Fluentd deployment session ending..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
 SSH_USER="${SSH_USER:-akushnir}"
 OPENSEARCH_HOST_PRIMARY="${OPENSEARCH_HOST_PRIMARY:-localhost}"
 OPENSEARCH_PORT="${OPENSEARCH_PORT:-9200}"

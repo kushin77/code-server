@@ -17,9 +17,9 @@ REPO_ROOT="$(cd "${SCRIPT_DIR%/scripts*}" && pwd)"
 source "${REPO_ROOT}/scripts/_common/init.sh" || exit 1
 
 # Configuration
-PRIMARY_IP="192.168.168.30"
-REPLICA_IP="192.168.168.31"
-WITNESS_IP="192.168.168.32"
+PRIMARY_IP="${PRIMARY_IP:?PRIMARY_IP must be set}"
+REPLICA_IP="${REPLICA_IP:?REPLICA_IP must be set}"
+WITNESS_IP="${WITNESS_IP:?WITNESS_IP must be set}"
 VRRP_VIP="192.168.168.50"
 FAILOVER_LOG="${REPO_ROOT}/logs/failover.log"
 mkdir -p "$(dirname "${FAILOVER_LOG}")"

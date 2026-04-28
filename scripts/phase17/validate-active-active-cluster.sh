@@ -45,7 +45,7 @@ cat > "${REPORT_DIR}/phase17-cluster-analysis.md" << 'ANALYSIS'
 
 ### Level 1: Current State (Day 0 - Before Phase 17)
 ```
-Primary (192.168.168.31)              Replica (192.168.168.42)
+Primary (${PRIMARY_HOST})              Replica (${REPLICA_HOST})
 ├── PostgreSQL Master                 ├── PostgreSQL Replica (streaming)
 ├── Redis Master                      ├── Redis Slave (with Sentinel)
 ├── Application Stack                 ├── Application Stack (standby)
@@ -59,7 +59,7 @@ Primary (192.168.168.31)              Replica (192.168.168.42)
 
 ### Level 2: Target State (After Phase 17)
 ```
-Primary (192.168.168.31)              Replica (192.168.168.42)
+Primary (${PRIMARY_HOST})              Replica (${REPLICA_HOST})
 ├── PostgreSQL Multi-Master          ├── PostgreSQL Multi-Master
 │   ├── WAL Streaming (bi-directional)│   ├── WAL Streaming (bi-directional)
 │   └── Conflict Resolution           │   └── Conflict Resolution
@@ -71,7 +71,7 @@ Primary (192.168.168.31)              Replica (192.168.168.42)
 │   └── Distributed consensus        │   └── Distributed consensus
 └── Split-Brain Prevention            └── Split-Brain Prevention
     ├── Quorum voting (2/3 quorum)        ├── Quorum voting (2/3 quorum)
-    ├── Third node: NAS (192.168.168.56) ├── Third node: NAS (192.168.168.56)
+    ├── Third node: NAS (${NAS_HOST}) ├── Third node: NAS (${NAS_HOST})
     └── Network partition detection      └── Network partition detection
 ```
 
@@ -341,12 +341,12 @@ code-server.local {
         health_timeout 500ms
         health_interval 1s
     }
-    reverse_proxy 192.168.168.31:8080 {
+    reverse_proxy ${PRIMARY_HOST}:8080 {
         health /health
         health_timeout 500ms
         health_interval 1s
     }
-    reverse_proxy 192.168.168.42:8080 {
+    reverse_proxy ${REPLICA_HOST}:8080 {
         health /health
         health_timeout 500ms
         health_interval 1s

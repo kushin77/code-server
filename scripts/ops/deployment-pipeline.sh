@@ -59,7 +59,13 @@ for arg in "$@"; do
 done
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
-source_env_file "${PROJECT_ROOT}/.env.infrastructure"
+
+if [[ -f "${PROJECT_ROOT}/.env.infrastructure" ]]; then
+    # Load deployment-specific variables without requiring extra helper functions.
+    set -a
+    source "${PROJECT_ROOT}/.env.infrastructure"
+    set +a
+fi
 
 : "${API_PROTOCOL:=http}"
 : "${API_HOST:=localhost}"
@@ -118,8 +124,12 @@ CURRENT_COMMIT=$(git -C "${PROJECT_ROOT}" rev-parse HEAD)
 CURRENT_BRANCH=$(git -C "${PROJECT_ROOT}" rev-parse --abbrev-ref HEAD)
 
 if [[ "$CURRENT_BRANCH" != "main" ]]; then
-    stage_fail "Not on main branch (currently on $CURRENT_BRANCH)"
-    exit 1
+    if [[ "$FORCE_DEPLOY" != "true" ]]; then
+        stage_fail "Not on main branch (currently on $CURRENT_BRANCH). Use --force-deploy to override."
+        exit 1
+    else
+        log_warn "Not on main branch (currently on $CURRENT_BRANCH); --force-deploy override in effect"
+    fi
 fi
 
 log_info "Branch: $CURRENT_BRANCH | Commit: ${CURRENT_COMMIT:0:7}"

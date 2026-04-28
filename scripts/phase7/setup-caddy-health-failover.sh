@@ -28,9 +28,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LOG_DIR="${REPO_ROOT}/logs/caddy-failover"
 
-PRIMARY_HOST="${1:-192.168.168.31}"
-REPLICA_HOST="${2:-192.168.168.42}"
-HEALTH_CHECK_INTERVAL="${3:-30s}"
+PRIMARY_HOST="${1:-${PRIMARY_HOST:?PRIMARY_HOST must be set}}"
+REPLICA_HOST="${2:-${REPLICA_HOST:?REPLICA_HOST must be set}}"
+HEALTH_CHECK_INTERVAL="${3:-${HEALTH_CHECK_INTERVAL:-30s}}"
 
 #############################################################################
 # Logging

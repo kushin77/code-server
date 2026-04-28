@@ -97,10 +97,6 @@ load_config() {
     else
         log_warning "config.env not found, using environment variables"
     fi
-
-    # Use loaded PRIMARY_HOST and REPLICA_HOST if not already set
-    PRIMARY_HOST="${PRIMARY_HOST:-${PRIMARY_HOST:-}}"
-    REPLICA_HOST="${REPLICA_HOST:-${REPLICA_HOST:-}}"
 }
 
 # ============================================================================

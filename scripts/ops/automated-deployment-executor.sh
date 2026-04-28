@@ -517,6 +517,7 @@ rollback_deployment() {
 }
 
 trap 'handle_error ${LINENO}' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 # ============================================================================
 # MAIN EXECUTION

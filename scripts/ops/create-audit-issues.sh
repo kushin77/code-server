@@ -4,6 +4,13 @@
 
 set -euo pipefail
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 source "$SCRIPT_DIR/_common/github-api-client.sh"

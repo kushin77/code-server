@@ -7,9 +7,13 @@
 variable "ssl_tls_apex_domain" {
   description = "Apex domain for SSL/TLS certificates"
   type        = string
+  default     = ""
   validation {
-    condition     = can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", var.ssl_tls_apex_domain))
-    error_message = "Must be a valid domain name."
+    condition = (
+      !var.enable_ssl_tls_module ||
+      can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", var.ssl_tls_apex_domain))
+    )
+    error_message = "Must be a valid domain name when the SSL/TLS module is enabled."
   }
 }
 
@@ -26,9 +30,13 @@ variable "ssl_tls_subdomain_prefixes" {
 variable "ssl_tls_letsencrypt_email" {
   description = "Email address for Let's Encrypt certificate notifications"
   type        = string
+  default     = ""
   validation {
-    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.ssl_tls_letsencrypt_email))
-    error_message = "Must be a valid email address."
+    condition = (
+      !var.enable_ssl_tls_module ||
+      can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.ssl_tls_letsencrypt_email))
+    )
+    error_message = "Must be a valid email address when the SSL/TLS module is enabled."
   }
 }
 

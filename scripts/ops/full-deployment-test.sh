@@ -45,16 +45,16 @@ test_infrastructure_validation() {
   log_info "Test Phase 1: Infrastructure Validation"
   
   log_info "  - Validating domain variability..."
-  "${REPO_ROOT}/scripts/ci/domain-variability-enforcer.sh" --check > /dev/null || return 1
+  bash "${REPO_ROOT}/scripts/ci/domain-variability-enforcer.sh" --check > /dev/null || return 1
   
   log_info "  - Validating Docker Compose idempotency..."
-  "${REPO_ROOT}/scripts/ci/check-docker-compose-idempotency.sh" --report > /dev/null || return 1
+  bash "${REPO_ROOT}/scripts/ci/check-docker-compose-idempotency.sh" --report > /dev/null || return 1
   
   log_info "  - Validating Terraform version pins..."
-  "${REPO_ROOT}/scripts/ci/validate-terraform-version-pins.sh" --check > /dev/null || return 1
+  bash "${REPO_ROOT}/scripts/ci/validate-terraform-version-pins.sh" --check > /dev/null || return 1
   
   log_info "  - Validating configuration SSOT..."
-  "${REPO_ROOT}/scripts/ci/validate-config-ssot.sh" > /dev/null || return 1
+  bash "${REPO_ROOT}/scripts/ci/validate-config-ssot.sh" > /dev/null || return 1
   
   log_success "Phase 1 PASSED: All infrastructure validation checks successful"
   return 0
@@ -65,7 +65,7 @@ test_gitops_drift() {
   log_info "Test Phase 2: GitOps Drift Detection"
   
   log_info "  - Running drift detection (check only)..."
-  "${REPO_ROOT}/scripts/ci/gitops-drift-detector.sh" --check 2>/dev/null || true
+  bash "${REPO_ROOT}/scripts/ci/gitops-drift-detector.sh" --check 2>/dev/null || true
   
   log_success "Phase 2 PASSED: Drift detection executed successfully"
   return 0
@@ -76,10 +76,10 @@ test_deployment_simulation() {
   log_info "Test Phase 3: Deployment Simulation (Dry-Run)"
   
   log_info "  - Running rollback dry-run (compose)..."
-  "${REPO_ROOT}/scripts/ops/automated-rollback.sh" compose --dry-run >> "${TEST_LOG}" 2>&1 || true
+  bash "${REPO_ROOT}/scripts/ops/automated-rollback.sh" compose --dry-run >> "${TEST_LOG}" 2>&1 || true
   
   log_info "  - Running rollback dry-run (terraform)..."
-  "${REPO_ROOT}/scripts/ops/automated-rollback.sh" terraform --dry-run >> "${TEST_LOG}" 2>&1 || true
+  bash "${REPO_ROOT}/scripts/ops/automated-rollback.sh" terraform --dry-run >> "${TEST_LOG}" 2>&1 || true
   
   log_success "Phase 3 PASSED: Deployment simulation completed"
   return 0
@@ -92,7 +92,7 @@ test_health_checks() {
   log_info "Test Phase 4: Health Check Validation"
   
   log_info "  - Running post-deployment health checks (timeout=${timeout}s)..."
-  "${REPO_ROOT}/scripts/ci/health-check-post-deploy.sh" --timeout "${timeout}" >> "${TEST_LOG}" 2>&1 || true
+  bash "${REPO_ROOT}/scripts/ci/health-check-post-deploy.sh" --timeout "${timeout}" >> "${TEST_LOG}" 2>&1 || true
   
   if [[ -f "${REPO_ROOT}/artifacts/health-check-report.json" ]]; then
     log_success "Phase 4 PASSED: Health check report generated"
@@ -109,7 +109,7 @@ test_rollback_verification() {
   log_info "Test Phase 5: Rollback Verification"
   
   log_info "  - Verifying rollback mechanism..."
-  if "${REPO_ROOT}/scripts/ops/automated-rollback.sh" compose --dry-run >> "${TEST_LOG}" 2>&1; then
+  if bash "${REPO_ROOT}/scripts/ops/automated-rollback.sh" compose --dry-run >> "${TEST_LOG}" 2>&1; then
     log_success "Phase 5 PASSED: Rollback mechanism verified"
     return 0
   else

@@ -31,6 +31,7 @@ ROOT = Path.cwd()
 PATH_FILTER = os.environ.get("SYNC_PATH_FILTER", "").strip()
 START_AFTER = os.environ.get("SYNC_START_AFTER", "").strip()
 MAX_CREATE = int(os.environ.get("SYNC_MAX_CREATE", "0") or "0")
+INCLUDE_CODE_TASKS = os.environ.get("SYNC_INCLUDE_CODE_TASKS", "0") == "1"
 
 EXCLUDED_FILES = {
     "SYNC_ISSUES_README.md",
@@ -41,7 +42,34 @@ EXCLUDED_FILES = {
     "INDEX.md",
     "EXECUTE_NOW.txt",
 }
+EXCLUDED_NAME_TOKENS = {
+    "STATUS",
+    "PROGRESS",
+    "COMPLETE",
+    "COMPLETION",
+    "REPORT",
+    "SUMMARY",
+    "HANDOFF",
+    "CERTIFICATE",
+    "VERIFICATION",
+    "EVIDENCE",
+}
+APPROVED_MARKDOWN_PREFIXES = (
+    "artifacts/",
+    "terraform/",
+    "docs/testing/",
+    "docs/operations/",
+    "docs/sso/",
+)
+APPROVED_MARKDOWN_NAME_TOKENS = {
+    "ROADMAP",
+    "CHECKLIST",
+    "PLAN",
+    "GAP-ANALYSIS",
+    "MIGRATION",
+}
 CODE_EXTS = {".sh", ".py", ".js", ".jsx", ".ts", ".tsx"}
+LABEL_CACHE = None
 
 
 def strip_markdown_emphasis(text: str) -> str:
@@ -78,6 +106,24 @@ def github_request(method: str, url: str, payload=None):
         return json.loads(resp.read().decode())
 
 
+def repository_labels():
+    global LABEL_CACHE
+    if LABEL_CACHE is not None:
+        return LABEL_CACHE
+
+    labels = set()
+    page = 1
+    while True:
+        data = github_request("GET", f"https://api.github.com/repos/{OWNER}/{REPO}/labels?per_page=100&page={page}")
+        if not data:
+            break
+        labels.update(item.get("name", "") for item in data)
+        page += 1
+
+    LABEL_CACHE = labels
+    return LABEL_CACHE
+
+
 def iter_files():
     for path in sorted(ROOT.rglob("*")):
         rel = path.relative_to(ROOT)
@@ -109,9 +155,42 @@ def derive_tags(path: Path, text: str):
     return tags[:4]
 
 
+def should_skip_markdown_file(path: Path) -> bool:
+    if path.name in EXCLUDED_FILES:
+        return True
+
+    upper_name = path.name.upper()
+    if any(token in upper_name for token in EXCLUDED_NAME_TOKENS):
+        return True
+
+    path_str = path.as_posix()
+    if any(path_str.startswith(prefix) for prefix in APPROVED_MARKDOWN_PREFIXES):
+        return False
+
+    return not any(token in upper_name for token in APPROVED_MARKDOWN_NAME_TOKENS)
+
+
+def resolve_labels(priority: str, tags):
+    available = repository_labels()
+    desired = [
+        "automation",
+        "github",
+        "area:github-sync",
+        "epic:pmo-excellence",
+        priority,
+    ]
+    desired.extend(tags)
+
+    labels = []
+    for label in desired:
+        if label in available and label not in labels:
+            labels.append(label)
+    return labels
+
+
 def scan_markdown_tasks(path: Path):
     tasks = []
-    if path.name in EXCLUDED_FILES:
+    if should_skip_markdown_file(path):
         return tasks
     try:
         lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
@@ -134,6 +213,8 @@ def scan_markdown_tasks(path: Path):
 
 def scan_code_tasks(path: Path):
     tasks = []
+    if not INCLUDE_CODE_TASKS:
+        return tasks
     if path.suffix.lower() not in CODE_EXTS or path.name == "pmo-todo-scanner.sh":
         return tasks
     try:
@@ -172,6 +253,7 @@ def build_issue(path: Path, line_no: int, text: str, task_type: str):
         "marker": marker,
         "source": path.as_posix(),
         "line": line_no,
+        "labels": resolve_labels(priority, tags),
     }
 
 
@@ -184,7 +266,10 @@ def issue_exists(marker: str) -> bool:
 
 def create_issue(issue):
     url = f"https://api.github.com/repos/{OWNER}/{REPO}/issues"
-    return github_request("POST", url, {"title": issue["title"], "body": issue["body"]})
+    payload = {"title": issue["title"], "body": issue["body"]}
+    if issue.get("labels"):
+        payload["labels"] = issue["labels"]
+    return github_request("POST", url, payload)
 
 
 def is_rate_limited(http_error: urllib.error.HTTPError, details: str) -> bool:

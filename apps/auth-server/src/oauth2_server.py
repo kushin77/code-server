@@ -3,6 +3,7 @@ OAuth2 Authorization Server - Week 1 Implementation
 Issue #1545: Enterprise SSO Portal Architecture
 """
 import os
+import logging
 from datetime import datetime, timedelta
 from apps._shared.python.config import get_config
 from typing import Optional, Dict, Any
@@ -18,6 +19,9 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 import jwt
+
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Data Models
@@ -164,6 +168,7 @@ class OAuth2Server:
             "issued_at": datetime.utcnow(),
             "expires_at": datetime.utcnow() + timedelta(minutes=10),
             "code_challenge": code_challenge,
+            "is_used": False,
         }
         
         return code
@@ -227,6 +232,9 @@ class OAuth2Server:
             raise HTTPException(status_code=400, detail="Invalid authorization code")
         
         auth_code_data = self.auth_codes[code]
+
+        if auth_code_data.get("is_used"):
+            raise HTTPException(status_code=400, detail="Authorization code already used")
         
         # Check client_id matches
         if auth_code_data["client_id"] != client_id:
@@ -247,9 +255,68 @@ class OAuth2Server:
                 raise HTTPException(status_code=400, detail="Invalid code verifier")
         
         # Code verified, delete it (single-use)
+                auth_code_data["is_used"] = True
         del self.auth_codes[code]
         
         return auth_code_data
+
+
+        def register_default_oauth_providers(server: OAuth2Server, config) -> None:
+            """Register OAuth providers from shared configuration values."""
+            provider_specs = [
+                {
+                    "provider": "github",
+                    "client_id_key": "GITHUB_CLIENT_ID",
+                    "client_secret_key": "GITHUB_CLIENT_SECRET",
+                    "auth_url": "https://github.com/login/oauth/authorize",
+                    "token_url": "https://github.com/login/oauth/access_token",
+                    "user_info_url": "https://api.github.com/user",
+                    "redirect_uri": "https://auth.kushnir.cloud/oauth/github/callback",
+                    "scopes": ["user:email", "read:user"],
+                },
+                {
+                    "provider": "google",
+                    "client_id_key": "GOOGLE_CLIENT_ID",
+                    "client_secret_key": "GOOGLE_CLIENT_SECRET",
+                    "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
+                    "token_url": "https://oauth2.googleapis.com/token",
+                    "user_info_url": "https://openidconnect.googleapis.com/v1/userinfo",
+                    "redirect_uri": "https://auth.kushnir.cloud/oauth/google/callback",
+                    "scopes": ["openid", "email", "profile"],
+                },
+                {
+                    "provider": "microsoft",
+                    "client_id_key": "MICROSOFT_CLIENT_ID",
+                    "client_secret_key": "MICROSOFT_CLIENT_SECRET",
+                    "auth_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+                    "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                    "user_info_url": "https://graph.microsoft.com/v1.0/me",
+                    "redirect_uri": "https://auth.kushnir.cloud/oauth/microsoft/callback",
+                    "scopes": ["openid", "email", "profile", "User.Read"],
+                },
+            ]
+
+            for spec in provider_specs:
+                client_id = config.get(spec["client_id_key"], "")
+                client_secret = config.get(spec["client_secret_key"], "")
+
+                if not client_id or not client_secret:
+                    logger.warning(
+                        "Skipping OAuth provider %s because credentials are not configured",
+                        spec["provider"],
+                    )
+                    continue
+
+                server.register_provider(OAuthConfig(
+                    provider=spec["provider"],
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    auth_url=spec["auth_url"],
+                    token_url=spec["token_url"],
+                    user_info_url=spec["user_info_url"],
+                    redirect_uri=spec["redirect_uri"],
+                    scopes=spec["scopes"],
+                ))
 
 
 # ============================================================================
@@ -265,30 +332,10 @@ app = FastAPI(
 oauth2_server = OAuth2Server()
 
 # Initialize config (SSOT from scripts/_common/config.env)
-config = get_config()
+config = get_config(validate_required=False)
 
-# Register providers (would be loaded from config in production)
-oauth2_server.register_provider(OAuthConfig(
-    provider="github",
-    client_id=config.get("OAUTH2_GITHUB_CLIENT_ID", "test-client-id"),
-    client_secret=config.get("OAUTH2_GITHUB_CLIENT_SECRET", "test-client-secret"),
-    auth_url="https://github.com/login/oauth/authorize",
-    token_url="https://github.com/login/oauth/access_token",
-    user_info_url="https://api.github.com/user",
-    redirect_uri="https://auth.kushnir.cloud/oauth/github/callback",
-    scopes=["user:email", "read:user"],
-))
-
-oauth2_server.register_provider(OAuthConfig(
-    provider="google",
-    client_id=config.get("OAUTH2_GOOGLE_CLIENT_ID", "test-client-id"),
-    client_secret=config.get("OAUTH2_GOOGLE_CLIENT_SECRET", "test-client-secret"),
-    auth_url="https://accounts.google.com/o/oauth2/v2/auth",
-    token_url="https://oauth2.googleapis.com/token",
-    user_info_url="https://openidconnect.googleapis.com/v1/userinfo",
-    redirect_uri="https://auth.kushnir.cloud/oauth/google/callback",
-    scopes=["openid", "email", "profile"],
-))
+# Register providers from canonical shared config values.
+register_default_oauth_providers(oauth2_server, config)
 
 
 # ============================================================================

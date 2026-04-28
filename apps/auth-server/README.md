@@ -278,7 +278,7 @@ pytest -v tests/
 - [ ] PostgreSQL 14+ with automatic backups
 - [ ] Redis 7+ with persistence and replication
 - [ ] TLS/SSL certificates (Let's Encrypt)
-- [ ] OAuth provider credentials configured
+- [x] OAuth provider credentials configured
 - [ ] Email service (SendGrid) configured
 - [ ] Database connection pooling (20+ connections)
 - [ ] Request logging and monitoring

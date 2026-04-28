@@ -1,4 +1,9 @@
 #!/bin/bash
+set -euo pipefail
+
+# Source canonical bootstrap
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 ###############################################################################
 # Pre-Deployment Validation Report
 ###############################################################################

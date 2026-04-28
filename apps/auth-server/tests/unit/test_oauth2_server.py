@@ -19,6 +19,7 @@ from src.oauth2_server import (
     app, OAuth2Server, KeyManager, OAuthConfig, TokenRequest,
     AuthorizationRequest, TokenResponse
 )
+from src.oauth2_server import register_default_oauth_providers
 from src.models import Base, OAuthProvider, OAuthConnection, AuthorizationCode, OAuthToken
 from src.config import AuthServerConfig
 
@@ -90,6 +91,30 @@ class TestOAuth2Server:
         assert "github" in oauth2_server.providers
         assert oauth2_server.providers["github"].provider == "github"
         assert oauth2_server.providers["github"].client_id == "test-github-id"
+
+    def test_register_default_oauth_providers_uses_shared_config_keys(self):
+        """Test default provider registration uses the canonical shared config keys."""
+        server = OAuth2Server()
+
+        class DummyConfig:
+            values = {
+                "GITHUB_CLIENT_ID": "github-id",
+                "GITHUB_CLIENT_SECRET": "github-secret",
+                "GOOGLE_CLIENT_ID": "google-id",
+                "GOOGLE_CLIENT_SECRET": "google-secret",
+                "MICROSOFT_CLIENT_ID": "microsoft-id",
+                "MICROSOFT_CLIENT_SECRET": "microsoft-secret",
+            }
+
+            def get(self, key, default=None):
+                return self.values.get(key, default)
+
+        register_default_oauth_providers(server, DummyConfig())
+
+        assert set(server.providers) == {"github", "google", "microsoft"}
+        assert server.providers["github"].client_id == "github-id"
+        assert server.providers["google"].client_secret == "google-secret"
+        assert server.providers["microsoft"].redirect_uri.endswith("/oauth/microsoft/callback")
     
     def test_authorization_code_generation(self, oauth2_server):
         """Test generating authorization code"""

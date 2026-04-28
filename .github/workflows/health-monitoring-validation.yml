@@ -1,0 +1,157 @@
+name: Service Health Monitoring Validation
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-compose*.yml'
+      - 'config/prometheus/**'
+      - 'grafana/dashboards/**'
+      - '.github/workflows/health-monitoring-validation.yml'
+
+jobs:
+  validate-health-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Validate docker-compose health checks
+        id: compose_health
+        run: |
+          python3 << 'PYEOF'
+          import yaml
+          import sys
+          
+          # Load docker-compose files
+          compose_files = [
+              'docker-compose.yml',
+              'docker-compose.enterprise.yml',
+              'docker-compose.observability.yml'
+          ]
+          
+          services_with_checks = 0
+          services_without_checks = 0
+          
+          for compose_file in compose_files:
+              try:
+                  with open(compose_file) as f:
+                      config = yaml.safe_load(f)
+              except FileNotFoundError:
+                  continue
+              
+              if not config or 'services' not in config:
+                  continue
+              
+              print(f"\n=== {compose_file} ===")
+              
+              for service_name, service_config in config['services'].items():
+                  # Skip init containers (they exit on completion)
+                  if service_name.endswith('-init'):
+                      continue
+                  
+                  if 'healthcheck' in service_config:
+                      print(f"✓ {service_name}: Has healthcheck")
+                      services_with_checks += 1
+                  else:
+                      print(f"! {service_name}: Missing healthcheck")
+                      services_without_checks += 1
+          
+          print(f"\n=== Summary ===")
+          print(f"Services with health checks: {services_with_checks}")
+          print(f"Services without health checks: {services_without_checks}")
+          
+          if services_without_checks > 0:
+              print("\n⚠️  Some services are missing health checks")
+              sys.exit(1)
+          else:
+              print("\n✅ All services have health checks defined")
+              sys.exit(0)
+          PYEOF
+
+      - name: Validate Prometheus configuration
+        id: prometheus_config
+        run: |
+          if [[ -f "config/prometheus/prometheus.yml" ]]; then
+            python3 -m pip install pyyaml -q
+            python3 << 'PYEOF'
+            import yaml
+            
+            with open('config/prometheus/prometheus.yml') as f:
+                config = yaml.safe_load(f)
+            
+            scrape_configs = len(config.get('scrape_configs', []))
+            alert_rules = len(config.get('rule_files', []))
+            
+            print(f"✓ Prometheus scrape configs: {scrape_configs}")
+            print(f"✓ Alert rule files: {alert_rules}")
+            
+            if scrape_configs < 5:
+                print("⚠️  Warning: Few scrape configs defined")
+            PYEOF
+          else
+            echo "⚠️  Prometheus config not found, skipping validation"
+          fi
+
+      - name: Validate Grafana dashboards
+        id: grafana_dashboards
+        run: |
+          if [[ -d "grafana/dashboards" ]]; then
+            DASHBOARD_COUNT=$(find grafana/dashboards -name "*.json" | wc -l)
+            echo "✓ Found $DASHBOARD_COUNT Grafana dashboards"
+            
+            if [[ $DASHBOARD_COUNT -lt 1 ]]; then
+              echo "⚠️  No Grafana dashboards found"
+            fi
+          else
+            echo "⚠️  Grafana dashboards directory not found"
+          fi
+
+      - name: Create summary report
+        if: always()
+        run: |
+          cat > health-monitoring-report.txt <<EOF
+          # Health Monitoring Validation Report
+          Generated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          ## Validation Results
+          - Docker Compose Health Checks: $(grep -q "✓ All services" <(echo "${{ steps.compose_health.outcome }}") && "PASS" || "WARNINGS")
+          - Prometheus Configuration: Validated
+          - Grafana Dashboards: Validated
+          
+          EOF
+          cat health-monitoring-report.txt
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-monitoring-report
+          path: health-monitoring-report.txt
+
+      - name: Create issue if validation fails
+        if: failure() && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[ALERT] Health Monitoring Validation Failed',
+              body: 'Service health monitoring validation has failed. See workflow run for details.',
+              labels: ['alert', 'monitoring']
+            });

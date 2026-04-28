@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+###############################################################################
+# @file scripts/git-hooks/pre-commit-trap-handler-check
+# @module git-hooks
+# @description Pre-commit hook to enforce trap handler requirements
+# @governance GOV-002: All scripts MUST have error handling before commit
+# @author Infrastructure Audit Bot
+# @date 2026-04-28
+###############################################################################
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+FAILED_SCRIPTS=()
+
+# Check if any bash scripts are staged without trap handlers
+while IFS= read -r staged_file; do
+  # Skip non-bash files
+  if ! grep -q "bash" "$staged_file" 2>/dev/null; then
+    continue
+  fi
+  
+  # Skip certain helper files that don't need traps
+  if [[ "$staged_file" =~ (_base-config|_templates|test-fixtures) ]]; then
+    continue
+  fi
+  
+  # Check for trap handlers
+  if ! grep -q "trap.*ERR\|trap.*EXIT" "$staged_file"; then
+    FAILED_SCRIPTS+=("$staged_file")
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM | grep '\.sh$')
+
+if [[ ${#FAILED_SCRIPTS[@]} -gt 0 ]]; then
+  echo -e "${RED}❌ Pre-commit hook failed: Scripts missing trap handlers${NC}"
+  echo ""
+  echo "The following scripts are missing required error handling:"
+  for script in "${FAILED_SCRIPTS[@]}"; do
+    echo -e "  ${RED}✗${NC} $script"
+  done
+  echo ""
+  echo -e "Add trap handlers using: ${YELLOW}bash scripts/ci/inject-trap-handlers.py${NC}"
+  echo "Or manually add:"
+  echo "  trap 'log_error \"Script failed at line \$LINENO\"; exit 1' ERR"
+  echo "  trap 'log_info \"Performing cleanup...\"; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT"
+  exit 1
+fi
+
+exit 0

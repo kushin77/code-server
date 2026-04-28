@@ -1,0 +1,113 @@
+name: Trap Handler Validation & Enforcement
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'scripts/**/*.sh'
+      - '.github/workflows/trap-handler-validation.yml'
+  pull_request:
+    paths:
+      - 'scripts/**/*.sh'
+  workflow_dispatch:
+
+jobs:
+  validate-trap-handlers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Run trap handler validation
+        id: validation
+        run: |
+          bash scripts/ci/validate-trap-handlers.sh > validation-report.txt 2>&1 || VALIDATION_FAILED=1
+          cat validation-report.txt
+          echo "VALIDATION_FAILED=${VALIDATION_FAILED:-0}" >> $GITHUB_ENV
+
+      - name: Check for scripts missing trap handlers
+        id: check_missing
+        run: |
+          MISSING_SCRIPTS=$(find scripts/ops scripts/ci -name "*.sh" -type f -exec grep -L "trap.*ERR\|trap.*EXIT" {} \; 2>/dev/null | grep -v "_templates\|_common" || true)
+          if [[ -n "$MISSING_SCRIPTS" ]]; then
+            echo "MISSING_SCRIPTS<<EOF" >> $GITHUB_ENV
+            echo "$MISSING_SCRIPTS" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            echo "HAS_MISSING=true" >> $GITHUB_ENV
+          else
+            echo "HAS_MISSING=false" >> $GITHUB_ENV
+          fi
+
+      - name: Comment on PR if issues found
+        if: github.event_name == 'pull_request' && env.HAS_MISSING == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const missing = process.env.MISSING_SCRIPTS;
+            const scripts = missing.split('\n').filter(s => s.trim());
+            
+            let comment = '⚠️ **Trap Handler Validation Warning**\n\n';
+            comment += 'The following scripts are missing required error handling:\n\n';
+            
+            scripts.forEach(script => {
+              comment += `- \`${script}\`\n`;
+            });
+            
+            comment += '\n**Required changes:**\n';
+            comment += '1. Add trap handlers to each script\n';
+            comment += '2. Use: `bash scripts/ci/inject-trap-handlers.py`\n';
+            comment += '3. Or add manually:\n';
+            comment += '```bash\n';
+            comment += 'trap \'log_error "Script failed at line $LINENO"; exit 1\' ERR\n';
+            comment += 'trap \'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true\' EXIT\n';
+            comment += '```\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trap-handler-validation-report
+          path: validation-report.txt
+
+      - name: Create issue if validation fails
+        if: failure() && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('validation-report.txt', 'utf8');
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[ALERT] Trap Handler Validation Failed on Main Branch',
+              body: `## Validation Failure Report\n\n\`\`\`\n${report}\n\`\`\`\n\nPlease resolve and re-run validation.`,
+              labels: ['bug', 'ci-cd', 'urgent']
+            });
+
+      - name: Set status check
+        if: env.VALIDATION_FAILED == '1'
+        run: |
+          echo "Trap handler validation failed"
+          exit 1

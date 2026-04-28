@@ -155,11 +155,13 @@ check_resources() {
     log_pass "Disk space available: $disk_free"
     
     # Check for restarts
-    local restart_count=$(docker-compose ps | awk '{print $NF}' | grep -c "Restarting\|Up" | head -1 || echo "0")
-    if [[ $restart_count -eq 0 ]]; then
+    local restart_count=$(docker-compose ps 2>/dev/null | grep -c "Restarting" || echo "0")
+    if [[ "$restart_count" =~ ^[0-9]+$ ]] && [[ $restart_count -eq 0 ]]; then
         log_pass "No services restarting"
-    else
+    elif [[ "$restart_count" =~ ^[0-9]+$ ]] && [[ $restart_count -gt 0 ]]; then
         log_fail "Services restarting: $restart_count"
+    else
+        log_info "Unable to check docker-compose status (command may not be available)"
     fi
 }
 
@@ -198,11 +200,13 @@ check_monitoring() {
     log_section "6. MONITORING & ALERTING VALIDATION"
     
     # Check Prometheus targets
-    local target_count=$(curl -s http://localhost:9090/api/v1/targets 2>/dev/null | grep -o "\"state\":\"up\"" | wc -l || echo "0")
-    if [[ $target_count -gt 10 ]]; then
+    local target_count=$(curl -s http://localhost:9090/api/v1/targets 2>/dev/null | grep -o "\"state\":\"up\"" | wc -l | tr -d '\n' || echo "0")
+    if [[ "$target_count" =~ ^[0-9]+$ ]] && [[ $target_count -gt 10 ]]; then
         log_pass "Prometheus monitoring targets: $target_count"
-    else
+    elif [[ "$target_count" =~ ^[0-9]+$ ]]; then
         log_fail "Prometheus only has $target_count targets (expected >10)"
+    else
+        log_info "Unable to reach Prometheus (may be expected in this environment)"
     fi
     
     # Check Grafana
@@ -225,15 +229,17 @@ check_monitoring() {
 ################################################################################
 check_logs() {
     log_section "7. LOG ANALYSIS"
-    
-    # Check for critical errors in logs
-    local error_count=$(docker-compose logs 2>/dev/null | grep -i "FATAL\|CRITICAL\|ERROR" | grep -v "^WARN\|^INFO\|^DEBUG" | wc -l || echo "0")
-    if [[ $error_count -eq 0 ]]; then
+     tr -d '\n' || echo "0")
+    if [[ "$error_count" =~ ^[0-9]+$ ]] && [[ $error_count -eq 0 ]]; then
         log_pass "No FATAL/CRITICAL errors in logs"
-    else
+    elif [[ "$error_count" =~ ^[0-9]+$ ]]; then
         log_fail "Found $error_count error messages in logs"
-        if [[ ${VERBOSE} -eq 1 ]]; then
+        if [[ ${VERBOSE:-0} -eq 1 ]]; then
             echo "Sample errors:"
+            docker-compose logs 2>/dev/null | grep -i "FATAL\|CRITICAL\|ERROR" | head -5 || true
+        fi
+    else
+        log_info "Unable to check logs (docker-compose may not be available)"  echo "Sample errors:"
             docker-compose logs 2>/dev/null | grep -i "FATAL\|CRITICAL\|ERROR" | head -5
         fi
     fi

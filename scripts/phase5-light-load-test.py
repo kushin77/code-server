@@ -13,16 +13,17 @@ import urllib.error
 import socket
 import sys
 import json
+import os
 from statistics import mean, median, stdev
 from threading import Lock
 
 # Configuration
-HOST = "192.168.168.31"
-PORT = 80
-TARGET_URL = f"http://{HOST}/"
-CONCURRENT_USERS = 50
-REQUESTS_PER_USER = 30
-TIMEOUT = 5  # seconds
+HOST = os.environ.get("PRIMARY_HOST", "192.168.168.31")
+PORT = int(os.environ.get("PRIMARY_PORT", "80"))
+TARGET_URL = f"http://{HOST}:{PORT}/"
+CONCURRENT_USERS = int(os.environ.get("LOAD_TEST_USERS", "50"))
+REQUESTS_PER_USER = int(os.environ.get("LOAD_TEST_REQUESTS_PER_USER", "30"))
+TIMEOUT = int(os.environ.get("LOAD_TEST_TIMEOUT", "5"))  # seconds
 
 # Results collection
 results_lock = Lock()

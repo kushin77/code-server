@@ -8,14 +8,19 @@
 
 set -euo pipefail
 
-# Source canonical configuration (SSOT)
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../_common/init.sh" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-trap 'echo "[ERROR] Test interrupted at line $LINENO"; exit 1' ERR
-trap 'echo "[INFO] Cleaning up..."; exit 0' EXIT
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+trap 'log_error "Test interrupted at line $LINENO"; exit 1' ERR
+trap 'log_info "Cleaning up..."' EXIT
+
+log_step() { printf '%s [STEP] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"; }
 
 PRIMARY_HOST="192.168.168.31"
 PRIMARY_USER="akushnir"
+REPORT_FILE="/tmp/performance-baseline-$(date +%s).txt"
 
 echo "═══════════════════════════════════════════════════════════════"
 echo "PHASE 5 WEEK 1: PERFORMANCE BASELINE TEST"
@@ -115,7 +120,7 @@ echo ""
 # Step 8: Create Performance Baseline Report
 log_step "Creating baseline report..."
 
-cat > /tmp/performance-baseline-$(date +%s).txt << REPORT
+cat > "$REPORT_FILE" << REPORT
 ╔═══════════════════════════════════════════════════════════════════════╗
 ║           PHASE 5 WEEK 1: PERFORMANCE BASELINE REPORT                 ║
 ╚═══════════════════════════════════════════════════════════════════════╝
@@ -158,7 +163,7 @@ BASELINE TARGETS (from config/performance-baselines.yml):
 REPORT
 
 log_success "Baseline report created"
-cat /tmp/performance-baseline-*.txt
+cat "$REPORT_FILE"
 echo ""
 
 # Step 9: Summary

@@ -10,7 +10,7 @@ import time
 import json
 import sys
 
-HOST = "192.168.168.31"
+HOST = __import__("os").environ.get("PRIMARY_HOST", "192.168.168.31")
 DB_CONTAINER = "code-server-postgres"
 
 print("═" * 70)

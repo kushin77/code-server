@@ -10,7 +10,7 @@ import subprocess
 import json
 import sys
 
-HOST = "192.168.168.31"
+HOST = __import__("os").environ.get("PRIMARY_HOST", "192.168.168.31")
 
 print("═" * 70)
 print("FINAL DEPLOYMENT VALIDATION - COMPLETE SYSTEM CHECK")

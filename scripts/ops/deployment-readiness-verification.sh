@@ -102,7 +102,7 @@ check_infrastructure() {
   log_info "Module 2: Infrastructure Health & Reachability..."
   
   # Verify connection to primary host
-  local primary_host="192.168.168.31"
+  local primary_host="${PRIMARY_HOST}"
   if ping -c 1 -W 2 "${primary_host}" > /dev/null 2>&1; then
     log_success "✓ Primary host ${primary_host} is reachable"
   else

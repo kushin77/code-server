@@ -1,3 +1,6 @@
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 #!/usr/bin/env bash
 ################################################################################
 # @file        scripts/ops/validate-production-deployment.sh
@@ -60,16 +63,16 @@ check_services() {
     log_section "1. SERVICE HEALTH VALIDATION"
     
     # Check that the main health endpoint is responding
-    if python3 -c "import urllib.request; urllib.request.urlopen('http://192.168.168.31/health', timeout=5)" > /dev/null 2>&1; then
-        log_pass "Production host (192.168.168.31) responding at /health"
+    if python3 -c "import urllib.request; urllib.request.urlopen('http://${PRIMARY_HOST}/health', timeout=5)" > /dev/null 2>&1; then
+        log_pass "Production host (${PRIMARY_HOST}) responding at /health"
     else
-        log_fail "Production host (192.168.168.31) /health NOT responding"
+        log_fail "Production host (${PRIMARY_HOST}) /health NOT responding"
         return 1
     fi
     
     # Check critical internal service endpoints (proxied via Caddy)
     for endpoint in api/auth/health api/opa/health; do
-        if python3 -c "import urllib.request; urllib.request.urlopen('http://192.168.168.31/$endpoint', timeout=5)" > /dev/null 2>&1; then
+        if python3 -c "import urllib.request; urllib.request.urlopen('http://${PRIMARY_HOST}/$endpoint', timeout=5)" > /dev/null 2>&1; then
             log_pass "Endpoint healthy: /$endpoint"
         else
             log_fail "Endpoint failed: /$endpoint"
@@ -85,7 +88,7 @@ check_database() {
     
     # In this environment, we rely on the health endpoints of services that depend on the DB
     # as direct 'docker-compose exec' is not available from this runner.
-    if python3 -c "import urllib.request; urllib.request.urlopen('http://192.168.168.31/api/auth/health', timeout=5)" > /dev/null 2>&1; then
+    if python3 -c "import urllib.request; urllib.request.urlopen('http://${PRIMARY_HOST}/api/auth/health', timeout=5)" > /dev/null 2>&1; then
         log_pass "PostgreSQL back-end verified via Auth API"
     else
         log_fail "PostgreSQL back-end check failed"

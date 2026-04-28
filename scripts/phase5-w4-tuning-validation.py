@@ -11,7 +11,7 @@ import statistics
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-HOST = "192.168.168.31"
+HOST = __import__("os").environ.get("PRIMARY_HOST", "192.168.168.31")
 TARGET_URL = f"http://{HOST}/"
 
 print("═" * 70)

@@ -8,13 +8,16 @@
 
 set -euo pipefail
 
-# Source canonical configuration (SSOT)
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../_common/init.sh" && pwd)"
-
-trap 'echo "[ERROR] Test failed at line $LINENO"; exit 1' ERR
-trap 'echo "[INFO] Test cleanup..."; exit 0' EXIT
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+trap 'log_error "Test failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Test cleanup..."' EXIT
+
+log_test() { printf '%s [TEST] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"; }
+
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "═══════════════════════════════════════════════════════════════"

@@ -95,6 +95,8 @@ class Config:
         'AZURE_TTS_REGION': 'eastus',
         'AZURE_TTS_VOICE': 'en-US-JennyNeural',
         'WHISPER_MODEL': 'base',
+        'TEST_DATABASE_URL': 'postgresql://test:test@localhost:5432/paperclip_test',
+        'USE_SQLITE_TESTS': 'false',
     }
     
     def __init__(self, validate_required: bool = True):

@@ -93,7 +93,7 @@ check_docker_compose_drift() {
   return $([ ${#drift_items[@]} -eq 0 ] && echo 0 || echo 1)
 }
 
-# Check Terraform state vs. code
+# Check Terraform state vs. code (P1 #2422: Updated to skip null_resources)
 check_terraform_drift() {
   log_info "Checking Terraform drift..."
 
@@ -117,7 +117,12 @@ check_terraform_drift() {
   cd "${TERRAFORM_DIR}"
   
   # Run terraform plan in no-changes mode
-  local plan_output=$(terraform plan -json 2>/dev/null | jq -r 'select(.type=="resource_drift") | .address' || echo "")
+  # NOTE: null_resource with ignore_changes=all are skipped intentionally
+  # (they're one-time provisioners, drift detection uses host state comparison instead)
+  local plan_output=$(terraform plan -json 2>/dev/null | jq -r \
+    'select(.type=="resource_drift") | 
+     select(.address | contains("null_resource") | not) |  # Skip null_resources
+     .address' || echo "")
   
   while IFS= read -r resource; do
     [[ -z "${resource}" ]] && continue

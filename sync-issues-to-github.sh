@@ -44,6 +44,25 @@ EXCLUDED_FILES = {
 CODE_EXTS = {".sh", ".py", ".js", ".jsx", ".ts", ".tsx"}
 
 
+def strip_markdown_emphasis(text: str) -> str:
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    return text.strip()
+
+
+def is_parent_checkbox_label(text: str) -> bool:
+    clean = strip_markdown_emphasis(text)
+    return bool(re.fullmatch(r"[A-Za-z0-9_./-]+\.[A-Za-z0-9_-]+", clean))
+
+
+def normalize_todo_heading(stripped: str) -> str:
+    text = re.sub(r"^#+\s*", "", stripped).strip()
+    text = re.sub(r"\s*\((?:TODO|FIXME|HACK)[^)]*\)\s*$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^(?:TODO|FIXME|HACK):?\s*", "", text, flags=re.IGNORECASE)
+    return text.strip()
+
+
 def github_request(method: str, url: str, payload=None):
     data = None
     headers = {
@@ -101,14 +120,15 @@ def scan_markdown_tasks(path: Path):
     for idx, line in enumerate(lines, 1):
         stripped = line.strip()
         checkbox = re.match(r"^- \[ \] (.+)$", stripped)
-        todo_heading = re.match(r"^#+ .*TODO:?\s*(.+)?$", stripped, re.IGNORECASE)
+        todo_heading = re.search(r"^#+ .*\b(TODO|FIXME|HACK)\b", stripped, re.IGNORECASE)
         if checkbox:
-            tasks.append((idx, checkbox.group(1).strip(), "markdown-checkbox"))
+            text = checkbox.group(1).strip()
+            if is_parent_checkbox_label(text):
+                continue
+            tasks.append((idx, text, "markdown-checkbox"))
         elif todo_heading:
-            text = todo_heading.group(1).strip() if todo_heading.group(1) else stripped
-            text = re.sub(r"^#+\s*", "", text)
-            text = re.sub(r"^TODO:?\s*", "", text, flags=re.IGNORECASE)
-            tasks.append((idx, text.strip() or stripped, "markdown-todo"))
+            text = normalize_todo_heading(stripped)
+            tasks.append((idx, text or stripped, "markdown-todo"))
     return tasks
 
 

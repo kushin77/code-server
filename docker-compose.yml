@@ -3,9 +3,35 @@
 # @description Production-grade Docker Compose for ElevatedIQ DevOS stack
 # @governance GOV-002 - All services must have health checks and logging
 
+# ============================================================================
+# INIT CONTAINER PATTERN EXPLANATION
+# ============================================================================
+# This compose file uses init containers for one-time storage setup:
+#
+# Purpose: Initialize volumes with correct ownership and permissions
+# Design:
+#   1. Init container runs with root to set UID/GID ownership
+#   2. Creates/initializes directories for the main service
+#   3. Exits after setup (restart: "no")
+#   4. Main service depends_on init with: service_completed_successfully
+#   5. Main service runs as non-root with permissions already prepared
+#
+# Security Benefit: All production services run as non-root users
+# Examples:
+#   - grafana-init → sets /var/lib/grafana to grafana user (472:472)
+#   - redis-init → sets /data to redis user (999:999)
+#   - postgres-init → sets /var/lib/postgresql/data to postgres user (999:999)
+#   - qdrant-init → sets /qdrant/storage to qdrant user (1000:1000)
+#   - tempo-init → sets /var/tempo to tempo user (10001:10001)
+#   - ollama-init → sets /home/ollama/.ollama to ollama user (11434:11434)
+#
+# Note: Init containers don't appear in "docker ps" after completion
+# They exit with status 0 and are invisible once their task completes
+# ============================================================================
+
 services:
   # ========================================================================
-  # CORE INFRASTRUCTURE
+  # INITIALIZATION CONTAINERS (One-time setup, then exit)
   # ========================================================================
 
   grafana-init:

@@ -68,3 +68,44 @@ ARTIFACTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../artifacts" && pwd)"
 mkdir -p "$ARTIFACTS_DIR"
 
 export ARTIFACTS_DIR
+
+# ==============================================================================
+# Utility functions for IaC compliance
+# ==============================================================================
+
+source_env_file() {
+  local env_file="$1"
+
+  if [[ -f "${env_file}" ]]; then
+    # shellcheck disable=SC1090
+    source <(tr -d '\r' < "${env_file}")
+  fi
+}
+
+# Verify git state is clean (idempotency requirement)
+verify_git_clean() {
+  if [ -n "$(cd "${REPO_ROOT:-.}" && git status --porcelain 2>/dev/null)" ]; then
+    log_warning "Git repository has uncommitted changes - idempotency may be affected"
+    return 1
+  fi
+  return 0
+}
+
+# Get current Git SHA for immutable image tagging
+get_git_sha() {
+  cd "${REPO_ROOT:-.}" && git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+}
+
+# Validate required environment variables
+validate_required_env() {
+  local required=("APEX_DOMAIN" "PRIMARY_HOST")
+  for var in "${required[@]}"; do
+    if [ -z "${!var:-}" ]; then
+      log_error "Required environment variable \$${var} is not set"
+      return 1
+    fi
+  done
+  return 0
+}
+
+export -f source_env_file verify_git_clean get_git_sha validate_required_env

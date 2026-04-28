@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import os
 
+from apps._shared.python.config import get_config
+
 class APIClientBase:
     """Base class for all API clients with caching support"""
     
@@ -91,7 +93,8 @@ class CIAPIClient(APIClientBase):
     def __init__(self, endpoint: str, cache_ttl: int = 60):
         super().__init__(cache_ttl)
         self.endpoint = endpoint
-        self.branch = os.getenv("GIT_BRANCH", "main")
+        config = get_config()
+        self.branch = config.get("GIT_BRANCH", "main")
     
     async def get_branch_status(self) -> Dict[str, Any]:
         """Get CI status for current branch"""

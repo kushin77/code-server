@@ -16,9 +16,11 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from provisioner import EnvProvisioner
+from apps._shared.python.config import Config
 
-# Configure logging
-log_level = os.getenv("LOG_LEVEL", "INFO")
+# Configure logging using shared config
+_config = Config(validate_required=False)
+log_level = _config.get("LOG_LEVEL", "INFO")
 logging.basicConfig(
     level=log_level,
     format="[%(asctime)s] [%(levelname)s] %(message)s",

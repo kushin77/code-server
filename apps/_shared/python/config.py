@@ -66,6 +66,7 @@ class Config:
         'OAUTH2_INTROSPECT_URL': '',
         'OAUTH2_CLIENT_ID': '',
         'OAUTH2_CLIENT_SECRET': '',
+        'OAUTH2_TOKEN_ENDPOINT': '/oauth/token',
         'SCHEDULER_API_KEY': None,
         'SCHEDULER_PORT': '8000',
         'REPUTATION_ENGINE_PORT': '8000',
@@ -73,6 +74,11 @@ class Config:
         'POSTGRES_PORT': '5432',
         'REDIS_HOST': 'localhost',
         'REDIS_PORT': '6379',
+        'QDRANT_HOST': 'localhost',
+        'QDRANT_PORT': '6333',
+        'GIT_BRANCH': 'main',
+        'GITHUB_REPO': 'kushin77/code-server',
+        'GITHUB_TOKEN': '',
     }
     
     def __init__(self, validate_required: bool = True):

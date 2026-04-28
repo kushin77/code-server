@@ -15,8 +15,10 @@ from datetime import datetime, timedelta
 import logging
 from functools import wraps
 import json
+from apps._shared.python.config import Config
 
 logger = logging.getLogger(__name__)
+_config = Config(validate_required=False)
 
 
 class AuthError(Exception):
@@ -210,9 +212,9 @@ def create_oauth_client(
     Raises:
         AuthError: If required variables not set
     """
-    client_id = client_id or os.getenv('OAUTH2_CLIENT_ID')
-    client_secret = client_secret or os.getenv('OAUTH2_CLIENT_SECRET')
-    token_endpoint = token_endpoint or os.getenv('OAUTH2_TOKEN_ENDPOINT', '/oauth/token')
+    client_id = client_id or _config.get('OAUTH2_CLIENT_ID')
+    client_secret = client_secret or _config.get('OAUTH2_CLIENT_SECRET')
+    token_endpoint = token_endpoint or _config.get('OAUTH2_TOKEN_ENDPOINT', '/oauth/token')
     
     if not client_id or not client_secret:
         raise AuthError("OAuth2 credentials not configured")

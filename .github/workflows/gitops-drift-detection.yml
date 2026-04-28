@@ -64,6 +64,11 @@ jobs:
         run: |
           chmod +x scripts/ci/domain-variability-enforcer.sh
           ./scripts/ci/domain-variability-enforcer.sh --check
+
+      - name: Validate Grouped SLOG Issue Sync
+        run: |
+          chmod +x scripts/ci/validate-slog-issue-sync.sh
+          ./scripts/ci/validate-slog-issue-sync.sh
       
       - name: Upload Idempotency Report
         if: always()

@@ -16,14 +16,6 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 
 source "${REPO_ROOT}/.env.infrastructure" 2>/dev/null || true
 
-log_info_custom() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
-}
-
 # Create VS Code command for memory search
 setup_vscode_commands() {
   log_info "Setting up VS Code memory search commands..."

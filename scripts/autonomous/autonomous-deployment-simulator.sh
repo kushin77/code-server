@@ -23,31 +23,23 @@ set -euo pipefail
 
 # Source canonical bootstrap
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../_.common/init.sh"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TIMESTAMP=$(date +%s)
-LOG_FILE="$PROJECT_ROOT/artifacts/autonomous-deployment-simulation-$TIMESTAMP.log"
-STATE_FILE="$PROJECT_ROOT/state/deployments/autonomous-sim-$TIMESTAMP.state"
-
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+LOG_FILE="$REPO_ROOT/artifacts/autonomous-deployment-simulation-$TIMESTAMP.log"
+STATE_FILE="$REPO_ROOT/state/deployments/autonomous-sim-$TIMESTAMP.state"
 
 ################################################################################
 # LOGGING FUNCTIONS
 ################################################################################
 
-log_info() {
-    local msg="$1"
-    echo "[$(date '+%Y-%m-%dT%H:%M:%SZ')] [INFO] $msg" | tee -a "$LOG_FILE"
+log_phase() {
+    local phase="$1"
+    local msg="$2"
+    echo "[$(date '+%Y-%m-%dT%H:%M:%SZ')] [PHASE-$phase] $msg" | tee -a "$LOG_FILE"
 }
 
 log_success() {

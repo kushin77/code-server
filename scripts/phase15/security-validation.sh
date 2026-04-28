@@ -12,14 +12,9 @@ source "${SCRIPT_DIR}/../_.common/init.sh"
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $1"; }
+# Custom output formatters specific to this script
+log_scan() { printf '%s [SCAN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"; }
+log_vuln() { printf '%s [VULN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2; }
 log_test() { echo -e "${YELLOW}[TEST]${NC} $1"; }
 log_fail() { echo -e "${RED}[✗]${NC} $1"; }
 

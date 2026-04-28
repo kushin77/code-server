@@ -169,6 +169,7 @@ SCRIPTS=(
     "scripts/ops/implement-rbac.sh"
     "scripts/ops/monitor-replication.sh"
     "scripts/ops/automated-rollback.sh"
+    "scripts/ci/validate-slog-issue-sync.sh"
 )
 
 for script in "${SCRIPTS[@]}"; do

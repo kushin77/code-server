@@ -143,6 +143,14 @@ SLOG_MAX_CREATE=5 bash sync-slog-now.sh
 - `SLOG_PATH_FILTER`: only consider sources whose path contains the provided substring.
 - `SLOG_MAX_CREATE`: cap only new issue creation; existing grouped issues are still updated.
 
+### CI Smoke Check
+
+```bash
+bash scripts/ci/validate-slog-issue-sync.sh
+```
+
+Use this to verify that the grouped SLOG parser still recognizes the current checked-in runtime and incident-log fixtures before running a live sync.
+
 ### Expected Output
 
 ```text

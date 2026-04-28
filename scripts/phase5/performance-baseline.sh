@@ -8,10 +8,13 @@ set -euo pipefail
 
 # Source canonical bootstrap
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../_.common/init.sh"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
+# Custom output formatters specific to this script
+log_test() { printf '%s [TEST] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"; }
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly BASELINE_DIR="${SCRIPT_DIR}/artifacts/phase5/performance-baseline"

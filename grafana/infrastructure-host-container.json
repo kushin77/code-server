@@ -1,0 +1,72 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["infrastructure", "host", "node-exporter"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource", "type": "datasource", "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "Prometheus" }, "label": "Datasource"
+      },
+      {
+        "name": "instance", "type": "query", "datasource": "${datasource}",
+        "query": "label_values(node_uname_info, instance)",
+        "refresh": 2, "includeAll": true, "multi": true, "label": "Host"
+      }
+    ]
+  },
+  "time": { "from": "now-3h", "to": "now" },
+  "title": "Infrastructure - Host & Container Resources",
+  "uid": "infra-host-container",
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries", "title": "CPU usage (%)", "id": 1,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 } },
+      "targets": [
+        { "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"$instance\"}[5m])) * 100)", "refId": "A", "legendFormat": "{{instance}}" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Memory used (%)", "id": 2,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 } },
+      "targets": [
+        { "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"})) * 100", "refId": "A", "legendFormat": "{{instance}}" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Disk used (%) by mount", "id": 3,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 } },
+      "targets": [
+        { "expr": "100 - (node_filesystem_avail_bytes{instance=~\"$instance\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{instance=~\"$instance\",fstype!~\"tmpfs|overlay\"} * 100)", "refId": "A", "legendFormat": "{{instance}} {{mountpoint}}" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Network I/O (bytes/s)", "id": 4,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total{instance=~\"$instance\",device!~\"lo|veth.*|docker.*\"}[1m])", "refId": "A", "legendFormat": "rx {{instance}} {{device}}" },
+        { "expr": "rate(node_network_transmit_bytes_total{instance=~\"$instance\",device!~\"lo|veth.*|docker.*\"}[1m])", "refId": "B", "legendFormat": "tx {{instance}} {{device}}" }
+      ]
+    },
+    {
+      "type": "table", "title": "Top container memory (RSS)", "id": 5,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "expr": "topk(20, sum by (name, instance) (container_memory_rss{name!=\"\",instance=~\"$instance\"}))", "refId": "A", "format": "table", "instant": true }
+      ]
+    }
+  ]
+}

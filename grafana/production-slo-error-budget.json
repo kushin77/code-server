@@ -1,0 +1,87 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["production", "slo", "error-budget"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource", "type": "datasource", "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "Prometheus" }, "label": "Datasource"
+      },
+      {
+        "name": "slo_target", "type": "constant", "current": { "value": "0.999", "text": "99.9%" },
+        "query": "0.999", "label": "SLO target"
+      }
+    ]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "title": "Production - SLO & Error Budget",
+  "uid": "prod-slo-error-budget",
+  "version": 1,
+  "panels": [
+    {
+      "type": "stat", "title": "30d Availability vs SLO", "id": 1,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "orange", "value": 0.995 },
+            { "color": "green", "value": 0.999 }
+          ]}
+        }
+      },
+      "options": { "colorMode": "background" },
+      "targets": [
+        { "expr": "1 - (sum(rate(http_requests_total{status=~\"5..\"}[30d])) / clamp_min(sum(rate(http_requests_total[30d])),1))", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat", "title": "Error Budget Remaining (30d)", "id": 2,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "orange", "value": 0.25 },
+            { "color": "green", "value": 0.5 }
+          ]}
+        }
+      },
+      "options": { "colorMode": "background" },
+      "targets": [
+        { "expr": "1 - ((sum(rate(http_requests_total{status=~\"5..\"}[30d])) / clamp_min(sum(rate(http_requests_total[30d])),1)) / (1 - $slo_target))", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat", "title": "MTTD (avg, 30d)", "id": 3,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "avg_over_time(incident_detection_seconds[30d])", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Burn rate (1h vs 6h)", "id": 4,
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "(sum(rate(http_requests_total{status=~\"5..\"}[1h])) / clamp_min(sum(rate(http_requests_total[1h])),1)) / (1 - $slo_target)",
+          "refId": "A", "legendFormat": "burn rate 1h"
+        },
+        {
+          "expr": "(sum(rate(http_requests_total{status=~\"5..\"}[6h])) / clamp_min(sum(rate(http_requests_total[6h])),1)) / (1 - $slo_target)",
+          "refId": "B", "legendFormat": "burn rate 6h"
+        }
+      ]
+    }
+  ]
+}

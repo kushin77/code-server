@@ -16,6 +16,13 @@ on:
       - 'docker-compose.yml'
       - 'Caddyfile'
       - 'terraform/**'
+      - 'sync-slog-to-github.sh'
+      - 'sync-slog-now.sh'
+      - 'scripts/ci/validate-slog-issue-sync.sh'
+      - 'scripts/ci/gitops-drift-detector.sh'
+      - 'logs/**'
+      - 'PRODUCTION_FIX_LOG.md'
+      - '.github/workflows/gitops-drift-detection.yml'
 
 jobs:
   drift-detection:

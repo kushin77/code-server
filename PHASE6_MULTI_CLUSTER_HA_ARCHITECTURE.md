@@ -35,7 +35,7 @@ Phase 6 implements a high-availability multi-cluster architecture enabling activ
 │                                                               │
 │  ┌──────────────────────┐         ┌──────────────────────┐  │
 │  │  PRIMARY CLUSTER     │         │  REPLICA CLUSTER     │  │
-│  │  192.168.168.221     │◄────────│  192.168.168.42      │  │
+│  │  192.168.168.31     │◄────────│  192.168.168.42      │  │
 │  │  (Active-Active)     │─────────│  (Active-Active)     │  │
 │  │                      │         │                      │  │
 │  │ ┌────────────────┐   │  Sync   │ ┌────────────────┐   │  │

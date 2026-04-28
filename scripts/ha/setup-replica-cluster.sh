@@ -26,7 +26,7 @@ trap 'log_info "Cleanup..."; cleanup_setup || true' EXIT
 # Configuration
 REPLICA_HOST="192.168.168.42"
 REPLICA_USER="deployment"
-PRIMARY_HOST="192.168.168.221"
+PRIMARY_HOST="192.168.168.31"
 CLUSTER_NETWORK="192.168.168.0/24"
 HA_DIR="$PROJECT_ROOT/artifacts/ha-setup"
 

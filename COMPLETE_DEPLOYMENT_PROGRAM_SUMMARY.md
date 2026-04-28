@@ -307,7 +307,7 @@ This comprehensive deployment program implements three critical modernization ph
 ### Cluster Topology
 
 ```
-Primary (192.168.168.221) ←→ Replica (192.168.168.42)
+Primary (192.168.168.31) ←→ Replica (192.168.168.42)
   ↓ Replication ↓              ↓ Replication ↓
   PostgreSQL     Redis         PostgreSQL    Redis
   Message Broker Web Services  Message Broker Web Services

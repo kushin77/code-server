@@ -32,7 +32,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Configuration
-PRIMARY_HOST="192.168.168.221"
+PRIMARY_HOST="192.168.168.31"
 REPLICA_HOST="192.168.168.42"
 REPLICA_USER="deployment"
 CLUSTER_VIP="192.168.168.50"
@@ -191,7 +191,7 @@ listen stats
 # Primary cluster backend
 backend primary_cluster
     balance roundrobin
-    server primary 192.168.168.221:8080 check
+    server primary 192.168.168.31:8080 check
     server replica  192.168.168.42:8080 check
 
 # Frontend for application traffic
@@ -208,7 +208,7 @@ frontend app_frontend
 backend database_backend
     mode tcp
     balance roundrobin
-    server primary 192.168.168.221:5432 check inter 5s rise 2 fall 3
+    server primary 192.168.168.31:5432 check inter 5s rise 2 fall 3
     server replica  192.168.168.42:5432 check inter 5s rise 2 fall 3
 
 frontend database_frontend
@@ -220,7 +220,7 @@ frontend database_frontend
 backend redis_backend
     mode tcp
     balance roundrobin
-    server primary 192.168.168.221:6379 check inter 5s rise 2 fall 3
+    server primary 192.168.168.31:6379 check inter 5s rise 2 fall 3
     server replica  192.168.168.42:6379 check inter 5s rise 2 fall 3
 
 frontend redis_frontend
@@ -243,7 +243,7 @@ monitoring:
   prometheus_scrape:
     - job_name: primary
       static_configs:
-        - targets: ['192.168.168.221:9090']
+        - targets: ['192.168.168.31:9090']
       interval: 15s
     
     - job_name: replica
@@ -253,7 +253,7 @@ monitoring:
     
     - job_name: postgres_primary
       static_configs:
-        - targets: ['192.168.168.221:9187']
+        - targets: ['192.168.168.31:9187']
     
     - job_name: postgres_replica
       static_configs:
@@ -261,7 +261,7 @@ monitoring:
     
     - job_name: redis_primary
       static_configs:
-        - targets: ['192.168.168.221:9121']
+        - targets: ['192.168.168.31:9121']
     
     - job_name: redis_replica
       static_configs:
@@ -329,7 +329,7 @@ create_verification_script() {
 #!/bin/bash
 # Cluster Health Verification Script
 
-PRIMARY="192.168.168.221"
+PRIMARY="192.168.168.31"
 REPLICA="192.168.168.42"
 
 echo "═════════════════════════════════════════════════"
@@ -407,8 +407,8 @@ create_failover_procedures() {
         echo ""
         echo "1. Verify primary is truly down:"
         echo "   ```bash"
-        echo "   ping -c 3 192.168.168.221"
-        echo "   ssh deployment@192.168.168.221 'uptime'"
+        echo "   ping -c 3 192.168.168.31"
+        echo "   ssh deployment@192.168.168.31 'uptime'"
         echo "   ```"
         echo ""
         echo "2. Promote replica to primary:"
@@ -440,7 +440,7 @@ create_failover_procedures() {
         echo ""
         echo "3. Reinitialize replica from primary:"
         echo "   ```bash"
-        echo "   pg_basebackup -h 192.168.168.221 -D /var/lib/postgresql/main \\"
+        echo "   pg_basebackup -h 192.168.168.31 -D /var/lib/postgresql/main \\"
         echo "     -U replication_user -v -P"
         echo "   ```"
         echo ""
@@ -450,7 +450,7 @@ create_failover_procedures() {
         echo "   ```bash"
         echo "   # Check if nodes can communicate"
         echo "   ping 192.168.168.42  # From primary"
-        echo "   ping 192.168.168.221 # From replica"
+        echo "   ping 192.168.168.31 # From replica"
         echo "   ```"
         echo ""
         echo "2. Restore connectivity or implement split-brain resolution"

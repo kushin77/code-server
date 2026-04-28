@@ -46,4 +46,3 @@ cat > "$OUTPUT_DIR/INNOVATION_FRAMEWORK.md" << 'INNER'
 - Conference attendance
 - Certification programs
 INNER
-}

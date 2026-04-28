@@ -214,7 +214,7 @@ services:
     - 3100:3100
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-    - ./config/loki:/etc/loki:ro
+    - ./config/monitoring/loki:/etc/loki:ro
     - loki_data:/loki
     environment:
     - LOG_LEVEL=info
@@ -253,7 +253,7 @@ services:
     ports:
     - 9093:9093
     volumes:
-    - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    - ./config/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     - alertmanager_data:/alertmanager
     healthcheck:
       test:
@@ -1055,7 +1055,7 @@ services:
     command:
     - --config=/etc/otel-collector.yaml
     volumes:
-    - ./config/otel-collector.config.yaml:/etc/otel-collector.yaml:ro
+    - ./config/monitoring/otel/collector-config.yaml:/etc/otel-collector.yaml:ro
     ports:
     - 4317:4317
     - 4318:4318
@@ -1102,7 +1102,7 @@ services:
     command:
     - -config.file=/etc/tempo.yaml
     volumes:
-    - ./config/tempo.config.yaml:/etc/tempo.yaml:ro
+    - ./config/monitoring/tempo/tempo-config.yaml:/etc/tempo.yaml:ro
     - tempo_data:/var/tempo
     ports:
     - 3200:3200

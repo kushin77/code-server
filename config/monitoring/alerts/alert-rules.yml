@@ -1,0 +1,100 @@
+# @file        monitoring/alerts/alert-rules.yml
+# @module      observability/alerts
+# @description Unified observability alert rules for logs, traces, and GPU metrics
+# @governance  GOV-002: Immutable, version-controlled, no hardcoded secrets
+# Issue #1532: Centralized Observability & SLOG
+
+groups:
+  - name: observability_stack
+    interval: 30s
+    rules:
+      - alert: LokiUnavailable
+        expr: up{job="loki"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: logging
+        annotations:
+          summary: "Loki is unavailable"
+          description: "Loki is not responding to scrape checks"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: PromtailStopped
+        expr: up{job="promtail"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: logging
+        annotations:
+          summary: "Promtail stopped shipping logs"
+          description: "Promtail is not scraping container logs"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: OTelCollectorUnavailable
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: tracing
+        annotations:
+          summary: "OpenTelemetry Collector is unavailable"
+          description: "OTel Collector is not receiving or exporting telemetry"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: TempoUnavailable
+        expr: up{job="tempo"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: tracing
+        annotations:
+          summary: "Tempo is unavailable"
+          description: "Tempo is not responding to health checks"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: AlertmanagerUnavailable
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: alerting
+        annotations:
+          summary: "Alertmanager is unavailable"
+          description: "Alertmanager is not responding to scrape checks"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+  - name: gpu_health
+    interval: 30s
+    rules:
+      - alert: GPUUtilizationHigh
+        expr: avg_over_time(DCGM_FI_DEV_GPU_UTIL[5m]) > 90
+        for: 10m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "GPU utilization is high"
+          description: "Average GPU utilization exceeded 90% for 10m"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: GPUMemoryPressure
+        expr: (DCGM_FI_DEV_FB_USED / DCGM_FI_DEV_FB_TOTAL) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "GPU memory pressure detected"
+          description: "GPU frame buffer usage is above 90%"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: GPUECCErrorsDetected
+        expr: increase(DCGM_FI_DEV_ECC_DBE_VOL_TOTAL[15m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: gpu
+        annotations:
+          summary: "GPU ECC errors detected"
+          description: "Volatile double-bit ECC errors have been observed"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"

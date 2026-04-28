@@ -1,0 +1,60 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default-webhook
+  group_by:
+    - alertname
+    - cluster
+    - service
+    - severity
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: critical-webhook
+    - matchers:
+        - severity="warning"
+      receiver: warning-email
+    - matchers:
+        - severity="info"
+      receiver: info-slack
+    - matchers:
+        - alertname=~"DeadMansSwitch|LokiUnavailable|PromtailStopped|OTelCollectorUnavailable|AlertmanagerUnavailable"
+      receiver: critical-webhook
+
+receivers:
+  - name: default-webhook
+    webhook_configs:
+      - url: http://alert-relay:8080/api/alerts/default
+        send_resolved: true
+
+  - name: critical-webhook
+    webhook_configs:
+      - url: http://alert-relay:8080/api/alerts/critical
+        send_resolved: true
+
+  - name: warning-email
+    email_configs:
+      - to: ops@kushnir.cloud
+        from: alertmanager@kushnir.cloud
+        smarthost: smtp.kushnir.cloud:587
+        send_resolved: true
+
+  - name: info-slack
+    slack_configs:
+      - api_url: https://hooks.slack.com/services/REPLACE/ME/IN/DEPLOYMENT
+        channel: "#incidents"
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity =~ warning|info
+    equal:
+      - alertname
+      - cluster
+      - service

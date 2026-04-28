@@ -216,7 +216,7 @@ services:
     - 3100:3100
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-    - ./config/loki:/etc/loki:ro
+    - ./config/monitoring/loki:/etc/loki:ro
     - loki_data:/loki
     environment:
     - LOG_LEVEL=info
@@ -255,7 +255,7 @@ services:
     ports:
     - 9093:9093
     volumes:
-    - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    - ./config/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     - alertmanager_data:/alertmanager
     healthcheck:
       test:

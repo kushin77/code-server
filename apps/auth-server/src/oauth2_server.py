@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 from src.request_logging import setup_request_logging
 from src.audit_logging import setup_audit_logging
+from src.email_service import setup_email_service
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -345,6 +346,9 @@ setup_request_logging(app, config)
 
 # Setup audit logging with retention policy
 audit_service = setup_audit_logging(config)
+
+# Setup email service with SendGrid
+email_service = setup_email_service(config)
 
 
 # ============================================================================

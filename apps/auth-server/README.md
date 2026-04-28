@@ -279,7 +279,7 @@ pytest -v tests/
 - [ ] Redis 7+ with persistence and replication
 - [ ] TLS/SSL certificates (Let's Encrypt)
 - [x] OAuth provider credentials configured
-- [ ] Email service (SendGrid) configured
+- [x] Email service (SendGrid) configured
 - [x] Database connection pooling (20+ connections)
 - [x] Request logging and monitoring
 - [x] Audit log retention policy (>1 year)

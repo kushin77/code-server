@@ -9,9 +9,11 @@ from enum import Enum
 from sqlalchemy import Column, String, Integer, Float, DateTime, Enum as SQLEnum, Index, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
+
+from apps._shared.python.config import get_config
 
 Base = declarative_base()
+config = get_config(validate_required=False)
 
 
 class TaskStatus(str, Enum):
@@ -122,7 +124,7 @@ class SchedulerDatabase:
     """Database connection and session management for task persistence."""
 
     def __init__(self, database_url: str = None):
-        self.database_url = database_url or os.getenv(
+        self.database_url = database_url or config.get(
             "DATABASE_URL",
             "postgresql://postgres:postgres@postgres:5432/scheduler"
         )

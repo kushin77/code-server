@@ -11,9 +11,11 @@ from enum import Enum
 from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime, JSON, Enum as SQLEnum, Index, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-import os
+
+from apps._shared.python.config import get_config
 
 Base = declarative_base()
+config = get_config(validate_required=False)
 
 
 class ActorType(str, Enum):
@@ -181,9 +183,7 @@ class ReputationAudit(Base):
 
 def init_db():
     """Initialize database tables."""
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("DATABASE_URL environment variable must be set")
+    database_url = config.get_required("DATABASE_URL")
     engine = create_engine(database_url, echo=False)
     Base.metadata.create_all(bind=engine)
     return engine

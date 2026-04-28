@@ -4,7 +4,6 @@
 # @description Main reputation engine service
 # @governance GOV-004 - Reputation engine service lifecycle
 
-import os
 import logging
 from contextlib import asynccontextmanager
 
@@ -17,6 +16,7 @@ from models import Base, ReputationScore, ScoreHistory, ActorType, AccessTier
 from opa_sync import OpaReputationSync
 from score_calculator import ScoreCalculator
 from api import setup_api_routes
+from apps._shared.python.config import get_config
 
 try:
     from event_processor import ReputationEventProcessor
@@ -30,12 +30,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+config = get_config(validate_required=False)
+
 # Configuration from environment
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable must be set")
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-OPA_URL = os.getenv("OPA_URL", "http://localhost:8181")
+DATABASE_URL = config.get_required("DATABASE_URL")
+KAFKA_BOOTSTRAP_SERVERS = config.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+OPA_URL = config.get("OPA_URL", "http://localhost:8181")
 
 # Database setup
 engine = create_engine(DATABASE_URL, echo=False)
@@ -322,6 +322,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=config.get_int("REPUTATION_ENGINE_PORT", 8000),
         log_level="info",
     )

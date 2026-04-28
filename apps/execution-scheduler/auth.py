@@ -4,15 +4,18 @@
 @governance GOV-002: Immutable, deterministic token validation
 """
 
-import os
 import logging
 from typing import Optional
 from fastapi import HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from apps._shared.python.config import get_config
+
 logger = logging.getLogger(__name__)
 
-_scheduler_api_key = os.getenv("SCHEDULER_API_KEY")
+config = get_config(validate_required=False)
+
+_scheduler_api_key = config.get_required("SCHEDULER_API_KEY")
 if not _scheduler_api_key:
     raise RuntimeError("SCHEDULER_API_KEY must be set")
 
@@ -22,9 +25,9 @@ VALID_API_KEYS = {
 }
 
 # OAuth2 introspection endpoint (set via env for production)
-_OAUTH2_INTROSPECT_URL = os.getenv("OAUTH2_INTROSPECT_URL", "")
-_OAUTH2_CLIENT_ID = os.getenv("OAUTH2_CLIENT_ID", "")
-_OAUTH2_CLIENT_SECRET = os.getenv("OAUTH2_CLIENT_SECRET", "")
+_OAUTH2_INTROSPECT_URL = config.get("OAUTH2_INTROSPECT_URL", "")
+_OAUTH2_CLIENT_ID = config.get("OAUTH2_CLIENT_ID", "")
+_OAUTH2_CLIENT_SECRET = config.get("OAUTH2_CLIENT_SECRET", "")
 
 
 class SchedulerAuth:

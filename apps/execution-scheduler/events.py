@@ -5,21 +5,23 @@
 """
 
 import json
-import os
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 
+from apps._shared.python.config import get_config
+
 logger = logging.getLogger(__name__)
+config = get_config(validate_required=False)
 
 
 class SchedulerEventPublisher:
     """Publish scheduling and routing events to Kafka for audit trail and downstream processing."""
 
     def __init__(self, broker_url: str = "redpanda:9092"):
-        self.broker_url = broker_url or os.getenv("KAFKA_BROKER", "redpanda:9092")
+        self.broker_url = broker_url or config.get("KAFKA_BROKER", "redpanda:9092")
         self.producer: Optional[KafkaProducer] = None
         self._initialize_producer()
 

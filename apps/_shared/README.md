@@ -11,14 +11,14 @@
 ```
 apps/_shared/
 ├── python/
-│   ├── config.py       # Configuration management (CANONICAL for all apps)
-│   ├── auth.py         # OAuth2 and API key authentication
-│   ├── logging.py      # Logging utilities (TODO)
-│   ├── exceptions.py   # Common exception classes (TODO)
+│   ├── config.py       # Configuration management (CANONICAL for all apps) ✓
+│   ├── auth.py         # OAuth2 and API key authentication ✓
+│   ├── logging.py      # Logging utilities ✓ (Completed Phase 2.5)
+│   ├── exceptions.py   # Common exception classes ✓ (Completed Phase 2.5)
 │   └── __init__.py
 ├── shell/
 │   ├── common.sh       # Common shell functions
-│   └── test.sh         # Test utilities (TODO)
+│   └── test.sh         # Test utilities ✓ (Completed Phase 2.5)
 └── README.md           # This file
 ```
 
@@ -113,37 +113,90 @@ headers = api_auth.get_headers()  # {'X-API-Key': 'secret-key-here'}
 
 ### `logging.py` - Centralized Logging (TODO - Phase 2.5)
 
-**Problem**: 24 scripts with duplicated log functions
-
 **Solution**: Centralized logging with:
 - Consistent format across apps
-- Structured logging support
+- Structured logging support (JSON, text, structured)
 - Log level management
 - File and stdout output
+- ANSI color support for terminal output
+- Global logger instance with convenience functions
+
+**Usage**:
+```python
+from apps._shared.python.logging import get_logger, setup_global_logging
+
+# Create a logger for a module
+logger = get_logger(__name__)
+
+# Use it
+logger.info("Application started")
+logger.success("Operation completed successfully")
+logger.warning("High memory usage detected")
+logger.error("Failed to connect to database", connection_url="postgresql://...")
+logger.debug("Debug information", variable_name=value)
+
+# Setup global logger with specific format
+setup_global_logging(
+    level="INFO",
+    log_format="json",  # "text", "json", or "structured"
+    log_file="/var/log/app.log"
+)
+
+# Use global convenience functions
+from apps._shared.python.logging import log_info, log_error, log_success
+log_info("Server started")
+log_error("Connection failed")
+log_success("Migration completed")
+```
 
 ---
 
-### `exceptions.py` - Common Exception Classes (TODO - Phase 2.5)
+### `exceptions.py` - Common Exception Classes
 
 **Problem**: Inconsistent error handling across apps
 
-**Solution**: Standard exception hierarchy:
+**Solution**: Standard exception hierarchy with 30+ exception classes organized by domain:
+- **AuthException**: InvalidCredentials, TokenExpired, UnauthorizedAccess, MFARequired, etc.
+- **ConfigException**: MissingConfig, InvalidConfig
+- **DatabaseException**: ConnectionError, QueryError, RecordNotFound, DuplicateRecord
+- **ServiceException**: ServiceUnavailable, EmailServiceError, ExternalServiceError
+- **ValidationException**: ValidationError, InvalidFormat, SchemaValidationError
+- **BusinessLogicException**: OperationNotPermitted, InvalidStateTransition, QuotaExceeded
+- **SystemException**: FeatureNotImplemented, InternalServerError, ResourceLimitExceeded
+
+Each exception includes:
+- Error code (e.g., "AUTH_001", "DB_003")
+- Structured context tracking (to_dict() method)
+- Details dictionary for additional information
+
+**Usage**:
 ```python
-class CodeServerException(Exception):
-    """Base exception"""
-    pass
+from apps._shared.python.exceptions import (
+    AuthenticationFailure,
+    RecordNotFound,
+    InvalidConfig,
+    UnauthorizedAccess
+)
 
-class ConfigurationError(CodeServerException):
-    """Configuration-related error"""
-    pass
+# Raise exceptions with context
+try:
+    if not user:
+        raise RecordNotFound("User", user_id)
+    if user.mfa_required and not mfa_verified:
+        raise UnauthorizedAccess("MFA required", required_scope="mfa:verify")
+except RecordNotFound as e:
+    print(e.error_code)  # "DB_003"
+    print(e.to_dict())   # {"error": "RecordNotFound", "code": "DB_003", ...}
 
-class AuthenticationError(CodeServerException):
-    """Authentication-related error"""
-    pass
-
-class ServiceError(CodeServerException):
-    """Service communication error"""
-    pass
+# For API responses
+except CodeServerException as e:
+    response = {
+        "status": "error",
+        "error": e.__class__.__name__,
+        "code": e.error_code,
+        "message": e.message,
+        "details": e.details,
+    }
 ```
 
 ---
@@ -230,7 +283,46 @@ fi
 
 ---
 
-## Migration Checklist
+### `test.sh` - Consolidated Test Utilities
+
+**Problem**: Test frameworks and assertion functions duplicated across scripts
+
+**Solution**: Unified bash test framework with:
+- Test suite management
+- 10+ assertion types (equals, contains, matches, file operations, etc.)
+- Setup/teardown fixtures
+- Mock/stub utilities
+- Detailed test reports with color-coded output
+
+**Usage**:
+```bash
+#!/bin/bash
+source apps/_shared/test.sh
+
+# Define a test suite
+test_suite "Database Connection Tests"
+
+# Run assertions
+assert_true "database is running" "nc -z localhost 5432"
+assert_equals "database version check" "16.13" "$(psql --version | awk '{print $3}')"
+assert_file_exists "config file exists" "/etc/db/config.yml"
+assert_contains "config has host" "$(cat /etc/db/config.yml)" "localhost"
+assert_matches "version matches pattern" "16.13" "[0-9]+\.[0-9]+"
+
+# Setup test environment
+setup_test_env
+# Use $TEST_DIR for temporary files
+echo "test" > "$TEST_DIR/test.txt"
+assert_file_exists "test file" "$TEST_DIR/test.txt"
+cleanup_test_env
+
+# Generate report
+test_report  # Returns 0 if all passed, 1 if any failed
+```
+
+---
+
+
 
 ### Phase 2 (In Progress)
 
@@ -245,11 +337,32 @@ fi
   - [ ] Migrate apps/auth-server
   - [ ] Add to all service-to-service integrations
 
+### Phase 2.5 (Completed)
+
+- [x] **logging.py** - Centralize 24 log function implementations
+  - [x] Created `CodeServerLogger` class with JSON/text/structured formats
+  - [x] Added ANSI color support and file logging
+  - [x] Implemented global logging functions (log_info, log_success, log_error, log_warning, log_debug)
+  - [x] Syntax validated
+  
+- [x] **exceptions.py** - Standard exception hierarchy
+  - [x] Created 30+ exception classes organized by domain
+  - [x] Added error codes and structured context tracking
+  - [x] Includes auth, config, database, service, validation, business logic, and system exceptions
+  - [x] Syntax validated
+  
+- [x] **test.sh** - Consolidated test utilities
+  - [x] Created bash test framework with suite management
+  - [x] Added 10+ assertion types (assert_true, assert_equals, assert_contains, etc.)
+  - [x] Implemented test fixtures and mock utilities
+  - [x] Added test report generation
+  - [x] Syntax validated
+
 ### Phase 3 (Planned)
 
-- [ ] **logging.py** - Centralize 24 log function implementations
-- [ ] **exceptions.py** - Standard exception hierarchy
-- [ ] **test.sh** - Consolidated test utilities
+- [ ] Migrate auth-server to use new logging.py and exceptions.py modules
+- [ ] Consolidate 24 scripts to use centralized logging functions
+- [ ] Create service-specific exception handlers
 
 ---
 

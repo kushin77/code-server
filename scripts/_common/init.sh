@@ -6,6 +6,10 @@
 # @standard This file is the authoritative entry point for all deployment operations
 set -euo pipefail
 
+# Error handling (only applies to direct execution, not sourcing)
+trap 'echo "Script failed at line $LINENO"; exit 1' ERR 2>/dev/null || true
+trap 'echo "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT 2>/dev/null || true
+
 # Source guards to prevent duplicate sourcing
 [[ "${_SCRIPT_INIT_SOURCED:-0}" == "1" ]] && return 0
 readonly _SCRIPT_INIT_SOURCED=1
@@ -16,6 +20,13 @@ readonly _SCRIPT_INIT_SOURCED=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
+
+# Load repo-local defaults first so strict canonical validation can pass in
+# local dry-run and validation workflows without requiring callers to export
+# every deployment variable up front.
+if [ -f "${SCRIPT_DIR}/config.env" ]; then
+  source <(tr -d '\r' < "${SCRIPT_DIR}/config.env")
+fi
 
 # Load canonical config (SSOT for all environment variables)
 if [ -f "${SCRIPT_DIR}/_base-config.env" ]; then

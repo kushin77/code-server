@@ -275,8 +275,10 @@ Redis (7-alpine)
 └─ Restart:       unless-stopped
 
 Redpanda (v26.1.6)
-├─ CPU Limit:     TBD (from docker-compose)
-├─ Memory Limit:  TBD
+├─ CPU Limit:     4.0 cores
+├─ CPU Reserve:   2.0 cores
+├─ Memory Limit:  8 GB
+├─ Memory Reserve: 4 GB
 └─ Restart:       unless-stopped
 
 Qdrant (v1.7.0)
@@ -325,8 +327,8 @@ Qdrant (v1.7.0)
 |--------|-----------|-------|----------|--------|
 | **Image Size** | alpine (small) | alpine (small) | ~1GB | ~500MB |
 | **Port** | 5432 | 6379 | 9092 | 6333 |
-| **CPU Limit** | 2.0 | 2.0 | TBD | 2.0 |
-| **Memory Limit** | 4GB | 4GB | TBD | 2GB |
+| **CPU Limit** | 2.0 | 2.0 | 4.0 | 2.0 |
+| **Memory Limit** | 4GB | 4GB | 8GB | 2GB |
 | **Storage** | Persistent | Persistent | Persistent | Persistent |
 | **Health Check** | pg_isready | redis-cli | HTTP | TCP |
 | **Dependencies** | None | None | None | None |

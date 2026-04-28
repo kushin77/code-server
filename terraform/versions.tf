@@ -35,10 +35,10 @@ provider "aws" {
   region = var.aws_region
   default_tags {
     tags = {
-      Environment  = var.environment
-      Project      = "code-server-enterprise"
-      Governance   = "GOV-002"
-      ManagedBy    = "Terraform"
+      Environment = var.environment
+      Project     = "code-server-enterprise"
+      Governance  = "GOV-002"
+      ManagedBy   = "Terraform"
     }
   }
 }

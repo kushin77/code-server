@@ -11,10 +11,10 @@ module "database" {
   source = "./modules/database"
 
   # Environment configuration
-  environment                    = var.environment
-  vpc_id                         = var.database_vpc_id
-  private_subnet_ids             = var.database_private_subnet_ids
-  application_security_group_id  = var.database_application_security_group_id
+  environment                   = var.environment
+  vpc_id                        = var.database_vpc_id
+  private_subnet_ids            = var.database_private_subnet_ids
+  application_security_group_id = var.database_application_security_group_id
 
   # PostgreSQL configuration
   postgres_instance_class        = var.database_postgres_instance_class
@@ -26,12 +26,12 @@ module "database" {
   enable_multi_az                = var.environment != "dev"
 
   # Redis configuration
-  redis_node_type                = var.database_redis_node_type
-  redis_num_cache_nodes          = var.database_redis_num_cache_nodes
-  redis_automatic_failover       = var.environment != "dev" && var.database_redis_num_cache_nodes > 1
-  redis_retention_days           = var.database_redis_retention_days
-  redis_maxmemory_policy         = "allkeys-lru"  # Match docker-compose configuration
-  enable_redis_encryption        = true
+  redis_node_type          = var.database_redis_node_type
+  redis_num_cache_nodes    = var.database_redis_num_cache_nodes
+  redis_automatic_failover = var.environment != "dev" && var.database_redis_num_cache_nodes > 1
+  redis_retention_days     = var.database_redis_retention_days
+  redis_maxmemory_policy   = "allkeys-lru" # Match docker-compose configuration
+  enable_redis_encryption  = true
 
   # Monitoring
   enable_enhanced_monitoring = var.environment != "dev"
@@ -41,9 +41,9 @@ module "database" {
   common_tags = merge(
     var.common_tags,
     {
-      Module  = "database"
-      Phase   = "3"
-      Tier    = "data"
+      Module = "database"
+      Phase  = "3"
+      Tier   = "data"
     }
   )
 }
@@ -52,19 +52,19 @@ module "database" {
 resource "local_file" "database_env_file" {
   count    = var.enable_database_module ? 1 : 0
   filename = "${path.module}/../scripts/_common/database.env"
-  
+
   content = templatefile("${path.module}/templates/database.env.tpl", {
-    postgres_host        = module.database[0].database_outputs.postgres_host
-    postgres_port        = module.database[0].database_outputs.postgres_port
-    postgres_db          = module.database[0].database_outputs.postgres_database
-    postgres_user        = module.database[0].database_outputs.postgres_username
-    redis_host           = module.database[0].database_outputs.redis_endpoint
-    redis_port           = module.database[0].database_outputs.redis_port
-    environment          = var.environment
+    postgres_host = module.database[0].database_outputs.postgres_host
+    postgres_port = module.database[0].database_outputs.postgres_port
+    postgres_db   = module.database[0].database_outputs.postgres_database
+    postgres_user = module.database[0].database_outputs.postgres_username
+    redis_host    = module.database[0].database_outputs.redis_endpoint
+    redis_port    = module.database[0].database_outputs.redis_port
+    environment   = var.environment
   })
 
   lifecycle {
-    ignore_changes = [content]  # Don't revert if manually modified
+    ignore_changes = [content] # Don't revert if manually modified
   }
 
   depends_on = [module.database]

@@ -30,11 +30,11 @@ output "certificate_details" {
 
 output "monitoring_configuration" {
   value = {
-    monitoring_enabled       = var.enable_certificate_monitoring
-    check_schedule           = var.renewal_check_frequency
-    expiration_alarm_days    = var.certificate_expiration_alarm_days
-    renewal_days_before      = var.certificate_renewal_days_before_expiry
-    sns_topic                = var.sns_topic_arn
+    monitoring_enabled    = var.enable_certificate_monitoring
+    check_schedule        = var.renewal_check_frequency
+    expiration_alarm_days = var.certificate_expiration_alarm_days
+    renewal_days_before   = var.certificate_renewal_days_before_expiry
+    sns_topic             = var.sns_topic_arn
   }
   description = "Certificate monitoring configuration"
 }

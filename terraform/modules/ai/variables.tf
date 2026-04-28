@@ -30,6 +30,6 @@ variable "ai_memory_gb" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

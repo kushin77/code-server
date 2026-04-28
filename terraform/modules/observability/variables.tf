@@ -36,6 +36,6 @@ variable "grafana_admin_password" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

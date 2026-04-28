@@ -30,6 +30,6 @@ variable "oauth2_proxy_image" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

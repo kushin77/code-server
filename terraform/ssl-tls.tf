@@ -10,9 +10,9 @@ module "ssl_tls" {
   count  = var.enable_ssl_tls_module ? 1 : 0
   source = "./modules/ssl-tls"
 
-  environment             = var.environment
-  apex_domain             = var.ssl_tls_apex_domain
-  subdomain_prefixes      = var.ssl_tls_subdomain_prefixes
+  environment                 = var.environment
+  apex_domain                 = var.ssl_tls_apex_domain
+  subdomain_prefixes          = var.ssl_tls_subdomain_prefixes
   enable_wildcard_certificate = var.ssl_tls_enable_wildcard
 
   # Let's Encrypt configuration
@@ -21,12 +21,12 @@ module "ssl_tls" {
 
   # Renewal configuration
   certificate_renewal_days_before_expiry = 30
-  enable_certificate_auto_renewal       = true
+  enable_certificate_auto_renewal        = true
 
   # Monitoring
-  enable_certificate_monitoring   = var.environment != "dev"
+  enable_certificate_monitoring     = var.environment != "dev"
   certificate_expiration_alarm_days = var.environment == "production" ? 14 : 21
-  renewal_check_frequency         = "cron(0 2 * * ? *)"  # Daily at 02:00 UTC
+  renewal_check_frequency           = "cron(0 2 * * ? *)" # Daily at 02:00 UTC
 
   # AWS resources
   route53_zone_id = var.route53_zone_id
@@ -35,9 +35,9 @@ module "ssl_tls" {
   common_tags = merge(
     var.common_tags,
     {
-      Module  = "ssl-tls"
-      Phase   = "3"
-      Tier    = "security"
+      Module = "ssl-tls"
+      Phase  = "3"
+      Tier   = "security"
     }
   )
 

@@ -25,6 +25,6 @@ variable "policy_bundles_path" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

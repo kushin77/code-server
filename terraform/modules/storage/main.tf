@@ -15,11 +15,11 @@ output "storage_configuration" {
 output "volume_mounts" {
   description = "Docker volume mount points"
   value = {
-    postgres_data     = "${var.storage_mount_path}/postgresql/data"
-    redis_data        = "${var.storage_mount_path}/redis/data"
-    qdrant_storage    = "${var.storage_mount_path}/qdrant/storage"
-    ollama_models     = "${var.storage_mount_path}/ollama/models"
-    grafana_data      = "${var.storage_mount_path}/grafana/data"
+    postgres_data  = "${var.storage_mount_path}/postgresql/data"
+    redis_data     = "${var.storage_mount_path}/redis/data"
+    qdrant_storage = "${var.storage_mount_path}/qdrant/storage"
+    ollama_models  = "${var.storage_mount_path}/ollama/models"
+    grafana_data   = "${var.storage_mount_path}/grafana/data"
   }
 }
 

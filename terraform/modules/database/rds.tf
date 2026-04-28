@@ -32,12 +32,12 @@ resource "aws_db_instance" "postgres" {
   engine_version = var.postgres_version
 
   # Instance sizing
-  instance_class       = var.postgres_instance_class
-  allocated_storage    = var.postgres_allocated_storage
-  storage_type         = "gp3"
-  storage_encrypted    = var.enable_postgres_encryption
-  iops                 = 3000
-  storage_throughput   = 125
+  instance_class     = var.postgres_instance_class
+  allocated_storage  = var.postgres_allocated_storage
+  storage_type       = "gp3"
+  storage_encrypted  = var.enable_postgres_encryption
+  iops               = 3000
+  storage_throughput = 125
 
   # Credentials (use AWS Secrets Manager in production)
   db_name  = "core_db"
@@ -48,25 +48,25 @@ resource "aws_db_instance" "postgres" {
   multi_az = var.enable_multi_az
 
   # Networking
-  db_subnet_group_name            = aws_db_subnet_group.postgres.name
-  publicly_accessible             = false
-  vpc_security_group_ids           = [aws_security_group.postgres.id]
-  skip_final_snapshot              = var.environment != "production"
-  final_snapshot_identifier        = var.environment == "production" ? "${var.environment}-postgres-final-snapshot-${formatdate("YYYYMMDD-hhmm", timestamp())}" : null
+  db_subnet_group_name      = aws_db_subnet_group.postgres.name
+  publicly_accessible       = false
+  vpc_security_group_ids    = [aws_security_group.postgres.id]
+  skip_final_snapshot       = var.environment != "production"
+  final_snapshot_identifier = var.environment == "production" ? "${var.environment}-postgres-final-snapshot-${formatdate("YYYYMMDD-hhmm", timestamp())}" : null
 
   # Backup and maintenance
-  backup_retention_period          = var.postgres_backup_retention_days
-  backup_window                    = "03:00-04:00"           # UTC
-  maintenance_window               = "mon:04:00-mon:05:00"   # UTC
-  copy_tags_to_snapshot            = true
-  delete_automated_backups         = var.environment != "production"
+  backup_retention_period  = var.postgres_backup_retention_days
+  backup_window            = "03:00-04:00"         # UTC
+  maintenance_window       = "mon:04:00-mon:05:00" # UTC
+  copy_tags_to_snapshot    = true
+  delete_automated_backups = var.environment != "production"
 
   # Performance and monitoring
   performance_insights_enabled          = var.enable_enhanced_monitoring
   performance_insights_retention_period = 7
   monitoring_interval                   = var.enable_enhanced_monitoring ? 60 : 0
   monitoring_role_arn                   = var.enable_enhanced_monitoring ? aws_iam_role.rds_monitoring.arn : null
-  enabled_cloudwatch_logs_exports      = ["postgresql"]
+  enabled_cloudwatch_logs_exports       = ["postgresql"]
 
   # Database configuration
   parameter_group_name = aws_db_parameter_group.postgres.name
@@ -82,9 +82,9 @@ resource "aws_db_instance" "postgres" {
   tags = merge(
     var.common_tags,
     {
-      Name  = "${var.environment}-postgres-primary"
-      Tier  = "database"
-      Role  = "oltp"
+      Name = "${var.environment}-postgres-primary"
+      Tier = "database"
+      Role = "oltp"
     }
   )
 
@@ -110,23 +110,23 @@ resource "aws_db_parameter_group" "postgres" {
 
   parameter {
     name  = "wal_keep_size"
-    value = "1024"  # MB
+    value = "1024" # MB
   }
 
   # Performance tuning
   parameter {
     name  = "shared_buffers"
-    value = "{DBInstanceClassMemory/32768}"  # 25% of instance memory
+    value = "{DBInstanceClassMemory/32768}" # 25% of instance memory
   }
 
   parameter {
     name  = "maintenance_work_mem"
-    value = "{DBInstanceClassMemory/63963}"  # 1.6% of instance memory
+    value = "{DBInstanceClassMemory/63963}" # 1.6% of instance memory
   }
 
   parameter {
     name  = "effective_cache_size"
-    value = "{DBInstanceClassMemory/2730}"   # 50% of instance memory
+    value = "{DBInstanceClassMemory/2730}" # 50% of instance memory
   }
 
   # Logging for troubleshooting
@@ -137,7 +137,7 @@ resource "aws_db_parameter_group" "postgres" {
 
   parameter {
     name  = "log_min_duration_statement"
-    value = var.environment == "production" ? "5000" : "1000"  # ms
+    value = var.environment == "production" ? "5000" : "1000" # ms
   }
 
   tags = merge(
@@ -156,7 +156,7 @@ resource "random_password" "postgres_password" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 
   lifecycle {
-    ignore_changes = all  # Don't rotate password once set
+    ignore_changes = all # Don't rotate password once set
   }
 }
 

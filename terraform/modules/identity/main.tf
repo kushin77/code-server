@@ -13,10 +13,10 @@ resource "random_password" "oauth2_cookie" {
 output "oauth2_config" {
   description = "OAuth2-proxy configuration summary"
   value = {
-    provider           = var.oauth2_provider
-    apex_domain        = var.apex_domain
-    twofa_enabled      = var.enable_2fa
-    cookie_secret_set  = var.oauth2_cookie_secret != ""
+    provider          = var.oauth2_provider
+    apex_domain       = var.apex_domain
+    twofa_enabled     = var.enable_2fa
+    cookie_secret_set = var.oauth2_cookie_secret != ""
   }
   sensitive = false
 }

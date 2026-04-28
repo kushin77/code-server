@@ -9,16 +9,16 @@
 resource "local_file" "caddyfile" {
   filename = "${path.module}/../../config/caddy/Caddyfile.${var.deployment_mode}"
   content = templatefile("${path.module}/templates/Caddyfile.tpl", {
-    apex_domain   = var.apex_domain
-    primary_host  = var.primary_host
-    admin_email   = var.admin_email
-    enable_tls    = var.enable_tls
-    log_level     = var.log_level
+    apex_domain     = var.apex_domain
+    primary_host    = var.primary_host
+    admin_email     = var.admin_email
+    enable_tls      = var.enable_tls
+    log_level       = var.log_level
     deployment_mode = var.deployment_mode
   })
-  
+
   lifecycle {
-    ignore_changes = [content]  # Allow manual edits in production
+    ignore_changes = [content] # Allow manual edits in production
   }
 }
 

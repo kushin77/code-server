@@ -18,18 +18,18 @@ resource "null_resource" "deployment_orchestration" {
   # Local execution of deployment script (can be executed from anywhere)
   provisioner "local-exec" {
     working_dir = "${path.module}/../.."
-    
+
     command = "${path.module}/../../scripts/ops/deploy-via-ssh.sh ."
-    
+
     environment = {
-      PRIMARY_HOST    = var.primary_host
-      REPLICA_HOST    = var.replica_host != "" ? var.replica_host : ""
-      SSH_USER        = var.ssh_user
-      SSH_KEY         = var.ssh_key != "" ? var.ssh_key : ""
-      SSH_PORT        = var.ssh_port
-      FORCE_RECREATE  = var.force_recreate ? "true" : "false"
-      PROFILES        = "ai governance infrastructure all"
-      DRY_RUN         = "false"
+      PRIMARY_HOST   = var.primary_host
+      REPLICA_HOST   = var.replica_host != "" ? var.replica_host : ""
+      SSH_USER       = var.ssh_user
+      SSH_KEY        = var.ssh_key != "" ? var.ssh_key : ""
+      SSH_PORT       = var.ssh_port
+      FORCE_RECREATE = var.force_recreate ? "true" : "false"
+      PROFILES       = "ai governance infrastructure all"
+      DRY_RUN        = "false"
     }
   }
 
@@ -54,18 +54,18 @@ resource "null_resource" "deployment_simulation" {
   # Local dry-run to validate deployment
   provisioner "local-exec" {
     working_dir = "${path.module}/../.."
-    
+
     command = "${path.module}/../../scripts/ops/deploy-via-ssh.sh . 2>&1 | tee /tmp/deployment-simulation.log"
-    
+
     environment = {
-      PRIMARY_HOST    = var.primary_host
-      REPLICA_HOST    = var.replica_host != "" ? var.replica_host : ""
-      SSH_USER        = var.ssh_user
-      SSH_KEY         = var.ssh_key != "" ? var.ssh_key : ""
-      SSH_PORT        = var.ssh_port
-      FORCE_RECREATE  = "false"
-      PROFILES        = "ai governance infrastructure all"
-      DRY_RUN         = "true"  # Dry run for simulation
+      PRIMARY_HOST   = var.primary_host
+      REPLICA_HOST   = var.replica_host != "" ? var.replica_host : ""
+      SSH_USER       = var.ssh_user
+      SSH_KEY        = var.ssh_key != "" ? var.ssh_key : ""
+      SSH_PORT       = var.ssh_port
+      FORCE_RECREATE = "false"
+      PROFILES       = "ai governance infrastructure all"
+      DRY_RUN        = "true" # Dry run for simulation
     }
   }
 
@@ -92,6 +92,6 @@ output "deployment_status" {
 
 # Output deployment log location
 output "deployment_log_location" {
-  value = "artifacts/deployment-*.log"
+  value       = "artifacts/deployment-*.log"
   description = "Location of deployment logs (created after execution)"
 }

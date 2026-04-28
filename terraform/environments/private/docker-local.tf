@@ -11,7 +11,7 @@ resource "local_file" "docker_compose_override" {
   file_permission = "0644"
 
   lifecycle {
-    ignore_changes = [content]  # Managed by docker-compose.override.yml file
+    ignore_changes = [content] # Managed by docker-compose.override.yml file
   }
 }
 
@@ -21,17 +21,17 @@ resource "local_file" "caddy_config" {
   file_permission = "0644"
 
   lifecycle {
-    ignore_changes = [content]  # Allow manual updates when needed
+    ignore_changes = [content] # Allow manual updates when needed
   }
 }
 
 # Output local file paths for reference
 output "docker_compose_override_path" {
-  value = local_file.docker_compose_override.filename
+  value       = local_file.docker_compose_override.filename
   description = "Path to docker-compose.override.yml"
 }
 
 output "caddy_config_path" {
-  value = local_file.caddy_config.filename
+  value       = local_file.caddy_config.filename
   description = "Path to active Caddyfile"
 }

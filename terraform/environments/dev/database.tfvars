@@ -9,16 +9,16 @@ postgres_backup_retention_days = 1
 postgres_deletion_protection   = false
 postgres_version               = "16.3"
 
-redis_node_type                = "cache.t4g.micro"
-redis_num_cache_nodes          = 1
-redis_automatic_failover       = false
-redis_retention_days           = 0
+redis_node_type          = "cache.t4g.micro"
+redis_num_cache_nodes    = 1
+redis_automatic_failover = false
+redis_retention_days     = 0
 
-enable_redis_encryption        = false
-enable_postgres_encryption     = true
-enable_enhanced_monitoring     = false
-enable_multi_az                = false
-log_retention_days             = 7
+enable_redis_encryption    = false
+enable_postgres_encryption = true
+enable_enhanced_monitoring = false
+enable_multi_az            = false
+log_retention_days         = 7
 
 common_tags = {
   Environment = "dev"

@@ -62,8 +62,8 @@ resource "aws_iam_role" "database_migration_lambda" {
 
 # Policy for Lambda to access RDS
 resource "aws_iam_role_policy" "database_migration_policy" {
-  name   = "${var.environment}-database-migration-policy"
-  role   = aws_iam_role.database_migration_lambda.id
+  name = "${var.environment}-database-migration-policy"
+  role = aws_iam_role.database_migration_lambda.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

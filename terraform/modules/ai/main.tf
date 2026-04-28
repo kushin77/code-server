@@ -14,9 +14,11 @@ output "ai_services_config" {
 
 output "ollama_preload_script" {
   description = "Script to preload Ollama models"
-  value = join("\n", [
-    "#!/bin/bash",
-    "# Preload Ollama models",
-    for model in var.ollama_models : "docker exec ollama-models ollama pull ${model}"
-  ])
+  value = join("\n", concat(
+    [
+      "#!/bin/bash",
+      "# Preload Ollama models"
+    ],
+    [for model in var.ollama_models : "docker exec ollama-models ollama pull ${model}"]
+  ))
 }

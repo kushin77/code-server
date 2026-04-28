@@ -32,6 +32,6 @@ variable "enable_backups" {
 }
 
 variable "tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }

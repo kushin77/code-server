@@ -90,14 +90,14 @@ resource "aws_elasticache_replication_group" "redis" {
   automatic_failover_enabled = var.redis_automatic_failover && var.redis_num_cache_nodes > 1
   multi_az_enabled           = var.redis_num_cache_nodes > 1
   at_rest_encryption_enabled = var.enable_redis_encryption
-  transit_encryption_enabled = false  # Enable only if using Redis AUTH
+  transit_encryption_enabled = false # Enable only if using Redis AUTH
 
   # Backup configuration
-  snapshot_retention_limit  = var.redis_retention_days
-  snapshot_window           = "03:00-05:00"  # UTC
+  snapshot_retention_limit = var.redis_retention_days
+  snapshot_window          = "03:00-05:00" # UTC
 
   # Maintenance
-  maintenance_window = "mon:05:00-mon:06:00"  # UTC
+  maintenance_window     = "mon:05:00-mon:06:00" # UTC
   notification_topic_arn = aws_sns_topic.redis_notifications.arn
 
   # Logging
@@ -121,8 +121,8 @@ resource "aws_elasticache_replication_group" "redis" {
   tags = merge(
     var.common_tags,
     {
-      Name       = "${var.environment}-redis"
-      Role       = "cache"
+      Name        = "${var.environment}-redis"
+      Role        = "cache"
       Replication = var.redis_num_cache_nodes > 1 ? "enabled" : "disabled"
     }
   )

@@ -9,7 +9,7 @@ resource "aws_cloudwatch_event_rule" "certificate_renewal" {
   count               = var.enable_certificate_auto_renewal ? 1 : 0
   name                = "${var.environment}-certificate-renewal"
   description         = "Automatic certificate renewal check"
-  schedule_expression = "0 1 * * *"  # Daily at 01:00 UTC
+  schedule_expression = "0 1 * * *" # Daily at 01:00 UTC
 
   tags = merge(
     var.common_tags,
@@ -21,23 +21,23 @@ resource "aws_cloudwatch_event_rule" "certificate_renewal" {
 
 # Lambda function for certificate renewal
 resource "aws_lambda_function" "certificate_renewalchecker" {
-  count            = var.enable_certificate_auto_renewal ? 1 : 0
-  filename         = "${path.module}/lambda/certificate-renewal.zip"
-  function_name    = "${var.environment}-certificate-renewal"
-  role             = aws_iam_role.certificate_renewal[0].arn
-  handler          = "index.handler"
-  runtime          = "python3.11"
-  timeout          = 120
+  count         = var.enable_certificate_auto_renewal ? 1 : 0
+  filename      = "${path.module}/lambda/certificate-renewal.zip"
+  function_name = "${var.environment}-certificate-renewal"
+  role          = aws_iam_role.certificate_renewal[0].arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+  timeout       = 120
 
   environment {
     variables = {
-      CERTIFICATE_ARN              = aws_acm_certificate.main.arn
-      RENEWAL_DAYS_BEFORE_EXPIRY   = var.certificate_renewal_days_before_expiry
-      APEX_DOMAIN                  = var.apex_domain
-      LETSENCRYPT_EMAIL            = var.letsencrypt_email
-      SNS_TOPIC_ARN                = var.sns_topic_arn
-      ENVIRONMENT                  = var.environment
-      CADDY_CERTIFICATE_PATH       = var.caddy_certificate_path
+      CERTIFICATE_ARN            = aws_acm_certificate.main.arn
+      RENEWAL_DAYS_BEFORE_EXPIRY = var.certificate_renewal_days_before_expiry
+      APEX_DOMAIN                = var.apex_domain
+      LETSENCRYPT_EMAIL          = var.letsencrypt_email
+      SNS_TOPIC_ARN              = var.sns_topic_arn
+      ENVIRONMENT                = var.environment
+      CADDY_CERTIFICATE_PATH     = var.caddy_certificate_path
     }
   }
 
@@ -77,9 +77,9 @@ resource "aws_iam_role" "certificate_renewal" {
 
 # Policy for renewal Lambda
 resource "aws_iam_role_policy" "certificate_renewal" {
-  count  = var.enable_certificate_auto_renewal ? 1 : 0
-  name   = "${var.environment}-certificate-renewal-policy"
-  role   = aws_iam_role.certificate_renewal[0].id
+  count = var.enable_certificate_auto_renewal ? 1 : 0
+  name  = "${var.environment}-certificate-renewal-policy"
+  role  = aws_iam_role.certificate_renewal[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

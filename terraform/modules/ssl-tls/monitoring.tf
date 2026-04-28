@@ -21,20 +21,20 @@ resource "aws_cloudwatch_event_rule" "certificate_expiration_check" {
 
 # Lambda function for certificate expiration checks
 resource "aws_lambda_function" "certificate_checker" {
-  count            = var.enable_certificate_monitoring ? 1 : 0
-  filename         = "${path.module}/lambda/certificate-checker.zip"
-  function_name    = "${var.environment}-certificate-checker"
-  role             = aws_iam_role.certificate_checker[0].arn
-  handler          = "index.handler"
-  runtime          = "python3.11"
-  timeout          = 60
+  count         = var.enable_certificate_monitoring ? 1 : 0
+  filename      = "${path.module}/lambda/certificate-checker.zip"
+  function_name = "${var.environment}-certificate-checker"
+  role          = aws_iam_role.certificate_checker[0].arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+  timeout       = 60
 
   environment {
     variables = {
-      CERTIFICATE_ARN           = aws_acm_certificate.main.arn
-      SNS_TOPIC_ARN             = var.sns_topic_arn
-      EXPIRATION_ALARM_DAYS     = var.certificate_expiration_alarm_days
-      ENVIRONMENT               = var.environment
+      CERTIFICATE_ARN            = aws_acm_certificate.main.arn
+      SNS_TOPIC_ARN              = var.sns_topic_arn
+      EXPIRATION_ALARM_DAYS      = var.certificate_expiration_alarm_days
+      ENVIRONMENT                = var.environment
       RENEWAL_DAYS_BEFORE_EXPIRY = var.certificate_renewal_days_before_expiry
     }
   }
@@ -73,9 +73,9 @@ resource "aws_iam_role" "certificate_checker" {
 
 # Policy for Lambda to check certificates and publish to SNS
 resource "aws_iam_role_policy" "certificate_checker" {
-  count  = var.enable_certificate_monitoring ? 1 : 0
-  name   = "${var.environment}-certificate-checker-policy"
-  role   = aws_iam_role.certificate_checker[0].id
+  count = var.enable_certificate_monitoring ? 1 : 0
+  name  = "${var.environment}-certificate-checker-policy"
+  role  = aws_iam_role.certificate_checker[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

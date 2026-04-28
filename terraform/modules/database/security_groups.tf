@@ -26,10 +26,10 @@ resource "aws_security_group" "postgres" {
 resource "aws_vpc_security_group_ingress_rule" "postgres_from_app" {
   security_group_id = aws_security_group.postgres.id
 
-  description              = "PostgreSQL from application servers"
-  from_port                = 5432
-  to_port                  = 5432
-  ip_protocol              = "tcp"
+  description                  = "PostgreSQL from application servers"
+  from_port                    = 5432
+  to_port                      = 5432
+  ip_protocol                  = "tcp"
   referenced_security_group_id = var.application_security_group_id
 
   tags = {
@@ -41,9 +41,9 @@ resource "aws_vpc_security_group_ingress_rule" "postgres_from_app" {
 resource "aws_vpc_security_group_egress_rule" "postgres_egress" {
   security_group_id = aws_security_group.postgres.id
 
-  description      = "Allow all outbound"
-  ip_protocol      = "-1"
-  cidr_ipv4        = "0.0.0.0/0"
+  description = "Allow all outbound"
+  ip_protocol = "-1"
+  cidr_ipv4   = "0.0.0.0/0"
 
   tags = {
     Name = "postgres-egress-all"
@@ -72,10 +72,10 @@ resource "aws_security_group" "redis" {
 resource "aws_vpc_security_group_ingress_rule" "redis_from_app" {
   security_group_id = aws_security_group.redis.id
 
-  description              = "Redis from application servers"
-  from_port                = 6379
-  to_port                  = 6379
-  ip_protocol              = "tcp"
+  description                  = "Redis from application servers"
+  from_port                    = 6379
+  to_port                      = 6379
+  ip_protocol                  = "tcp"
   referenced_security_group_id = var.application_security_group_id
 
   tags = {
@@ -87,9 +87,9 @@ resource "aws_vpc_security_group_ingress_rule" "redis_from_app" {
 resource "aws_vpc_security_group_egress_rule" "redis_egress" {
   security_group_id = aws_security_group.redis.id
 
-  description      = "Allow all outbound"
-  ip_protocol      = "-1"
-  cidr_ipv4        = "0.0.0.0/0"
+  description = "Allow all outbound"
+  ip_protocol = "-1"
+  cidr_ipv4   = "0.0.0.0/0"
 
   tags = {
     Name = "redis-egress-all"

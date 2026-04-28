@@ -10,14 +10,14 @@ locals {
   domain_names = var.enable_wildcard_certificate ? concat(
     [var.apex_domain, "*.${var.apex_domain}"],
     [for prefix in var.subdomain_prefixes : "${prefix}.${var.apex_domain}"]
-  ) : concat(
+    ) : concat(
     [var.apex_domain],
     [for prefix in var.subdomain_prefixes : "${prefix}.${var.apex_domain}"]
   )
 
   # Unique subject alternative names
   san_list = distinct(local.domain_names)
-  
+
   # First domain becomes the primary subject
   primary_domain = var.apex_domain
 }
@@ -29,9 +29,9 @@ data "aws_route53_zone" "apex" {
 
 # ACM Certificate with DNS validation
 resource "aws_acm_certificate" "main" {
-  domain_name            = local.primary_domain
+  domain_name               = local.primary_domain
   subject_alternative_names = slice(local.san_list, 1, length(local.san_list))
-  validation_method      = "DNS"
+  validation_method         = "DNS"
 
   lifecycle {
     create_before_destroy = true
@@ -51,9 +51,9 @@ resource "aws_acm_certificate" "main" {
 resource "aws_route53_record" "validation" {
   for_each = {
     for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
-      name    = dvo.resource_record_name
-      record  = dvo.resource_record_value
-      type    = dvo.resource_record_type
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
     }
   }
 
@@ -67,7 +67,7 @@ resource "aws_route53_record" "validation" {
 
 # Wait for certificate validation to complete
 resource "aws_acm_certificate_validation" "main" {
-  certificate_arn           = aws_acm_certificate.main.arn
+  certificate_arn = aws_acm_certificate.main.arn
   timeouts {
     create = "5m"
   }
@@ -78,13 +78,13 @@ resource "aws_acm_certificate_validation" "main" {
 # Export certificate details for Caddy configuration
 resource "local_file" "caddy_certificate_config" {
   filename = "${path.module}/../../config/caddy-certificate.conf"
-  
+
   content = templatefile("${path.module}/templates/caddy-certificate.conf.tpl", {
-    apex_domain      = var.apex_domain
-    subdomains       = join(" ", local.san_list)
-    cert_arn         = aws_acm_certificate.main.arn
-    cert_name        = "${var.environment}-${replace(var.apex_domain, ".", "-")}"
-    environment      = var.environment
+    apex_domain       = var.apex_domain
+    subdomains        = join(" ", local.san_list)
+    cert_arn          = aws_acm_certificate.main.arn
+    cert_name         = "${var.environment}-${replace(var.apex_domain, ".", "-")}"
+    environment       = var.environment
     letsencrypt_email = var.letsencrypt_email
   })
 

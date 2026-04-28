@@ -135,11 +135,11 @@ output "infrastructure_state" {
 # Output service URLs
 output "service_endpoints" {
   value = {
-    "health_check"       = "http://${var.primary_host}/health"
-    "gateway"            = "http://${var.primary_host}"
-    "execution_api"      = "http://${var.primary_host}/api/execution"
-    "opa_api"            = "http://${var.primary_host}/api/opa"
-    "auth_api"           = "http://${var.primary_host}/api/auth"
+    "health_check"  = "http://${var.primary_host}/health"
+    "gateway"       = "http://${var.primary_host}"
+    "execution_api" = "http://${var.primary_host}/api/execution"
+    "opa_api"       = "http://${var.primary_host}/api/opa"
+    "auth_api"      = "http://${var.primary_host}/api/auth"
   }
   description = "Service endpoints for the deployed cluster"
 }

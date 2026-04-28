@@ -6,20 +6,20 @@
 output "database_outputs" {
   value = {
     # PostgreSQL
-    postgres_endpoint        = aws_db_instance.postgres.endpoint
-    postgres_host            = aws_db_instance.postgres.address
-    postgres_port            = aws_db_instance.postgres.port
-    postgres_database        = aws_db_instance.postgres.db_name
-    postgres_username        = aws_db_instance.postgres.username
-    postgres_arn             = aws_db_instance.postgres.arn
-    postgres_security_group  = aws_security_group.postgres.id
+    postgres_endpoint       = aws_db_instance.postgres.endpoint
+    postgres_host           = aws_db_instance.postgres.address
+    postgres_port           = aws_db_instance.postgres.port
+    postgres_database       = aws_db_instance.postgres.db_name
+    postgres_username       = aws_db_instance.postgres.username
+    postgres_arn            = aws_db_instance.postgres.arn
+    postgres_security_group = aws_security_group.postgres.id
 
     # Redis
-    redis_endpoint           = aws_elasticache_replication_group.redis.primary_endpoint_address
-    redis_reader_endpoint    = aws_elasticache_replication_group.redis.reader_endpoint_address
-    redis_port               = aws_elasticache_replication_group.redis.port
-    redis_replication_group  = aws_elasticache_replication_group.redis.id
-    redis_security_group     = aws_security_group.redis.id
+    redis_endpoint          = aws_elasticache_replication_group.redis.primary_endpoint_address
+    redis_reader_endpoint   = aws_elasticache_replication_group.redis.reader_endpoint_address
+    redis_port              = aws_elasticache_replication_group.redis.port
+    redis_replication_group = aws_elasticache_replication_group.redis.id
+    redis_security_group    = aws_security_group.redis.id
 
     # Configuration
     postgres_parameter_group = aws_db_parameter_group.postgres.name
@@ -32,20 +32,20 @@ output "database_outputs" {
 output "database_environment_vars" {
   value = {
     # PostgreSQL connection
-    POSTGRES_HOST        = aws_db_instance.postgres.address
-    POSTGRES_PORT        = tostring(aws_db_instance.postgres.port)
-    POSTGRES_DB          = aws_db_instance.postgres.db_name
-    POSTGRES_USER        = aws_db_instance.postgres.username
-    POSTGRES_PASSWORD    = random_password.postgres_password.result  # Store in secrets manager
-    POSTGRES_URL         = "postgresql://${aws_db_instance.postgres.username}:${random_password.postgres_password.result}@${aws_db_instance.postgres.address}:${aws_db_instance.postgres.port}/${aws_db_instance.postgres.db_name}"
+    POSTGRES_HOST     = aws_db_instance.postgres.address
+    POSTGRES_PORT     = tostring(aws_db_instance.postgres.port)
+    POSTGRES_DB       = aws_db_instance.postgres.db_name
+    POSTGRES_USER     = aws_db_instance.postgres.username
+    POSTGRES_PASSWORD = random_password.postgres_password.result # Store in secrets manager
+    POSTGRES_URL      = "postgresql://${aws_db_instance.postgres.username}:${random_password.postgres_password.result}@${aws_db_instance.postgres.address}:${aws_db_instance.postgres.port}/${aws_db_instance.postgres.db_name}"
 
     # Redis connection
-    REDIS_HOST           = aws_elasticache_replication_group.redis.primary_endpoint_address
-    REDIS_PORT           = tostring(aws_elasticache_replication_group.redis.port)
-    REDIS_URL            = "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${aws_elasticache_replication_group.redis.port}/0"
+    REDIS_HOST = aws_elasticache_replication_group.redis.primary_endpoint_address
+    REDIS_PORT = tostring(aws_elasticache_replication_group.redis.port)
+    REDIS_URL  = "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${aws_elasticache_replication_group.redis.port}/0"
   }
   description = "Environment variables for application configuration"
-  sensitive   = false  # Marked per environment variable
+  sensitive   = false # Marked per environment variable
 }
 
 # Detailed resource outputs
@@ -67,15 +67,15 @@ output "postgres_details" {
 
 output "redis_details" {
   value = {
-    id                    = aws_elasticache_replication_group.redis.id
-    arn                   = aws_elasticache_replication_group.redis.arn
-    engine                = aws_elasticache_replication_group.redis.engine
-    engine_version        = aws_elasticache_replication_group.redis.engine_version
-    node_type             = aws_elasticache_replication_group.redis.node_type
-    num_cache_clusters    = aws_elasticache_replication_group.redis.num_cache_clusters
-    automatic_failover    = aws_elasticache_replication_group.redis.automatic_failover_enabled
-    multi_az              = aws_elasticache_replication_group.redis.multi_az_enabled
-    cluster_enabled       = aws_elasticache_replication_group.redis.cluster_enabled
+    id                 = aws_elasticache_replication_group.redis.id
+    arn                = aws_elasticache_replication_group.redis.arn
+    engine             = aws_elasticache_replication_group.redis.engine
+    engine_version     = aws_elasticache_replication_group.redis.engine_version
+    node_type          = aws_elasticache_replication_group.redis.node_type
+    num_cache_clusters = aws_elasticache_replication_group.redis.num_cache_clusters
+    automatic_failover = aws_elasticache_replication_group.redis.automatic_failover_enabled
+    multi_az           = aws_elasticache_replication_group.redis.multi_az_enabled
+    cluster_enabled    = aws_elasticache_replication_group.redis.cluster_enabled
   }
   description = "Detailed Redis ElastiCache outputs"
 }

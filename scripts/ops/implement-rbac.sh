@@ -23,12 +23,7 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-
-log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
-log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
-log_error() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*"; }
+PROJECT_ROOT="${REPO_ROOT}"
 
 OPA_POLICY_DIR="${PROJECT_ROOT}/policies"
 REDIS_ACL_TEMPLATE="${PROJECT_ROOT}/config/redis.acl.example"

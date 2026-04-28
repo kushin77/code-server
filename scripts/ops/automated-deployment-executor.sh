@@ -12,8 +12,8 @@ set -euo pipefail
 # CONFIGURATION & INITIALIZATION
 # ============================================================================
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 source "${REPO_ROOT}/scripts/_common/service-names.env"
 readonly DEPLOYMENT_ID="deploy-$(date +%Y%m%d-%H%M%S)"
 readonly LOG_DIR="${REPO_ROOT}/artifacts/deployments/${DEPLOYMENT_ID}"

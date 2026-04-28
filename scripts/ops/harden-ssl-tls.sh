@@ -31,10 +31,6 @@ SERVER_CERT="$CERT_DIR/server.crt"
 SERVER_KEY="$CERT_DIR/server.key"
 DAYS=365
 
-log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
-log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
-log_error() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*"; }
-
 # 1. Generate Custom CA and Certificates (for internal services)
 setup_internal_pki() {
     log_info "Setting up internal PKI..."

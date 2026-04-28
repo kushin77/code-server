@@ -17,19 +17,13 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
 # @description Kafka consumer for continuous organizational memory ingestion
 # @governance GOV-002
 # @idempotent YES
 
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="${REPO_ROOT}"
 
 # Source shared service endpoints
 source "${PROJECT_ROOT}/scripts/_common/service-names.env"
@@ -38,11 +32,6 @@ source "${PROJECT_ROOT}/scripts/_common/service-names.env"
 KAFKA_BROKER="${KAFKA_BROKER:-${REDPANDA_KAFKA_ENDPOINT}}"
 MEMORY_ENGINE_URL="${MEMORY_ENGINE_URL:-http://localhost:8001}"
 CONSUMER_GROUP="memory-engine-consumer"
-
-# Logging
-log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
-log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
-log_error() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*"; }
 
 # ============================================================================
 # Kafka Consumer Setup

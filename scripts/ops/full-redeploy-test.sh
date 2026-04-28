@@ -16,9 +16,9 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
+PROJECT_ROOT="${REPO_ROOT}"
 
 # ============================================================================
 # Configuration

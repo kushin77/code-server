@@ -441,14 +441,13 @@ ssh replica-host "docker exec postgres psql -U postgres -c 'SELECT pg_is_in_reco
 
 ```
 scripts/ops/
-├── deploy-ha-cluster.sh        (Phase 4 - HA setup)
-├── deploy-integration-services.sh (Phase 5 - integrations)
 ├── deploy-core-services.sh     (Phase 1 - infrastructure)
-├── deploy-app-and-monitoring.sh (Phase 2 - observability)
-├── deploy-ai-services.sh       (Phase 3 - AI/ML)
+├── deploy-app-and-monitoring.sh (Phase 2 - application, monitoring, AI runtime)
 ├── verify-deployment.sh        (health checks)
 └── master-deployment-orchestrator.sh (main entry point)
 ```
+
+Phase 4 and Phase 5 are captured in the active deployment handoff notes rather than standalone wrapper scripts.
 
 ### Environment Configuration
 
@@ -522,22 +521,15 @@ docker-compose.yml:
 
 ### Phase 4 Deployment
 
-```bash
-bash scripts/ops/deploy-ha-cluster.sh
-```
+Use the phase 4 HA handoff notes in the deployment documentation.
 
 ### Phase 5 Deployment
 
-```bash
-bash scripts/ops/deploy-integration-services.sh
-```
+Use the phase 5 integration handoff notes in the deployment documentation.
 
 ### Combined Deployment (4+5)
 
-```bash
-bash scripts/ops/deploy-ha-cluster.sh && \
-bash scripts/ops/deploy-integration-services.sh
-```
+Use the phase 4/5 combined handoff notes in the deployment documentation.
 
 ### Verification
 
@@ -618,8 +610,6 @@ nslookup cluster.kushnir.cloud
 ```
 Commit: Phase 4-5 Deployment Complete
 Files Modified:
-  - scripts/ops/deploy-ha-cluster.sh (new)
-  - scripts/ops/deploy-integration-services.sh (new)
   - PHASES_4_5_DEPLOYMENT_COMPLETE.md (new)
 
 Services Deployed:

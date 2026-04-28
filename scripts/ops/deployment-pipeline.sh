@@ -40,7 +40,9 @@ trap 'log_info "Pipeline cleanup..."; true' EXIT
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+PROJECT_ROOT="${REPO_ROOT}"
 ENVIRONMENT=${1:-production}
 DEPLOYMENT_ID=$(date +%s)
 LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
@@ -57,8 +59,6 @@ for arg in "$@"; do
         --execute) EXECUTE_DEPLOY=true ;;
     esac
 done
-
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
 if [[ -f "${PROJECT_ROOT}/.env.infrastructure" ]]; then
     # Load deployment-specific variables without requiring extra helper functions.

@@ -14,6 +14,12 @@ trap 'exit 0' INT TERM
 # Logging Functions
 # ============================================================================
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 log_info() {
   printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
 }

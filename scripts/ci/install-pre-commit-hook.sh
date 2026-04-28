@@ -5,6 +5,12 @@
 
 set -euo pipefail
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 HOOK_SOURCE="scripts/ci/pre-commit-ssot-enforcement.sh"
 HOOK_DEST=".git/hooks/pre-commit"
 

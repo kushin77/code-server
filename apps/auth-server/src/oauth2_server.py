@@ -4,6 +4,7 @@ Issue #1545: Enterprise SSO Portal Architecture
 """
 import os
 from datetime import datetime, timedelta
+from apps._shared.python.config import get_config
 from typing import Optional, Dict, Any
 import json
 import secrets
@@ -263,11 +264,14 @@ app = FastAPI(
 
 oauth2_server = OAuth2Server()
 
+# Initialize config (SSOT from scripts/_common/config.env)
+config = get_config()
+
 # Register providers (would be loaded from config in production)
 oauth2_server.register_provider(OAuthConfig(
     provider="github",
-    client_id=os.getenv("GITHUB_CLIENT_ID", "test-client-id"),
-    client_secret=os.getenv("GITHUB_CLIENT_SECRET", "test-client-secret"),
+    client_id=config.get("OAUTH2_GITHUB_CLIENT_ID", "test-client-id"),
+    client_secret=config.get("OAUTH2_GITHUB_CLIENT_SECRET", "test-client-secret"),
     auth_url="https://github.com/login/oauth/authorize",
     token_url="https://github.com/login/oauth/access_token",
     user_info_url="https://api.github.com/user",
@@ -277,8 +281,8 @@ oauth2_server.register_provider(OAuthConfig(
 
 oauth2_server.register_provider(OAuthConfig(
     provider="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID", "test-client-id"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "test-client-secret"),
+    client_id=config.get("OAUTH2_GOOGLE_CLIENT_ID", "test-client-id"),
+    client_secret=config.get("OAUTH2_GOOGLE_CLIENT_SECRET", "test-client-secret"),
     auth_url="https://accounts.google.com/o/oauth2/v2/auth",
     token_url="https://oauth2.googleapis.com/token",
     user_info_url="https://openidconnect.googleapis.com/v1/userinfo",
@@ -492,6 +496,6 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.getenv("PORT", 8001)),
+        port=config.get_int("API_PORT", 8001),
         log_level="info",
     )

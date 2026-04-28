@@ -12,6 +12,12 @@
 # @governance GOV-002
 # Validate that all services have resource limits configured
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 echo "Checking resource limits in docker-compose.yml..."
 
 compose_file="./docker-compose.yml"

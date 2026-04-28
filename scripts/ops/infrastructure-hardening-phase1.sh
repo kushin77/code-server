@@ -6,6 +6,12 @@
 # @idempotent YES - Safe to run multiple times, state-based execution
 set -euo pipefail
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${REPO_ROOT}/scripts/_common/init.sh"
 

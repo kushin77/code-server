@@ -6,6 +6,12 @@
 
 set -euo pipefail
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
 # Ensure shared initialization and GitHub API client are loaded
 readonly REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 source "${REPO_ROOT}/scripts/_common/init.sh"

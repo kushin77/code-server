@@ -1,0 +1,170 @@
+================================================================================
+  ALEMBIC DATABASE MIGRATION INSTRUCTIONS
+  Phase 3 Week 2: Database Initialization to Terraform IaC
+================================================================================
+
+DATABASE CONNECTION INFORMATION:
+  Host:     ${postgres_host}
+  Port:     ${postgres_port}
+  Database: ${postgres_db}
+  User:     ${postgres_user}
+
+STEP 1: Retrieve Database Password
+────────────────────────────────────────────────────────────────────────────────
+
+Option A - From AWS Secrets Manager:
+  aws secretsmanager get-secret-value \
+    --secret-id ${postgres_user} \
+    --query SecretString \
+    --output text
+
+Option B - From Terraform:
+  terraform output -raw database_connection_info | jq '.postgres.password'
+
+Then set environment variable:
+  export POSTGRES_PASSWORD="<password-from-above>"
+
+STEP 2: Build Connection String
+────────────────────────────────────────────────────────────────────────────────
+
+export DATABASE_URL="postgresql://${postgres_user}:$${POSTGRES_PASSWORD}@${postgres_host}:${postgres_port}/${postgres_db}"
+
+STEP 3: Verify Connectivity
+────────────────────────────────────────────────────────────────────────────────
+
+Test via psql:
+  psql "$${DATABASE_URL}" -c "SELECT version();"
+
+Expected output:
+  PostgreSQL 16.3 on x86_64-pc-linux-gnu, ...
+
+STEP 4: List Pending Migrations
+────────────────────────────────────────────────────────────────────────────────
+
+cd /path/to/repository
+alembic history
+
+View pending migrations:
+  alembic current
+  alembic heads
+
+STEP 5: Run Migrations
+────────────────────────────────────────────────────────────────────────────────
+
+IMPORTANT: This is a one-time operation. Back up production data before proceeding.
+
+Run all migrations:
+  alembic upgrade head
+
+View applied migrations:
+  alembic current
+
+Expected output:
+  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+  INFO  [alembic.scriptdir.ScriptDirectory] Applying <migration_id>...
+  INFO  [alembic.runtime.migration] Running upgrade <migration_id> -> ...
+
+STEP 6: Verify Database Schema
+────────────────────────────────────────────────────────────────────────────────
+
+# List tables
+psql "$${DATABASE_URL}" -c "\dt"
+
+# View alembic_version table
+psql "$${DATABASE_URL}" -c "SELECT * FROM alembic_version;"
+
+# Count records in key tables
+psql "$${DATABASE_URL}" -c "SELECT 
+  (SELECT COUNT(*) FROM information_schema.tables 
+   WHERE table_schema = 'public') AS total_tables,
+  version() AS postgres_version;"
+
+TROUBLESHOOTING
+────────────────────────────────────────────────────────────────────────────────
+
+Connection Issues:
+  Error: could not connect to server
+  Solution: Verify security group allows inbound 5432 from your IP
+
+  aws ec2 describe-security-groups \
+    --group-ids sg-xxx \
+    --query 'SecurityGroups[0].IpPermissions'
+
+Authentication Issues:
+  Error: password authentication failed for user
+  Solution: Verify POSTGRES_PASSWORD is correctly set
+
+  echo $POSTGRES_PASSWORD
+
+Migration Issues:
+  Error: migration script error
+  Solution: Check migration scripts in /migrations/versions/
+
+  ls -la migrations/versions/
+
+Rollback Procedure:
+  Downgrade to previous version (if migration fails):
+  
+  alembic downgrade -1
+  
+  Or specific version:
+  
+  alembic downgrade <revision>
+
+AUTOMATION (Phase 3 Week 2)
+────────────────────────────────────────────────────────────────────────────────
+
+Automated migration runner (coming):
+  - Lambda function triggers on RDS creation
+  - Executes: alembic upgrade head
+  - Logs output to CloudWatch
+  - Sends SNS notification on success/failure
+
+Lambda function: terraform/modules/database/lambda-migration.tf
+Scheduled for: Phase 3 Week 2
+
+POST-MIGRATION VALIDATION
+────────────────────────────────────────────────────────────────────────────────
+
+1. Verify all migrations applied:
+   psql "$${DATABASE_URL}" -c "SELECT version_num FROM alembic_version;"
+
+2. Test application connectivity:
+   cd /path/to/repository
+   python -c "from apps._shared.python.config import get_config; \
+             config = get_config(); \
+             print(f'Database: {config.get(\"POSTGRES_HOST\")}')"
+
+3. Check connection pool:
+   psql "$${DATABASE_URL}" -c "SELECT count(*) FROM pg_stat_activity;"
+
+4. Monitor logs:
+   aws logs tail /aws/rds/${postgres_host} --follow
+
+NEXT STEPS
+────────────────────────────────────────────────────────────────────────────────
+
+□ Run Step 1-6 above to initialize database
+□ Verify all migrations applied (Step 6)
+□ Test application connectivity
+□ Update DNS/load balancer to use new RDS endpoint
+□ Decommission old database (if migrating from Docker Compose)
+□ Schedule monitoring verification (Phase 3 Week 2)
+□ Create backup validation procedure (Phase 3 Week 3)
+
+SUPPORT
+────────────────────────────────────────────────────────────────────────────────
+
+Phase 3 Week 2 Deliverables:
+  - Automated Lambda migration runner
+  - CloudWatch monitoring dashboard
+  - SNS notifications
+  - Rollback procedure automation
+
+Questions? Check:
+  - DATABASE_INITIALIZATION_ANALYSIS.md
+  - TERRAFORM_DATABASE_MIGRATION_CHECKLIST.md
+  - terraform/modules/database/README.md
+
+================================================================================

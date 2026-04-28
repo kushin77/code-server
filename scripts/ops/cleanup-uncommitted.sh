@@ -9,6 +9,14 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+set -euo pipefail
+
 # ============================================================================
 # Logging Functions
 # ============================================================================
@@ -28,6 +36,12 @@ log_warn() {
 log_error() {
   printf '[%s] [ERROR] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
 }
+
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Cleanup failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Cleanup complete"; true' EXIT
 
 # ============================================================================
 # Configuration

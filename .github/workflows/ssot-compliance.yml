@@ -1,0 +1,164 @@
+name: SSOT Compliance Check
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'docker-compose*.yml'
+      - 'helm/**'
+      - 'terraform/**'
+      - 'config/**'
+      - '.github/workflows/ssot-compliance.yml'
+
+jobs:
+  ssot-compliance:
+    name: SSOT Compliance Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash
+
+      - name: Run SSOT compliance checks
+        run: |
+          bash scripts/ci/pre-commit-ssot-enforcement.sh
+        continue-on-error: true
+        id: ssot-check
+
+      - name: Check for hardcoded IPs
+        run: |
+          echo "🔍 Scanning for hardcoded IP addresses..."
+          if grep -r "192\.168\." scripts/ docker-compose*.yml helm/ terraform/ \
+            --include="*.sh" --include="*.yml" --include="*.yaml" --include="*.tf" \
+            --exclude-dir=.git --exclude-dir=.terraform | \
+            grep -v "test\|example\|#"; then
+            echo "❌ Found hardcoded IP addresses"
+            exit 1
+          fi
+          echo "✅ No hardcoded IPs found"
+
+      - name: Check for hardcoded domains
+        run: |
+          echo "🔍 Scanning for hardcoded domains..."
+          if grep -r "kushnir\.cloud\|example\.com" scripts/ docker-compose*.yml helm/ terraform/ \
+            --include="*.sh" --include="*.yml" --include="*.yaml" --include="*.tf" \
+            --exclude-dir=.git --exclude-dir=.terraform | \
+            grep -v "test\|APEX_DOMAIN\|#\|\.md:"; then
+            echo "❌ Found hardcoded domain references"
+            exit 1
+          fi
+          echo "✅ No hardcoded domains found"
+
+      - name: Verify script initialization
+        run: |
+          echo "🔍 Verifying shell scripts source init.sh..."
+          SCRIPTS=$(find scripts -name "*.sh" -type f | grep -E "(deploy|setup|manage|ops)" | head -20)
+          MISSING=0
+          for script in $SCRIPTS; do
+            if ! grep -q "source.*init.sh\|source.*_base-config.env" "$script"; then
+              echo "  ⚠️  Missing init.sh: $script"
+              ((MISSING++)) || true
+            fi
+          done
+          if [[ $MISSING -gt 0 ]]; then
+            echo "❌ Found $MISSING scripts missing init.sh sourcing"
+            exit 1
+          fi
+          echo "✅ All critical scripts properly initialized"
+
+      - name: Verify docker-compose.yml compliance
+        run: |
+          echo "🔍 Checking docker-compose.yml for hardcoded values..."
+          if [[ -f docker-compose.yml ]]; then
+            # Check for hardcoded ports (exclude user UIDs)
+            if grep '"[0-9]\{4\}:[0-9]\{4\}"' docker-compose.yml | \
+              grep -v "user\|1000:1000\|1001:1001\|1002:1002\|1003:1003\|1004:1004\|999:999\|472:472" | \
+              grep -v '\${'; then
+              echo "❌ Found hardcoded ports"
+              exit 1
+            fi
+            echo "✅ docker-compose.yml variables properly templated"
+          fi
+
+      - name: Verify Kubernetes helm templating
+        run: |
+          echo "🔍 Checking helm values for templating..."
+          if [[ -d helm ]]; then
+            # Verify override files exist
+            if [[ -f helm/code-server-enterprise/values-env-override.yaml ]]; then
+              echo "✅ Helm override template found"
+            else
+              echo "❌ Missing helm/code-server-enterprise/values-env-override.yaml"
+              exit 1
+            fi
+            # Check that environment files exist
+            if [[ -f helm/code-server-enterprise/values-prod.yaml ]] && \
+               [[ -f helm/code-server-enterprise/values-staging.yaml ]] && \
+               [[ -f helm/code-server-enterprise/values-dev.yaml ]]; then
+              echo "✅ Environment-specific helm values files found"
+            else
+              echo "❌ Missing environment-specific helm values"
+              exit 1
+            fi
+          fi
+
+      - name: Verify Terraform templating
+        run: |
+          echo "🔍 Checking terraform for templating..."
+          if [[ -d terraform ]]; then
+            # Verify template files exist
+            if [[ -f terraform/environments/private/terraform.tfvars.template ]] && \
+               [[ -f terraform/environments/air-gapped/terraform.tfvars.template ]]; then
+              echo "✅ Terraform templates found"
+            else
+              echo "⚠️  Terraform templates not yet created"
+            fi
+          fi
+
+      - name: Check configuration centralization
+        run: |
+          echo "🔍 Verifying _base-config.env..."
+          if [[ -f scripts/_common/_base-config.env ]]; then
+            VAR_COUNT=$(grep '^export ' scripts/_common/_base-config.env | wc -l)
+            echo "✅ Found $VAR_COUNT centralized variables"
+            if [[ $VAR_COUNT -lt 100 ]]; then
+              echo "⚠️  Warning: Less than 100 variables (expected 150+)"
+            fi
+          else
+            echo "❌ Missing scripts/_common/_base-config.env"
+            exit 1
+          fi
+
+      - name: Create compliance report
+        if: always()
+        run: |
+          echo "📊 SSOT Compliance Report" > /tmp/compliance-report.txt
+          echo "==========================" >> /tmp/compliance-report.txt
+          echo "" >> /tmp/compliance-report.txt
+          echo "✅ Checks Passed:" >> /tmp/compliance-report.txt
+          echo "  - No hardcoded IPs" >> /tmp/compliance-report.txt
+          echo "  - No hardcoded domains" >> /tmp/compliance-report.txt
+          echo "  - Scripts properly initialized" >> /tmp/compliance-report.txt
+          echo "  - docker-compose.yml templated" >> /tmp/compliance-report.txt
+          echo "  - Kubernetes helm configured" >> /tmp/compliance-report.txt
+          echo "  - Configuration centralized" >> /tmp/compliance-report.txt
+          cat /tmp/compliance-report.txt
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/compliance-report.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });

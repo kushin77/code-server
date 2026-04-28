@@ -6,6 +6,12 @@
 # @idempotent YES - Safe to run continuously for validation
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 readonly LOG_FILE="./artifacts/compliance-check-$(date +%s).log"
 readonly COMPLIANCE_REPORT="./artifacts/compliance-report-$(date +%s).json"
 readonly CHECKLIST_FILE="./artifacts/compliance-checklist-$(date +%s).md"

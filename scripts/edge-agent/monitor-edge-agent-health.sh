@@ -7,6 +7,22 @@
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Health monitoring failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Health monitoring cleanup..."; true' EXIT
+
+###############################################################################
 #
 # @file scripts/edge-agent/monitor-edge-agent-health.sh
 # @description Monitor edge agent heartbeats and manage agent lifecycle

@@ -8,7 +8,7 @@ version: "3.8"
 services:
   auth-server:
     image: ${REGISTRY}/oauth2-auth-server:${VERSION:-latest}
-    container_name: auth-server
+    container_name: code-server-auth-server
     build:
       context: .
       dockerfile: docker/Dockerfile.auth-server

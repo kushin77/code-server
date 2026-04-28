@@ -9,6 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/service-names.env"
 QDRANT_DATA_PATH="${REPO_ROOT}/data/qdrant"
 QDRANT_CONFIG="${REPO_ROOT}/config/qdrant-config.yaml"
 
@@ -29,9 +30,10 @@ log_success() {
 wait_for_qdrant_health() {
   local max_attempts=30
   local attempt=0
+  local qdrant_url="http://${QDRANT_ENDPOINT}/readyz"
 
   while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if curl -sf http://localhost:6333/readyz > /dev/null 2>&1; then
+    if curl -sf "${qdrant_url}" > /dev/null 2>&1; then
       return 0
     fi
 
@@ -72,13 +74,13 @@ EOF
 generate_docker_compose_service() {
   log_info "Generating Qdrant Docker Compose service definition..."
   
-  cat > "${REPO_ROOT}/docker-compose.qdrant.yml" <<'EOF'
+  cat > "${REPO_ROOT}/docker-compose.qdrant.yml" <<EOF
 version: '3.8'
 
 services:
   qdrant:
     image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
-    container_name: qdrant
+    container_name: ${QDRANT_CONTAINER_NAME}
     ports:
       - "6333:6333"    # HTTP API
       - "6334:6334"    # gRPC API
@@ -90,7 +92,7 @@ services:
     environment:
       - QDRANT_API_KEY=
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      test: ["CMD", "curl", "-f", "http://${QDRANT_ENDPOINT}/readyz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -121,7 +123,7 @@ initialize_qdrant_collections() {
   for collection in "${collections[@]}"; do
     log_info "Creating collection: ${collection}"
     
-    curl -s -X POST http://localhost:6333/collections \
+    curl -s -X POST "http://${QDRANT_ENDPOINT}/collections" \
       -H 'Content-Type: application/json' \
       -d "{
         \"create_collection\": {
@@ -143,9 +145,10 @@ verify_qdrant_health() {
   
   local max_attempts=30
   local attempt=0
+  local qdrant_url="http://${QDRANT_ENDPOINT}/readyz"
   
   while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if curl -sf http://localhost:6333/readyz > /dev/null 2>&1; then
+    if curl -sf "${qdrant_url}" > /dev/null 2>&1; then
       log_success "Qdrant health check passed"
       return 0
     fi

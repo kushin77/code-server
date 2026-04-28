@@ -8,6 +8,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CERT_DIR="${REPO_DIR}/vault-tls/postgres"
 CONFIG_DIR="${REPO_DIR}/config/postgres"
@@ -107,7 +113,7 @@ create_env_documentation() {
 
 ```bash
 # Connection parameters
-export POSTGRES_HOST=postgres-db          # Container hostname
+export POSTGRES_HOST=${POSTGRES_CONTAINER_NAME}          # Container hostname
 export POSTGRES_PORT=5432                  # PostgreSQL port
 export POSTGRES_DB=appdb                   # Database name
 export POSTGRES_USER=appuser               # Database user
@@ -142,7 +148,7 @@ postgres:
 ### Test SSL connection from client
 
 ```bash
-psql -h postgres-db \
+psql -h ${POSTGRES_CONTAINER_NAME} \
      -U appuser \
      -d appdb \
      -v sslmode=require \

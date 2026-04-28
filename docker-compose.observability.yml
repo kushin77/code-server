@@ -13,7 +13,7 @@
 services:
   promtail:
     image: grafana/promtail:2.9.4
-    container_name: promtail-logs
+    container_name: code-server-promtail
     user: "0:0"
     command:
       - --config.file=/etc/promtail/config.yml
@@ -52,7 +52,7 @@ services:
 
   dcgm-exporter:
     image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.5-3.4.1-ubuntu22.04
-    container_name: dcgm-exporter
+    container_name: code-server-dcgm-exporter
     gpus: all
     ports:
       - "9400:9400"

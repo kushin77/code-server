@@ -13,15 +13,9 @@ set -euo pipefail
 # ============================================================================
 
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
 readonly LOG_FILE="${REPO_ROOT}/artifacts/idempotency-validation-$(date +%Y%m%d-%H%M%S).log"
 readonly METRICS_FILE="${REPO_ROOT}/artifacts/idempotency-metrics.json"
-
-# Color codes
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m' # No Color
 
 # ============================================================================
 # LOGGING FUNCTIONS

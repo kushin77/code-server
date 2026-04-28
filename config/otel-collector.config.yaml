@@ -31,16 +31,6 @@ processors:
     limit_mib: 400
     spike_limit_mib: 128
 
-  # Resource attributes: tag all telemetry with deployment context
-  resource:
-    attributes:
-      - key: deployment.environment
-        value: ${env:DEPLOYMENT_ENV}
-        action: upsert
-      - key: service.cluster
-        value: code-server-enterprise
-        action: upsert
-
 exporters:
   # Traces → Tempo
   otlp/tempo:
@@ -78,15 +68,15 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch, resource]
+      processors: [memory_limiter, batch]
       exporters: [otlp/tempo, debug]
     metrics:
       receivers: [otlp, prometheus]
-      processors: [memory_limiter, batch, resource]
+      processors: [memory_limiter, batch]
       exporters: [prometheusremotewrite, debug]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch, resource]
+      processors: [memory_limiter, batch]
       exporters: [loki, debug]
 
   telemetry:

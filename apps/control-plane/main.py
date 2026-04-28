@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""
+Control Plane Service
+Orchestrates and manages code-server infrastructure services
+"""
+
+import logging
+import os
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict, Any
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="Control Plane",
+    description="Service orchestration and control",
+    version="1.0"
+)
+
+class ServiceStatus(BaseModel):
+    service: str
+    status: str
+    healthy: bool
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    version: str
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    return HealthResponse(
+        status="healthy",
+        service="control-plane",
+        version="1.0"
+    )
+
+@app.get("/services", response_model=Dict[str, Any])
+async def get_services():
+    """Get all managed services status"""
+    return {
+        "services": [
+            "code-server-ide",
+            "gitlab",
+            "gitlab-runner",
+            "testing-service",
+            "minio",
+            "vault",
+            "artifact-repository"
+        ],
+        "cluster_id": os.getenv("DEPLOYMENT_ID", "primary"),
+        "timestamp": os.getcwd()
+    }
+
+@app.post("/services/{service}/restart")
+async def restart_service(service: str):
+    """Request service restart (orchestrated by docker-compose)"""
+    logger.info(f"Restart request for service: {service}")
+    return {"service": service, "action": "restart_requested"}
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return {
+        "status": "operational",
+        "services_managed": 7,
+        "cluster_nodes": 2
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("CONTROL_PLANE_PORT", 8082)),
+        log_level="info"
+    )

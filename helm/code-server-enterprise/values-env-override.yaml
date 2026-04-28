@@ -1,0 +1,89 @@
+# Helm Values Override Template with Environment Variable Support
+# Purpose: Override default values.yaml with environment-specific configuration
+# Usage: helm install -f values.yaml -f values-env-override.yaml ...
+# Or:    envsubst < values-env-override.yaml | helm install -f -
+
+# SSOT Pattern: All values sourced from scripts/_common/_base-config.env
+# This file is processed through envsubst for environment variable substitution
+
+global:
+  # Image registry (from HELM_IMAGE_REGISTRY env var)
+  imageRegistry: "${HELM_IMAGE_REGISTRY}"
+  imagePullPolicy: "${HELM_IMAGE_PULL_POLICY}"
+  
+  # Domain and TLS from SSOT
+  domain: "${HELM_DOMAIN}"
+  tlsEmail: "${HELM_TLS_EMAIL}"
+  tlsEnabled: true
+  
+  # Log level from SSOT
+  logLevel: "${HELM_LOG_LEVEL}"
+  
+  # Global resource limits (can be overridden per service)
+  resources:
+    limits:
+      cpu: "${HELM_SERVICE_CPU_LIMIT}"
+      memory: "${HELM_SERVICE_MEMORY_LIMIT}"
+    requests:
+      cpu: "${HELM_SERVICE_CPU_REQUEST}"
+      memory: "${HELM_SERVICE_MEMORY_REQUEST}"
+
+# Environment tracking
+labels:
+  environment: "${HELM_ENVIRONMENT}"
+
+annotations:
+  deployment/config-source: "scripts/_common/_base-config.env"
+  deployment/template: "helm/code-server-enterprise/values-env-override.yaml"
+
+# Service configurations with environment-driven values
+services:
+  api:
+    replicas: ${HELM_API_REPLICAS}
+    resources:
+      limits:
+        cpu: "${HELM_API_CPU_LIMIT}"
+        memory: "${HELM_API_MEMORY_LIMIT}"
+      requests:
+        cpu: "${HELM_API_CPU_REQUEST}"
+        memory: "${HELM_API_MEMORY_REQUEST}"
+
+  frontend:
+    replicas: ${HELM_FRONTEND_REPLICAS}
+    resources:
+      limits:
+        cpu: "${HELM_FRONTEND_CPU_LIMIT}"
+        memory: "${HELM_FRONTEND_MEMORY_LIMIT}"
+      requests:
+        cpu: "${HELM_FRONTEND_CPU_REQUEST}"
+        memory: "${HELM_FRONTEND_MEMORY_REQUEST}"
+
+  reputation_engine:
+    replicas: ${HELM_REPUTATION_ENGINE_REPLICAS}
+    resources:
+      limits:
+        cpu: "${HELM_SERVICE_CPU_LIMIT}"
+        memory: "${HELM_SERVICE_MEMORY_LIMIT}"
+      requests:
+        cpu: "${HELM_SERVICE_CPU_REQUEST}"
+        memory: "${HELM_SERVICE_MEMORY_REQUEST}"
+
+  activity_feed:
+    replicas: ${HELM_ACTIVITY_FEED_REPLICAS}
+    resources:
+      limits:
+        cpu: "${HELM_SERVICE_CPU_LIMIT}"
+        memory: "${HELM_SERVICE_MEMORY_LIMIT}"
+      requests:
+        cpu: "${HELM_SERVICE_CPU_REQUEST}"
+        memory: "${HELM_SERVICE_MEMORY_REQUEST}"
+
+  control_plane:
+    replicas: ${HELM_CONTROL_PLANE_REPLICAS}
+    resources:
+      limits:
+        cpu: "${HELM_SERVICE_CPU_LIMIT}"
+        memory: "${HELM_SERVICE_MEMORY_LIMIT}"
+      requests:
+        cpu: "${HELM_SERVICE_CPU_REQUEST}"
+        memory: "${HELM_SERVICE_MEMORY_REQUEST}"

@@ -2,16 +2,11 @@
 ###############################################################################
 # @file        scripts/ops/terraform-apply-validated.sh
 # @module      ops/terraform-apply-validated
-# @description Infrastructure automation script
-# @governance  GOV-002: Deterministic, audited, immutable infrastructure
-# @author      Autonomous Infrastructure
-# @date        2026-04-25
-###############################################################################
-# @file scripts/ops/terraform-apply-validated.sh
 # @description Phase 4: Validated Terraform apply with environment variable sourcing (#1531)
-# @governance GOV-002 - All values from environment, no hardcoding in tfvars
-# @automation Validates drift detection before applying changes
+# @governance  GOV-002: Deterministic, audited, immutable infrastructure
+# @automation  Validates drift detection before applying changes
 # @prerequisite Must source scripts/_common/init.sh
+###############################################################################
 
 set -euo pipefail
 
@@ -30,21 +25,31 @@ readonly MODE="${1:-plan}"  # plan or apply
 # TERRAFORM CONFIGURATION
 # ==============================================================================
 
+export_tf_var() {
+  local target_var="$1"
+  local source_var="$2"
+  local default_value="${3:-}"
+
+  if [ "$#" -ge 3 ]; then
+    export "${target_var}=${!source_var:-${default_value}}"
+  else
+    export "${target_var}=${!source_var}"
+  fi
+}
+
 # Export environment variables for Terraform
 export_terraform_variables() {
   log_info "Exporting Terraform variables from environment..."
-  
-  # Required variables
-  export TF_VAR_apex_domain="${APEX_DOMAIN}"
-  export TF_VAR_primary_host="${PRIMARY_HOST}"
-  export TF_VAR_admin_email="${ADMIN_EMAIL}"
-  
-  # Optional variables with defaults
-  export TF_VAR_replica_host="${REPLICA_HOST:-}"
-  export TF_VAR_nas_host="${NAS_HOST:-}"
-  export TF_VAR_registry_domain="${REGISTRY_DOMAIN:-registry.${APEX_DOMAIN}}"
-  export TF_VAR_enable_tls="${ENABLE_TLS:-false}"
-  export TF_VAR_metrics_retention_days="${PROMETHEUS_RETENTION_DAYS:-30}"
+
+  export_tf_var TF_VAR_apex_domain APEX_DOMAIN
+  export_tf_var TF_VAR_primary_host PRIMARY_HOST
+  export_tf_var TF_VAR_admin_email ADMIN_EMAIL
+
+  export_tf_var TF_VAR_replica_host REPLICA_HOST
+  export_tf_var TF_VAR_nas_host NAS_HOST
+  export_tf_var TF_VAR_registry_domain REGISTRY_DOMAIN "registry.${APEX_DOMAIN}"
+  export_tf_var TF_VAR_enable_tls ENABLE_TLS "false"
+  export_tf_var TF_VAR_metrics_retention_days PROMETHEUS_RETENTION_DAYS "30"
   
   log_success "✅ Terraform variables exported"
   log_info "  APEX_DOMAIN: ${TF_VAR_apex_domain}"
@@ -72,11 +77,9 @@ terraform_plan() {
   cd "$TERRAFORM_DIR"
   
   local exit_code=0
-  
-  if ! terraform plan -no-color -out=tfplan || exit_code=$?; then
-    log_error "Terraform plan generation failed"
-    return 1
-  fi
+
+  terraform plan -no-color -out=tfplan
+  exit_code=$?
   
   # Exit code 0 = no changes, 2 = changes detected
   if [ "$exit_code" -eq 0 ]; then
@@ -84,6 +87,9 @@ terraform_plan() {
   elif [ "$exit_code" -eq 2 ]; then
     log_info "⚠️  Infrastructure changes detected (exit code 2)"
     terraform show -no-color tfplan || true
+  else
+    log_error "Terraform plan generation failed"
+    return 1
   fi
   
   log_success "✅ Terraform plan complete"

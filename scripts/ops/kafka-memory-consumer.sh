@@ -7,7 +7,14 @@
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
-# @file scripts/ops/kafka-memory-consumer.sh
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
 # @description Kafka consumer for continuous organizational memory ingestion
 # @governance GOV-002
 # @idempotent YES
@@ -17,8 +24,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-# Configuration
-KAFKA_BROKER="${KAFKA_BROKER:-localhost:9092}"
+# Source shared service endpoints
+source "${PROJECT_ROOT}/scripts/_common/service-names.env"
+
+# Configuration - use shared Redpanda endpoint
+KAFKA_BROKER="${KAFKA_BROKER:-${REDPANDA_KAFKA_ENDPOINT}}"
 MEMORY_ENGINE_URL="${MEMORY_ENGINE_URL:-http://localhost:8001}"
 CONSUMER_GROUP="memory-engine-consumer"
 

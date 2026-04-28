@@ -28,6 +28,12 @@ log_success() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
 }
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Rollback failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Rollback cleanup..."; true' EXIT
+
 wait_for_compose_health() {
   local max_attempts=30
   local attempt=0

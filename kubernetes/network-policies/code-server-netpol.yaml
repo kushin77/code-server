@@ -1,0 +1,193 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server-ingress-internal
+  namespace: code-server
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+spec:
+  podSelector: {}  # Applies to all pods in namespace
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow traffic from other pods in code-server namespace
+  - from:
+    - podSelector: {}
+  # Allow traffic from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+  # Allow DNS from kube-dns
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server-egress-internal
+  namespace: code-server
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+spec:
+  podSelector: {}  # Applies to all pods in namespace
+  policyTypes:
+  - Egress
+  egress:
+  # Allow traffic to other pods in code-server namespace
+  - to:
+    - podSelector: {}
+  # Allow DNS queries
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS to external APIs (if needed for external integrations)
+  # This is restricted by default; enable specific IPs if needed
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 169.254.169.254/32  # Block AWS metadata
+        - 10.0.0.0/8          # Block internal cluster network (adjust as needed)
+    ports:
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server-deny-ingress
+  namespace: code-server
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+spec:
+  podSelector:
+    matchLabels:
+      project: code-server
+  policyTypes:
+  - Ingress
+  ingress:
+  # Only allow from code-server namespace
+  - from:
+    - podSelector:
+        matchLabels:
+          project: code-server
+  # Allow from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server-deny-cross-namespace
+  namespace: code-server
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+spec:
+  podSelector: {}  # All pods in code-server namespace
+  policyTypes:
+  - Ingress
+  ingress:
+  # Deny traffic from other namespaces (except ingress and kube-system)
+  - from:
+    - podSelector: {}
+      namespaceSelector:
+        matchLabels:
+          name: code-server
+  # Allow from kube-system (for DNS, etc.)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+---
+# Pod Security Policy - if PSP is enabled on cluster
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: code-server-restricted
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+  - ALL
+  volumes:
+  - 'configMap'
+  - 'emptyDir'
+  - 'projected'
+  - 'secret'
+  - 'downwardAPI'
+  - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'MustRunAs'
+    seLinuxOptions:
+      level: "s0:c123,c456"
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+    - min: 1000
+      max: 2000
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+    - min: 1000
+      max: 2000
+  readOnlyRootFilesystem: false
+---
+# PodSecurityPolicyBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: code-server-psp
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+rules:
+- apiGroups:
+  - policy
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+  resourceNames:
+  - code-server-restricted
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: code-server-psp
+  labels:
+    app.kubernetes.io/name: code-server-enterprise
+    project: code-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: code-server-psp
+subjects:
+- kind: ServiceAccount
+  name: code-server
+  namespace: code-server

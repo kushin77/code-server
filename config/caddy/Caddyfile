@@ -1,135 +1,20 @@
-# @file Caddyfile
-# @module config/caddy
-# @description Caddy reverse proxy configuration with OPA policy integration
-# @governance GOV-002 - All requests validated by OPA
-
-# Global options
-{
-	log {
-		format json
-		output stdout
-	}
-	storage file_system /data
-}
-
-# Development environment (kushnir.local)
-kushnir.local, *.kushnir.local {
-	log {
-		level debug
-	}
-
-	# Health check endpoint
-	handle /health {
-		respond "OK" 200
-	}
-
-	# Protected API endpoints - require OPA authorization
-	handle /api/* {
-		# Step 1: Verify OPA policy allows request
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		# Step 2: Route to backend service
-		reverse_proxy http://backend:8000 {
-			header_up X-Forwarded-For {http.request.remote}
-			header_up X-Forwarded-Proto {http.request.proto}
-			header_up X-User-ID {http.request.header.User-ID}
-		}
-	}
-
-	# Admin endpoints - stricter policy checks
-	handle /admin/* {
-		# Require device trust and reputation checks
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://admin-service:9000 {
-			header_up X-User-ID {http.request.header.User-ID}
-			header_up X-Audit-ID {uuid}
-		}
-	}
-
-	# AI Model endpoints - model allowlist and budget checks
-	handle /models/* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://model-gateway:8080 {
-			header_up X-Model-Name {model_param}
-			header_up X-User-ID {user_id}
-		}
-	}
-
-	# Public endpoints - no auth required
-	handle / {
-		respond "ElevatedIQ DevOS v1.0" 200
-	}
-
-	# Catch-all: deny by default
-	handle {
-		respond "Endpoint not found" 404
-	}
-
-	# Error handling
-	handle_errors {
-		respond "Internal error" 500
-	}
-}
-
-# Production domain with ACME/Let's Encrypt
-{$APEX_DOMAIN} {
-	tls {$TLS_EMAIL} {
-	}
-
-	log {
-		level info
-		format json
-	}
-
-	# Health check
-	handle /.well-known/health {
-		respond "OK" 200
-	}
-
-	# API routes with full policy enforcement
-	handle /api/* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://backend:8000 {
-			header_up X-Forwarded-For {http.request.remote}
-			header_up X-Forwarded-Proto {http.request.proto}
-			header_up X-Audit-ID {uuid}
-		}
-	}
-
-	# IDE endpoints
-	handle /ide* {
-		forward_auth http://opa:8181 {
-			uri /v1/data/identity/sso_required
-			copy_headers Authorization X-User-ID
-		}
-
-		reverse_proxy http://code-server:8443 {
-			header_up X-Real-IP {http.request.remote}
-		}
-	}
-
-# Metrics endpoint
-handle /metrics* {
-	reverse_proxy http://prometheus:9090
-}
-
-handle / {
-	root * /srv
-	file_server browse
-}
+:80 {
+  handle /health {
+    respond OK 200
+  }
+  handle /api/execution/* {
+    uri strip_prefix /api/execution
+    reverse_proxy execution-scheduler:8080
+  }
+  handle /api/opa/* {
+    uri strip_prefix /api/opa
+    reverse_proxy opa:8181
+  }
+  handle /api/auth/* {
+    uri strip_prefix /api/auth
+    reverse_proxy oauth2-proxy:4180
+  }
+  handle / {
+    respond "ElevatedIQ Cluster Gateway" 200
+  }
 }

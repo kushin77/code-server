@@ -19,7 +19,27 @@
 #   ssh akushnir@${REPLICA_HOST} 'cd code-server-enterprise && bash scripts/ops/deploy-production-fix.sh'
 #
 
+
 set -euo pipefail
+
+# Source canonical environment variables (SSOT)
+if [ -f "$PWD/.env.infrastructure" ]; then
+    set -a
+    source "$PWD/.env.infrastructure"
+    set +a
+else
+    echo "[ERROR] .env.infrastructure not found in $PWD. Aborting." >&2
+    exit 1
+fi
+
+# Fail-fast: Ensure required environment variables are set
+required_vars=(PRIMARY_HOST REPLICA_HOST OAUTH2_COOKIE_SECRET SCHEDULER_API_KEY DATABASE_URL)
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var:-}" ]; then
+        echo "[ERROR] Required environment variable $var is not set. Aborting." >&2
+        exit 1
+    fi
+done
 
 readonly REPO_ROOT="${PWD}"
 readonly DOCKER_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
@@ -39,6 +59,12 @@ log_error() {
 log_success() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] SUCCESS: $*" | tee -a "$LOG_FILE"
 }
+
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Deployment failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/deploy-*.log 2>/dev/null || true' EXIT
 
 # Idempotent git sync: only pull if HEAD diverges from origin/main
 sync_code() {

@@ -39,6 +39,7 @@ Common labels
 {{- define "code-server-enterprise.labels" -}}
 helm.sh/chart: {{ include "code-server-enterprise.chart" . }}
 {{ include "code-server-enterprise.selectorLabels" . }}
+project: code-server
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -54,6 +55,7 @@ Selector labels
 {{- define "code-server-enterprise.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "code-server-enterprise.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+project: code-server
 {{- end }}
 
 {{/*

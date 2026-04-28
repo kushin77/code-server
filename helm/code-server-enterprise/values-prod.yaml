@@ -1,0 +1,73 @@
+# Production Helm Values Override
+# High-availability, strict resource limits, redundancy
+
+global:
+  imageRegistry: "registry.kushnir.cloud:5000"
+  imagePullPolicy: "Always"
+  logLevel: "warn"
+  
+  resources:
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+    requests:
+      cpu: "1000m"
+      memory: "1Gi"
+
+labels:
+  environment: "production"
+
+annotations:
+  sla/tier: "critical"
+  governance/compliance: "required"
+
+services:
+  api:
+    replicas: 5
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+      requests:
+        cpu: "1000m"
+        memory: "1Gi"
+
+  frontend:
+    replicas: 3
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+
+  reputation_engine:
+    replicas: 3
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+
+  activity_feed:
+    replicas: 3
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+
+  control_plane:
+    replicas: 3
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"

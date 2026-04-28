@@ -4,6 +4,12 @@
 # @description Pre-pull digest-pinned images for an air-gapped Terraform deployment
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <image> [image...]" >&2
   exit 1

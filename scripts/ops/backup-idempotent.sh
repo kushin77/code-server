@@ -15,6 +15,16 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+log_error() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
+}
+
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Backup failed at line $LINENO (exit code: $?)"; rm -f "${BACKUP_FILE}" 2>/dev/null || true; exit 1' ERR
+trap 'log "Performing cleanup..."; true' EXIT
+
 # Check if recent backup exists
 has_recent_backup() {
   local cutoff_time=$(($(date '+%s') - (BACKUP_AGE_HOURS * 3600)))

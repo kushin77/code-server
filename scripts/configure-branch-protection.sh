@@ -7,6 +7,15 @@
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/_common/init.sh"
+###############################################################################
 #
 # Configure GitHub branch protection rules for main branch
 # This script sets up protection rules aligned with issue #1534 governance standards

@@ -1,0 +1,72 @@
+# Staging Helm Values Override
+# Medium resources, 2-3 replicas for redundancy
+
+global:
+  imageRegistry: "registry.kushnir.cloud:5000"
+  imagePullPolicy: "IfNotPresent"
+  logLevel: "info"
+  
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+
+labels:
+  environment: "staging"
+
+annotations:
+  sla/tier: "standard"
+
+services:
+  api:
+    replicas: 2
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+
+  frontend:
+    replicas: 2
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  reputation_engine:
+    replicas: 2
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  activity_feed:
+    replicas: 2
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+
+  control_plane:
+    replicas: 2
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"

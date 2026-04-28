@@ -9,6 +9,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/service-names.env"
 REDPANDA_DATA_PATH="${REPO_ROOT}/data/redpanda"
 KAFKA_CONFIG="${REPO_ROOT}/config/kafka-topics.yaml"
 
@@ -174,13 +181,13 @@ EOF
 generate_docker_compose_service() {
   log_info "Generating Docker Compose service for Redpanda..."
   
-  cat > "${REPO_ROOT}/docker-compose.redpanda.yml" <<'EOF'
+  cat > "${REPO_ROOT}/docker-compose.redpanda.yml" <<EOF
 version: '3.8'
 
 services:
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v26.1.6@sha256:e5b6aaecf38861d199b0d26d635b83da26dd6e6acf0684cd8b92f16b4f4b8733
-    container_name: redpanda
+    container_name: ${REDPANDA_CONTAINER_NAME}
     command:
       - redpanda
       - start
@@ -207,7 +214,7 @@ services:
   
   redpanda-console:
     image: docker.redpanda.com/redpandadata/console:v3.7.1@sha256:d5ec9a54339db74d8efa61b18576185903694bee1deb4c029befa492e41ac78f
-    container_name: redpanda-console
+    container_name: ${REDPANDA_CONSOLE_CONTAINER_NAME}
     environment:
       KAFKA_BROKERS: redpanda:9092
       SCHEMA_REGISTRY_URL: http://redpanda:8081
@@ -241,7 +248,7 @@ initialize_kafka_topics() {
   local attempt=0
   
   while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if rpk cluster info --brokers=localhost:9092 > /dev/null 2>&1; then
+    if rpk cluster info --brokers="${REDPANDA_KAFKA_ENDPOINT}" > /dev/null 2>&1; then
       log_success "Redpanda broker ready"
       break
     fi
@@ -255,14 +262,14 @@ initialize_kafka_topics() {
   fi
   
   # Create topics
-  rpk topic create agent.audit --brokers=localhost:9092 --partitions=3 --replicas=1 || true
-  rpk topic create agent.lifecycle --brokers=localhost:9092 --partitions=3 --replicas=1 || true
-  rpk topic create deploy.events --brokers=localhost:9092 --partitions=3 --replicas=1 || true
-  rpk topic create incident.events --brokers=localhost:9092 --partitions=3 --replicas=1 || true
-  rpk topic create code.review --brokers=localhost:9092 --partitions=3 --replicas=1 || true
-  rpk topic create ai.interactions --brokers=localhost:9092 --partitions=3 --replicas=1 || true
-  rpk topic create reputation.update --brokers=localhost:9092 --partitions=2 --replicas=1 || true
-  rpk topic create system.alerts --brokers=localhost:9092 --partitions=2 --replicas=1 || true
+  rpk topic create agent.audit --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=3 --replicas=1 || true
+  rpk topic create agent.lifecycle --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=3 --replicas=1 || true
+  rpk topic create deploy.events --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=3 --replicas=1 || true
+  rpk topic create incident.events --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=3 --replicas=1 || true
+  rpk topic create code.review --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=3 --replicas=1 || true
+  rpk topic create ai.interactions --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=3 --replicas=1 || true
+  rpk topic create reputation.update --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=2 --replicas=1 || true
+  rpk topic create system.alerts --brokers="${REDPANDA_KAFKA_ENDPOINT}" --partitions=2 --replicas=1 || true
   
   log_success "Kafka topics initialized"
 }
@@ -271,12 +278,12 @@ initialize_kafka_topics() {
 verify_redpanda_health() {
   log_info "Verifying Redpanda health..."
   
-  if ! curl -sf http://localhost:9644/v1/cluster/brokers > /dev/null 2>&1; then
+  if ! curl -sf "http://${REDPANDA_ADMIN_ENDPOINT}/v1/cluster/brokers" > /dev/null 2>&1; then
     log_error "Redpanda admin API not responding"
     return 1
   fi
   
-  if ! curl -sf http://localhost:8081/subjects > /dev/null 2>&1; then
+  if ! curl -sf "http://${REDPANDA_SCHEMA_REGISTRY_ENDPOINT}/subjects" > /dev/null 2>&1; then
     log_error "Schema Registry not responding"
     return 1
   fi

@@ -1,0 +1,72 @@
+# Development Helm Values Override
+# Minimal resources, single replicas for local development
+
+global:
+  imageRegistry: "docker.io"
+  imagePullPolicy: "Always"
+  logLevel: "debug"
+  
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+
+labels:
+  environment: "development"
+
+annotations:
+  sla/tier: "best-effort"
+
+services:
+  api:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+
+  frontend:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+
+  reputation_engine:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+
+  activity_feed:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+
+  control_plane:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"

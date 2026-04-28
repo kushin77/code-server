@@ -17,15 +17,18 @@ CERT_DIR="${REPO_DIR}/vault-tls"
 POSTGRES_CERT_DIR="${CERT_DIR}/postgres"
 LOG_FILE="${REPO_DIR}/logs/database-ssl-setup.log"
 
+# Source canonical service names
+source "${REPO_DIR}/scripts/_common/service-names.env"
+
 # Certificate configuration
 CERT_VALIDITY_DAYS=365
-DB_HOST="postgres-db"
+DB_HOST="${POSTGRES_CONTAINER_NAME}"
 DB_PORT="5432"
 COUNTRY="US"
 STATE="CA"
 CITY="San Francisco"
 ORGANIZATION="ElevatedIQ"
-COMMON_NAME="postgres-db"
+COMMON_NAME="${POSTGRES_CONTAINER_NAME}"
 
 # Create directories
 mkdir -p "${POSTGRES_CERT_DIR}" "${REPO_DIR}/logs"
@@ -245,7 +248,7 @@ export POSTGRES_SSLKEY=/path/to/client-key.pem
 export POSTGRES_SSLROOTCERT=/path/to/ca.crt
 
 # Connection details
-export POSTGRES_HOST=postgres-db
+export POSTGRES_HOST="${POSTGRES_CONTAINER_NAME}"
 export POSTGRES_PORT=5432
 export POSTGRES_DB=appdb
 export POSTGRES_USER=appuser
@@ -259,7 +262,7 @@ export POSTGRES_PASSWORD=${DB_PASSWORD}  # From GSM
 ```bash
 # With SSL certificate verification
 psql \
-  "host=postgres-db \
+  "host=${POSTGRES_CONTAINER_NAME} \
    port=5432 \
    dbname=appdb \
    user=appuser \

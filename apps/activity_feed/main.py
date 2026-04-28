@@ -12,7 +12,7 @@ from typing import List, Optional
 from datetime import datetime
 import asyncio
 import logging
-from .consumer import ActivityFeedConsumer, ActivityEvent
+from consumer import ActivityFeedConsumer, ActivityEvent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

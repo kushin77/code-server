@@ -53,6 +53,17 @@ log_error() {
 export -f log_info log_success log_warn log_warning log_error
 
 # ==============================================================================
+# PHASE 2.5: Color constants for terminal output (SSOT for all scripts)
+# ==============================================================================
+
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
+
+export RED GREEN BLUE NC
+
+# ==============================================================================
 # PHASE 3: Utility functions for IaC compliance
 # ==============================================================================
 
@@ -78,19 +89,105 @@ get_git_sha() {
   cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo "unknown"
 }
 
-# Validate required environment variables
+# Validate required environment variables (fail-fast pattern)
 validate_required_env() {
-  local required=("APEX_DOMAIN" "PRIMARY_HOST" "ADMIN_EMAIL")
+  # Allow custom validation via function override
+  if declare -f _validate_required_env >/dev/null 2>&1; then
+    _validate_required_env
+    return $?
+  fi
+
+  # Default required variables for deployment
+  local required=("APEX_DOMAIN" "PRIMARY_HOST" "REPLICA_HOST" "NAS_HOST" "ADMIN_EMAIL")
+  
+  # Allow caller to override with REQUIRED_ENV_VARS array
+  if declare -p REQUIRED_ENV_VARS >/dev/null 2>&1; then
+    required=("${REQUIRED_ENV_VARS[@]}")
+  fi
+
+  local missing_vars=()
+  local var
   for var in "${required[@]}"; do
     if [ -z "${!var:-}" ]; then
-      log_error "Required environment variable \$${var} is not set"
-      return 1
+      missing_vars+=("$var")
     fi
   done
+
+  if [ ${#missing_vars[@]} -gt 0 ]; then
+    log_error "Missing required environment variables: ${missing_vars[*]}"
+    log_error "Ensure these are set before running deployment scripts"
+    return 1
+  fi
+
   return 0
 }
 
-export -f source_env_file verify_git_clean get_git_sha validate_required_env
+# Require environment variable or fail fast (convenience wrapper)
+require_env() {
+  local var_name="$1"
+  local default_value="${2:-}"
+  
+  if [ -z "${!var_name:-}" ] && [ -z "$default_value" ]; then
+    log_error "Required environment variable \$${var_name} is not set"
+    return 1
+  fi
+  
+  if [ -z "${!var_name:-}" ]; then
+    eval "export ${var_name}=\"${default_value}\""
+    log_warn "Using default for ${var_name}: ${default_value}"
+  fi
+  return 0
+}
+
+# Validate a variable is not empty (fail-fast)
+require_vars() {
+  local -a missing=()
+  for var in "$@"; do
+    if [ -z "${!var:-}" ]; then
+      missing+=("$var")
+    fi
+  done
+  
+  if [ ${#missing[@]} -gt 0 ]; then
+    log_error "Required environment variables missing: ${missing[*]}"
+    return 1
+  fi
+  return 0
+}
+
+export -f source_env_file verify_git_clean get_git_sha validate_required_env require_env require_vars
+
+# ==============================================================================
+# PHASE 3.5: Docker Compose health check helpers (SSOT for deployment validation)
+# ==============================================================================
+
+# Count services in docker-compose configuration
+services_running() {
+  docker compose ps --services 2>/dev/null | wc -l | tr -d ' '
+}
+
+# Wait for all services to reach healthy state
+wait_for_healthy_services() {
+  local expected_count
+  expected_count=$(services_running)
+
+  local attempt=0
+  while [[ $attempt -lt 24 ]]; do
+    local healthy_count
+    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
+
+    if [[ "$healthy_count" -ge "$expected_count" && "$expected_count" -gt 0 ]]; then
+      return 0
+    fi
+
+    sleep 5
+    ((attempt++))
+  done
+
+  return 1
+}
+
+export -f services_running wait_for_healthy_services
 
 # ==============================================================================
 # PHASE 4: IaC idempotency tracking

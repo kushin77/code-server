@@ -9,6 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_DIR}/scripts/_common/service-names.env"
 CONFIG_DIR="${REPO_DIR}/config"
 LOG_FILE="${REPO_DIR}/logs/network-policies.log"
 
@@ -175,7 +176,7 @@ docker ps --format "table {{.Names}}\t{{.Ports}}"
 ### Verify network policies
 ```bash
 # Test connectivity
-docker exec postgres-db ping redis-cache
+docker exec "${POSTGRES_CONTAINER_NAME}" ping "${REDIS_CONTAINER_NAME}"
 docker exec api-backend curl -f http://opa:8181/health
 ```
 

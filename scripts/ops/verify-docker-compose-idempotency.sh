@@ -205,8 +205,10 @@ test_persistent_volume_preservation() {
   
   log_info "Persistent volumes defined: $persistent_volumes"
   
+  source "${REPO_ROOT}/scripts/_common/service-names.env"
+  
   # Create test marker file in PostgreSQL volume
-  docker exec postgres-db touch /var/lib/postgresql/data/.idempotency-test-marker 2>/dev/null || true
+  docker exec "${POSTGRES_CONTAINER_NAME}" touch /var/lib/postgresql/data/.idempotency-test-marker 2>/dev/null || true
   
   # Stop and restart
   docker-compose down
@@ -215,9 +217,9 @@ test_persistent_volume_preservation() {
   sleep 5
   
   # Check if marker persists
-  if docker exec postgres-db test -f /var/lib/postgresql/data/.idempotency-test-marker 2>/dev/null; then
+  if docker exec "${POSTGRES_CONTAINER_NAME}" test -f /var/lib/postgresql/data/.idempotency-test-marker 2>/dev/null; then
     log_success "✅ Persistent volumes preserved across restarts"
-    docker exec postgres-db rm /var/lib/postgresql/data/.idempotency-test-marker 2>/dev/null || true
+    docker exec "${POSTGRES_CONTAINER_NAME}" rm /var/lib/postgresql/data/.idempotency-test-marker 2>/dev/null || true
     return 0
   else
     log_warn "Persistent volume test inconclusive"

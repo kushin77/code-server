@@ -178,18 +178,20 @@ EOF
 create_encryption_verification() {
   log "Creating encryption verification..."
   
-  cat > "${CONFIG_DIR}/encryption/verify-encryption.sh" <<'EOF'
+  source "${REPO_DIR}/scripts/_common/service-names.env"
+  
+  cat > "${CONFIG_DIR}/encryption/verify-encryption.sh" <<EOF
 #!/bin/bash
 echo "Verifying Encryption at Rest - P1 Priority 7"
 echo "=============================================="
 
 echo ""
 echo "1. PostgreSQL pgcrypto:"
-docker exec postgres-db psql -U postgres -c "SELECT extname FROM pg_extension WHERE extname='pgcrypto';" 2>/dev/null || echo "✗ Not found"
+docker exec "${POSTGRES_CONTAINER_NAME}" psql -U postgres -c "SELECT extname FROM pg_extension WHERE extname='pgcrypto';" 2>/dev/null || echo "✗ Not found"
 
 echo ""
 echo "2. Redis TLS:"
-docker exec redis-cache redis-cli -p 6380 INFO server 2>/dev/null | grep tls || echo "✗ Not configured"
+docker exec "${REDIS_CONTAINER_NAME}" redis-cli -p 6380 INFO server 2>/dev/null | grep tls || echo "✗ Not configured"
 
 echo ""
 echo "3. Encryption keys in GSM:"

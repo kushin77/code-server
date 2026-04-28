@@ -9,6 +9,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 OPA_CONFIG="${REPO_ROOT}/config/opa-config.yaml"
 OPA_BUNDLE_DIR="${REPO_ROOT}/policies"
 OPA_DECISION_LOG="${REPO_ROOT}/artifacts/opa-decision-log.json"

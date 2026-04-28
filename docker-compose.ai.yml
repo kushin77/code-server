@@ -19,7 +19,7 @@
 services:
   ollama:
     image: ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a
-    container_name: ollama-models
+    container_name: code-server-ollama
     profiles:
       - ai
       - all
@@ -59,7 +59,7 @@ services:
     build:
       context: apps/multimodal-ai
       dockerfile: Dockerfile
-    container_name: multimodal-ai
+    container_name: code-server-multimodal-ai
     profiles:
       - ai
       - all

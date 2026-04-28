@@ -6,7 +6,7 @@ services:
   # Control Plane API (orchestrates edge agents)
   control-plane-edge-api:
     image: paperclip/control-plane:latest
-    container_name: control-plane-edge-api
+    container_name: code-server-control-plane-edge-api
     ports:
       - "8080:8080"
     environment:
@@ -48,7 +48,7 @@ services:
   # Edge Agent 1 (US West region)
   edge-agent-us-west-1:
     image: paperclip/edge-agent:latest
-    container_name: edge-agent-us-west-1
+    container_name: code-server-edge-agent-us-west-1
     
     environment:
       # Agent Identity
@@ -98,7 +98,7 @@ services:
   # Edge Agent 2 (US East region)
   edge-agent-us-east-1:
     image: paperclip/edge-agent:latest
-    container_name: edge-agent-us-east-1
+    container_name: code-server-edge-agent-us-east-1
     
     environment:
       EDGE_AGENT_ID: edge-agent-us-east-1
@@ -133,7 +133,7 @@ services:
   # Edge Agent 3 (EU Central region)
   edge-agent-eu-central-1:
     image: paperclip/edge-agent:latest
-    container_name: edge-agent-eu-central-1
+    container_name: code-server-edge-agent-eu-central-1
     
     environment:
       EDGE_AGENT_ID: edge-agent-eu-central-1
@@ -168,7 +168,7 @@ services:
   # Edge Agent Health Monitor (centralized monitoring)
   edge-agent-health-monitor:
     image: paperclip/edge-agent-monitor:latest
-    container_name: edge-agent-health-monitor
+    container_name: code-server-edge-agent-health-monitor
     
     environment:
       # Control Plane

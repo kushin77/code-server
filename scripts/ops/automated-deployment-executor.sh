@@ -13,6 +13,8 @@ set -euo pipefail
 # ============================================================================
 
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/service-names.env"
 readonly DEPLOYMENT_ID="deploy-$(date +%Y%m%d-%H%M%S)"
 readonly LOG_DIR="${REPO_ROOT}/artifacts/deployments/${DEPLOYMENT_ID}"
 readonly LOG_FILE="${LOG_DIR}/deployment.log"
@@ -24,13 +26,6 @@ readonly DEPLOY_TARGET="${1:-primary}" # primary or replica
 readonly DEPLOY_ENV="${2:-production}"
 readonly SKIP_BACKUP="${SKIP_BACKUP:-false}"
 readonly AUTO_ROLLBACK="${AUTO_ROLLBACK:-true}"
-
-# Color codes for output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m' # No Color
 
 # Deployment stages
 readonly STAGES=(
@@ -192,7 +187,7 @@ stage_backup() {
   # Backup 1: Database
   log_info "Backing up PostgreSQL database..."
   if docker ps --format="{{.Names}}" | grep -q postgres; then
-    docker exec postgres-db pg_dump -U "$DB_USER" "$DB_NAME" 2>/dev/null | gzip > "$BACKUP_DIR/postgres.sql.gz" || {
+    docker exec "${POSTGRES_CONTAINER_NAME}" pg_dump -U "$DB_USER" "$DB_NAME" 2>/dev/null | gzip > "$BACKUP_DIR/postgres.sql.gz" || {
       log_warn "PostgreSQL backup skipped (database not fully initialized)"
     }
     log_success "PostgreSQL backed up"
@@ -201,9 +196,9 @@ stage_backup() {
   # Backup 2: Redis
   log_info "Backing up Redis data..."
   if docker ps --format="{{.Names}}" | grep -q redis; then
-    docker exec redis-cache redis-cli BGSAVE 2>/dev/null || true
+    docker exec "${REDIS_CONTAINER_NAME}" redis-cli BGSAVE 2>/dev/null || true
     sleep 2
-    docker cp redis-cache:/data/dump.rdb "$BACKUP_DIR/redis-dump.rdb" 2>/dev/null || {
+    docker cp "${REDIS_CONTAINER_NAME}":/data/dump.rdb "$BACKUP_DIR/redis-dump.rdb" 2>/dev/null || {
       log_warn "Redis backup skipped (service not ready)"
     }
     log_success "Redis backed up"
@@ -400,7 +395,7 @@ stage_smoke_tests() {
   
   # Test 2: Database connectivity
   log_info "Test 2: Database connectivity..."
-  if docker exec postgres-db psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" > /dev/null 2>&1; then
+  if docker exec "${POSTGRES_CONTAINER_NAME}" psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" > /dev/null 2>&1; then
     log_success "Database connectivity verified"
   else
     log_warn "Database connectivity test skipped (database not fully initialized)"
@@ -408,7 +403,7 @@ stage_smoke_tests() {
   
   # Test 3: Redis connectivity
   log_info "Test 3: Redis connectivity..."
-  if docker exec redis-cache redis-cli ping > /dev/null 2>&1; then
+  if docker exec "${REDIS_CONTAINER_NAME}" redis-cli ping > /dev/null 2>&1; then
     log_success "Redis connectivity verified"
   else
     log_warn "Redis connectivity test skipped (cache not fully initialized)"

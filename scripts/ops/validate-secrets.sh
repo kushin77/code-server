@@ -7,26 +7,18 @@
 
 set -euo pipefail
 
-# Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-LOG_FILE="${REPO_DIR}/logs/security-validation.log"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+# Script configuration
+LOG_FILE="${REPO_ROOT}/logs/security-validation.log"
 ERRORS=0
 
 # Create logs directory
-mkdir -p "${REPO_DIR}/logs"
-
-# ============================================================================
-# LOGGING & OUTPUT
-# ============================================================================
-
-log() {
-  local level=$1
-  shift
-  local message="$@"
-  local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-  echo "[${timestamp}] [${level}] ${message}" | tee -a "${LOG_FILE}"
-}
+mkdir -p "${REPO_ROOT}/logs"
 
 error() {
   log "ERROR" "$@"

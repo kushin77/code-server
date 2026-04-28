@@ -6,8 +6,8 @@
 
 # Local file resources for configuration management
 resource "local_file" "docker_compose_override" {
-  filename        = "${path.module}/../../docker-compose.override.yml"
-  content         = file("${path.module}/../../docker-compose.override.yml")
+  filename        = "${path.module}/../../../docker-compose.override.yml"
+  content         = file("${path.module}/../../../docker-compose.override.yml")
   file_permission = "0644"
 
   lifecycle {
@@ -16,8 +16,8 @@ resource "local_file" "docker_compose_override" {
 }
 
 resource "local_file" "caddy_config" {
-  filename        = "${path.module}/../../config/caddy/Caddyfile"
-  content         = file("${path.module}/../../config/caddy/Caddyfile.http-prod")
+  filename        = "${path.module}/../../../config/caddy/Caddyfile"
+  content         = file("${path.module}/../../../config/caddy/Caddyfile.http-prod")
   file_permission = "0644"
 
   lifecycle {

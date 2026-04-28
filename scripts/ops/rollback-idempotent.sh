@@ -5,6 +5,9 @@
 # @idempotent YES - Idempotent state checking before rollback
 set -euo pipefail
 
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 readonly BACKUP_DIR="./state/backups"
 readonly LOG_FILE="./artifacts/rollback-$(date +%s).log"
 
@@ -16,27 +19,6 @@ log() {
 
 log_error() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >&2
-}
-
-# Wait for all services to report healthy after restart
-wait_for_healthy_services() {
-  local expected_count
-  expected_count=$(docker compose ps --services 2>/dev/null | wc -l | tr -d ' ')
-
-  local attempt=0
-  while [[ $attempt -lt 24 ]]; do
-    local healthy_count
-    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
-
-    if [[ "$healthy_count" -ge "$expected_count" && "$expected_count" -gt 0 ]]; then
-      return 0
-    fi
-
-    sleep 5
-    ((attempt++))
-  done
-
-  return 1
 }
 
 # Find latest deployment backup

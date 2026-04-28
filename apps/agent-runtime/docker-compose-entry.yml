@@ -5,7 +5,7 @@ agent-runtime:
   build:
     context: apps/agent-runtime
     dockerfile: Dockerfile
-  container_name: agent-runtime
+  container_name: code-server-agent-runtime
   ports:
     - "8020:8020"
   environment:

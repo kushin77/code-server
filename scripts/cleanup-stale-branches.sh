@@ -7,6 +7,15 @@
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/_common/init.sh"
+###############################################################################
 #
 # Clean up stale merged branches
 # Removes local and remote branches that were merged >N days ago

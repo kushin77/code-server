@@ -6,15 +6,12 @@
 # @idempotent YES - Safe to run multiple times
 set -euo pipefail
 
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 readonly REGISTRY_URL="${REGISTRY_URL:-docker.io}"
 readonly DRY_RUN="${DRY_RUN:-false}"
 readonly LOG_FILE="./artifacts/image-pinning-$(date +%s).log"
-
-# Color codes
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly RED='\033[0;31m'
-readonly NC='\033[0m'
 
 log() {
   echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $*" | tee -a "$LOG_FILE"

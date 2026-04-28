@@ -7,6 +7,15 @@
 # @author      Autonomous Infrastructure
 # @date        2026-04-25
 ###############################################################################
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+###############################################################################
 # @file scripts/ops/setup-log-rotation.sh
 # @description Configures log rotation for infrastructure logs to prevent disk exhaustion.
 # @governance GOV-002

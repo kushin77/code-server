@@ -11,12 +11,15 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Organizational Memory Engine", version="1.0")
+
+Instrumentator().instrument(app).expose(app)
 
 class SearchResult(BaseModel):
     """Search result with metadata"""
@@ -181,4 +184,4 @@ async def memory_stats():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("MEMORY_ENGINE_PORT", "8001")))

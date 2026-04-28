@@ -1,0 +1,51 @@
+# Terraform Values Template for Air-Gapped Deployment
+# @file terraform/environments/air-gapped/terraform.tfvars.template
+# @description Template for air-gapped environment configuration
+# @governance GOV-002 - SSOT principle applied
+
+# ==============================================================================
+# DEPLOYMENT INFRASTRUCTURE
+# ==============================================================================
+apex_domain     = "${APEX_DOMAIN}"
+primary_host    = "${PRIMARY_HOST}"
+replica_host    = "${REPLICA_HOST}"
+nas_host        = "${NAS_HOST}"
+local_registry_url = "${REGISTRY_DOMAIN}"
+admin_email     = "${ADMIN_EMAIL}"
+
+# Deployment configuration
+deployment_mode = "air-gapped"
+environment     = "${ENVIRONMENT}"
+bypass_internet_checks = true
+image_mirror_path = "/opt/code-server/images"
+
+# SSH configuration
+ssh_user = "${SSH_USER:-akushnir}"
+ssh_port = ${SSH_PORT:-22}
+
+# ==============================================================================
+# SERVICE CONFIGURATION
+# ==============================================================================
+
+enable_tls              = ${ENABLE_TLS:-false}
+enable_metrics          = ${ENABLE_METRICS:-true}
+log_level               = "${LOG_LEVEL}"
+oauth2_cookie_secret    = "${OAUTH2_COOKIE_SECRET}"
+
+# ==============================================================================
+# CONTAINER IMAGE VERSIONS (IMMUTABLE)
+# ==============================================================================
+
+caddy_version           = "${CADDY_VERSION}"
+oauth2_proxy_version    = "${OAUTH2_PROXY_VERSION}"
+postgres_version        = "${POSTGRES_VERSION}"
+redis_version           = "${REDIS_VERSION}"
+redpanda_version        = "${REDPANDA_VERSION}"
+opa_version             = "${OPA_VERSION}"
+ollama_version          = "${OLLAMA_VERSION}"
+
+tags = {
+  Environment   = "${ENVIRONMENT}"
+  DeploymentMode = "air-gapped"
+  GovernancePolicy = "GOV-002"
+}

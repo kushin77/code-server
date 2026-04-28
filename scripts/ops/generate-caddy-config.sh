@@ -11,13 +11,15 @@
 # @description Phase 3: Generate Caddyfile from template using environment variables (#1531)
 # @governance GOV-002 - All domains are variables, zero hardcoding
 # @automation Generates Caddyfile before docker-compose up
-# @prerequisite Must source scripts/_common/hosts.sh
+# @prerequisite Must source scripts/_common/init.sh
 
 set -euo pipefail
 
-# Source bootstrap
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "${SCRIPT_DIR}/_common/hosts.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 # ==============================================================================
 # CONFIGURATION

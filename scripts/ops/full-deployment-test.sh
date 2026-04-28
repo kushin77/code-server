@@ -9,6 +9,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
 TEST_LOG="${REPO_ROOT}/artifacts/deployment-test-$(date +%s).log"
 TEST_REPORT="${REPO_ROOT}/artifacts/deployment-test-report.json"
 

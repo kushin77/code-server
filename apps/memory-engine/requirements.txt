@@ -1,7 +1,8 @@
 fastapi==0.124.0
 uvicorn==0.24.0
 pydantic==2.5.3
-qdrant-client==2.7.0
+qdrant-client==1.17.1
 requests==2.32.3
 kafka-python==2.0.2
 python-dotenv==1.0.0
+prometheus-fastapi-instrumentator==7.1.0

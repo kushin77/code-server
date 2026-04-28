@@ -5,6 +5,9 @@
 # @idempotent YES - Checks state before any modifications
 set -euo pipefail
 
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 readonly DEPLOYMENT_ID="deployment-$(date +%s)"
 readonly STATE_DIR="./state/deployments"
 readonly LOG_FILE="./artifacts/deploy-${DEPLOYMENT_ID}.log"
@@ -23,31 +26,11 @@ log_warn() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $*" | tee -a "$LOG_FILE"
 }
 
-# Check if services are already running
-services_running() {
-  docker compose ps --services 2>/dev/null | wc -l | tr -d ' '
-}
-
-# Wait for all services to report healthy
-wait_for_healthy_services() {
-  local expected_count
-  expected_count=$(services_running)
-
-  local attempt=0
-  while [[ $attempt -lt 24 ]]; do
-    local healthy_count
-    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
-
-    if [[ "$healthy_count" -ge "$expected_count" && "$expected_count" -gt 0 ]]; then
-      return 0
-    fi
-
-    sleep 5
-    ((attempt++))
-  done
-
-  return 1
-}
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Deployment failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/deploy-*.tmp 2>/dev/null || true' EXIT
 
 # Idempotent deployment
 deploy() {

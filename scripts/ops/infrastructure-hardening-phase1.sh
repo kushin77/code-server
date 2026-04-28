@@ -6,6 +6,9 @@
 # @idempotent YES - Safe to run multiple times, state-based execution
 set -euo pipefail
 
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 readonly PHASE="TIER-1"
 readonly LOG_DIR="./artifacts/hardening-$(date +%s)"
 readonly STATE_DIR="./state/hardening"
@@ -13,13 +16,6 @@ readonly DRY_RUN="${DRY_RUN:-false}"
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$STATE_DIR"
-
-# Color codes
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly RED='\033[0;31m'
-readonly BLUE='\033[0;34m'
-readonly NC='\033[0m'
 
 log() {
   local msg="$*"

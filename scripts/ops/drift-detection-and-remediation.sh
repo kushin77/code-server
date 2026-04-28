@@ -6,6 +6,12 @@
 # @idempotent YES - Safe to run continuously for state reconciliation
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 readonly LOG_FILE="./artifacts/drift-detection-$(date +%s).log"
 readonly STATE_DIR="./state/drift"
 readonly DRIFT_REPORT="./artifacts/drift-report-$(date +%s).json"

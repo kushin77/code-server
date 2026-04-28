@@ -1,0 +1,101 @@
+# Terraform Values Template for code-server-enterprise
+# @file terraform/environments/private/terraform.tfvars.template
+# @description Template for environment-specific terraform configuration
+# @governance GOV-002 - SSOT principle: all values sourced from scripts/_common/_base-config.env
+# @usage: 
+#   1. Source environment: source scripts/_common/_base-config.env
+#   2. Generate values:   envsubst < terraform.tfvars.template > terraform.tfvars
+#   3. Or use TF_VAR_*:   export TF_VAR_apex_domain="${APEX_DOMAIN}"
+
+# ==============================================================================
+# DEPLOYMENT INFRASTRUCTURE (from SSOT _base-config.env)
+# ==============================================================================
+apex_domain     = "${APEX_DOMAIN}"
+primary_host    = "${PRIMARY_HOST}"
+replica_host    = "${REPLICA_HOST}"
+nas_host        = "${NAS_HOST}"
+registry_url    = "${REGISTRY_DOMAIN}"
+admin_email     = "${ADMIN_EMAIL}"
+
+# Deployment configuration
+deployment_mode = "private"
+environment     = "${ENVIRONMENT}"
+aws_region      = "${AWS_REGION:-us-east-1}"
+kubeconfig_path = "${KUBECONFIG_PATH:-~/.kube/config}"
+
+# SSH configuration
+ssh_user  = "${SSH_USER:-akushnir}"
+ssh_port  = ${SSH_PORT:-22}
+
+# ==============================================================================
+# SERVICE CONFIGURATION (from _base-config.env)
+# ==============================================================================
+
+# Feature flags
+enable_tls                    = ${ENABLE_TLS:-false}
+enable_metrics                = ${ENABLE_METRICS:-true}
+enable_tracing                = ${ENABLE_TRACING:-false}
+enable_profiling              = ${ENABLE_PROFILING:-false}
+enable_debug_endpoints        = ${ENABLE_DEBUG_ENDPOINTS:-false}
+
+# Logging configuration
+log_level                     = "${LOG_LEVEL}"
+
+# Security configuration
+oauth2_cookie_secret          = "${OAUTH2_COOKIE_SECRET}"
+scheduler_api_key             = "${SCHEDULER_API_KEY}"
+
+# Database configuration
+postgres_pool_size            = ${POSTGRES_POOL_SIZE:-20}
+postgres_max_overflow         = ${POSTGRES_MAX_OVERFLOW:-10}
+redis_max_memory              = "${REDIS_MAX_MEMORY:-256mb}"
+
+# Service replicas (from Kubernetes config)
+helm_api_replicas             = ${HELM_API_REPLICAS:-3}
+helm_frontend_replicas        = ${HELM_FRONTEND_REPLICAS:-2}
+
+# Resource limits (from Kubernetes config)
+service_cpu_limit             = "${HELM_SERVICE_CPU_LIMIT}"
+service_memory_limit          = "${HELM_SERVICE_MEMORY_LIMIT}"
+
+# ==============================================================================
+# CONTAINER IMAGE VERSIONS (IMMUTABLE - matches _base-config.env)
+# ==============================================================================
+
+caddy_version                 = "${CADDY_VERSION}"
+oauth2_proxy_version          = "${OAUTH2_PROXY_VERSION}"
+postgres_version              = "${POSTGRES_VERSION}"
+redis_version                 = "${REDIS_VERSION}"
+redpanda_version              = "${REDPANDA_VERSION}"
+opa_version                   = "${OPA_VERSION}"
+ollama_version                = "${OLLAMA_VERSION}"
+qdrant_version                = "${QDRANT_VERSION}"
+prometheus_version            = "${PROMETHEUS_VERSION}"
+grafana_version               = "${GRAFANA_VERSION}"
+loki_version                  = "${LOKI_VERSION}"
+
+# ==============================================================================
+# MONITORING & OBSERVABILITY (from _base-config.env)
+# ==============================================================================
+
+prometheus_retention_days     = ${PROMETHEUS_RETENTION_DAYS:-15}
+loki_retention_days           = ${LOKI_RETENTION_DAYS:-7}
+health_check_interval         = "${HEALTH_CHECK_INTERVAL:-30s}"
+health_check_timeout          = "${HEALTH_CHECK_TIMEOUT:-10s}"
+health_check_retries          = ${HEALTH_CHECK_RETRIES:-3}
+
+# ==============================================================================
+# DEPLOYMENT STRATEGY
+# ==============================================================================
+
+auto_rollback_on_failure      = ${AUTO_ROLLBACK_ON_FAILURE:-true}
+rollback_failure_threshold    = ${ROLLBACK_FAILURE_THRESHOLD:-3}
+
+# Tags applied to all resources
+tags = {
+  Environment     = "${ENVIRONMENT}"
+  ManagedBy       = "Terraform"
+  GovernancePolicy = "GOV-002"
+  Source          = "scripts/_common/_base-config.env"
+  Immutable       = "true"
+}

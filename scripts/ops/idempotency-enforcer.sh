@@ -6,6 +6,9 @@
 # @idempotent YES - Core infrastructure stabilization tool
 set -euo pipefail
 
+readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 readonly LOG_FILE="./artifacts/idempotency-$(date +%s).log"
 readonly STATE_DIR="./state"
 readonly DRY_RUN="${DRY_RUN:-false}"

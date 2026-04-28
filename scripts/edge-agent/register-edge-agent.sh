@@ -30,6 +30,18 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Source canonical configuration (SSOT)
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Agent registration failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Registration cleanup..."; true' EXIT
+
 readonly SCRIPT_VERSION="1.0"
 readonly LOG_DIR="artifacts/edge-agent-logs"
 readonly TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)

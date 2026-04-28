@@ -28,6 +28,12 @@ readonly DOCKER_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
 readonly TEST_LOG_DIR=".rollback-test-logs"
 readonly TEST_MODE="${1:-dry-run}"  # dry-run or full-test
 
+# =============================================================================
+# ERROR HANDLING & CLEANUP
+# =============================================================================
+trap 'log_error "Rollback test failed at line $LINENO (exit code: $?)"; exit 1' ERR
+trap 'log_info "Rollback test cleanup..."; rm -rf "${TEST_LOG_DIR}" 2>/dev/null || true' EXIT
+
 # ==============================================================================
 # TEST INFRASTRUCTURE
 # ==============================================================================

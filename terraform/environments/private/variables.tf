@@ -1,31 +1,24 @@
 # terraform/environments/private/variables.tf
-# @description Private deployment variables
+# @description Private deployment variables - supplementary to main.tf
+# Note: Core variables (apex_domain, primary_host, replica_host, nas_host, admin_email) 
+# are defined in main.tf to prevent duplication
 
-variable "apex_domain" {
+variable "ssh_user" {
   type        = string
-  description = "Organization's apex domain (e.g., kushnir.cloud)"
+  default     = "akushnir"
+  description = "SSH user for remote deployment"
 }
 
-variable "primary_host" {
-  type        = string
-  description = "Primary deployment host IP"
-}
-
-variable "replica_host" {
+variable "ssh_key" {
   type        = string
   default     = ""
-  description = "Replica host for HA (optional)"
+  description = "SSH private key path for remote deployment (uses agent if empty)"
 }
 
-variable "nas_host" {
-  type        = string
-  default     = ""
-  description = "NAS/storage host IP (optional)"
-}
-
-variable "admin_email" {
-  type        = string
-  description = "Administrator email for ACME"
+variable "ssh_port" {
+  type        = number
+  default     = 22
+  description = "SSH port for remote hosts"
 }
 
 variable "enable_tls" {

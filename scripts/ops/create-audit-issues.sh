@@ -17,6 +17,55 @@ source "$SCRIPT_DIR/_common/github-api-client.sh"
 
 readonly REPO="kushin77/code-server"
 
+terraform_version_needs_audit() {
+  python3 - <<'PY'
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+versions_tf = pathlib.Path("terraform/versions.tf")
+if not versions_tf.exists():
+  sys.exit(0)
+
+match = re.search(r'required_version\s*=\s*"([^"]+)"', versions_tf.read_text())
+if not match:
+  sys.exit(0)
+
+constraint_text = match.group(1)
+constraints = []
+for raw_part in constraint_text.split(','):
+  part = raw_part.strip()
+  if not part:
+    continue
+  op, version = part.split(None, 1)
+  constraints.append((op, tuple(int(piece) for piece in version.split('.'))))
+
+try:
+  version_json = subprocess.check_output(["terraform", "version", "-json"], text=True)
+  installed = tuple(int(piece) for piece in json.loads(version_json)["terraform_version"].split('.'))
+except Exception:
+  sys.exit(1)
+
+def satisfies(installed_version, operator, expected_version):
+  if operator == '>=':
+    return installed_version >= expected_version
+  if operator == '>':
+    return installed_version > expected_version
+  if operator == '<=':
+    return installed_version <= expected_version
+  if operator == '<':
+    return installed_version < expected_version
+  if operator in ('=', '=='):
+    return installed_version == expected_version
+  return True
+
+needs_audit = any(not satisfies(installed, operator, expected) for operator, expected in constraints)
+sys.exit(0 if needs_audit else 1)
+PY
+}
+
 create_issue() {
   local title="$1"
   local body="$2"
@@ -52,12 +101,17 @@ create_issue "[DEBT] Engineering Hardening: 74+ Scripts Missing Trap Handlers" \
 **Suggested Action:**
 - Implement `trap` handlers across identified scripts." "P2"
 
-# Issue 3: Terraform Upgrade
-create_issue "[IAC] Terraform Version Outdated (v1.8.0 vs v1.14.9)" \
-"The local environment is using Terraform `v1.8.0`. The latest stable version is `v1.14.9`.
+# Issue 3: Terraform Version Drift
+if terraform_version_needs_audit; then
+  create_issue "[IAC] Terraform CLI Version Outside Repo Constraint" \
+"The locally installed Terraform CLI version does not satisfy the bounded constraint declared in `terraform/versions.tf`.
 
 **Suggested Action:**
-- Upgrade Terraform and verify provider compatibility." "P3"
+- Align the local Terraform CLI version with the repo constraint.
+- Re-run Terraform validation and provider compatibility checks." "P3"
+else
+  log_info "Skipping Terraform CLI audit issue: local version satisfies repo constraint."
+fi
 
 # Issue 4: Tools Missing
 create_issue "[OPS] Missing Runtime Tooling: Docker and Kubectl" \

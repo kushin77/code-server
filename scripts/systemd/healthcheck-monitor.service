@@ -1,0 +1,29 @@
+[Unit]
+Description=Healthcheck Event Streamer for Docker Containers
+After=docker.service
+Requires=docker.service
+Documentation=file:///home/akushnir/code-server-enterprise/docs/operations/HEALTHCHECK-EVENT-STREAMING.md
+
+[Service]
+Type=simple
+User=akushnir
+WorkingDirectory=/home/akushnir/code-server-enterprise
+ExecStart=/home/akushnir/code-server-enterprise/scripts/healthcheck-event-streamer.sh \
+    --interval 30 \
+    --loki-url http://code-server-loki:3100/loki/api/v1/push
+
+# Restart policy
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=healthcheck-monitor
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ReadOnlyPaths=/
+ReadWritePaths=/tmp /home/akushnir/code-server-enterprise
+
+[Install]
+WantedBy=multi-user.target

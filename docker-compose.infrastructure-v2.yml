@@ -1,0 +1,185 @@
+# Infrastructure Services - Fixed Permissions & Config
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: code-server-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_phase6
+      POSTGRES_DB: code_server
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: code-server-redis
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  redpanda:
+    image: redpandadata/redpanda:v24.1.1
+    container_name: code-server-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=100M
+      - --set
+      - redpanda.enable_idempotence=true
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-f", "http://localhost:9644/v1/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: code-server-qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      QDRANT_ALLOW_RECOVERY_MODE: "false"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: code-server-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: code-server-prometheus
+    command:
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    volumes:
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: code-server-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: "grafana-piechart-panel"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  loki:
+    image: grafana/loki:2.9.1
+    container_name: code-server-loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: code-server-tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    volumes:
+      - tempo_data:/var/tempo
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: code-server-alertmanager
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  opa:
+    image: openpolicyagent/opa:0.58.0
+    container_name: code-server-opa
+    command:
+      - "run"
+      - "--server"
+    ports:
+      - "8181:8181"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+  caddy:
+    image: caddy:2.7.4-alpine
+    container_name: code-server-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    networks:
+      - code-server-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  redpanda_data:
+  qdrant_data:
+  ollama_data:
+  prometheus_data:
+  grafana_data:
+  tempo_data:
+
+networks:
+  code-server-network:
+    driver: bridge

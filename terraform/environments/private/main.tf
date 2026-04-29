@@ -1,3 +1,19 @@
+/**
+ * Code-Server Infrastructure-as-Code Deployment
+ * 
+ * SHARED CLUSTER NAMESPACE CONSTRAINT:
+ * This Terraform configuration manages ONLY code-server namespaced resources.
+ * All containers are prefixed with "code-server-".
+ * All networks created are isolated to this deployment.
+ * No management of shared cluster workloads (e.g., hermes, other services).
+ * 
+ * Namespace Isolation:
+ * - Networks: ingress, services, database (code-server only)
+ * - Containers: code-server-* prefix (40+ services per host)
+ * - No cross-namespace resource dependencies
+ * - No management of external workloads
+ */
+
 terraform {
   required_version = ">= 1.6.0, < 1.15.0"
 

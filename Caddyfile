@@ -54,7 +54,7 @@
 }
 
 # Development environment (kushnir.local)
-kushnir.local, *.kushnir.local {
+kushnir.local, *.kushnir.local, kushnir.cloud, *.kushnir.cloud {
 	# HTTP → HTTPS redirect
 	# All traffic must use encrypted connection
 	redir http:// https:// permanent

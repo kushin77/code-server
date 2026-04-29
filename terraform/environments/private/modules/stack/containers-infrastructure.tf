@@ -243,7 +243,11 @@ resource "docker_container" "ollama" {
 
 # ── Keepalived (VRRP High Availability) ──────────────────────────────────────
 resource "docker_container" "keepalived_init" {
-  image   = "alpine:3.20"
+  name    = "code-server-keepalived-init"
+  image   = docker_image.alpine.image_id
+  user    = "0:0"
+  restart = "no"
+  
   command = [
     "sh",
     "-lc",
@@ -293,14 +297,11 @@ resource "docker_container" "keepalived_init" {
     chmod 600 /etc/keepalived/keepalived.conf
     EOT
   ]
-  user = "0:0"
 
   volumes {
     volume_name = docker_volume.keepalived_config.name
     container_path = "/etc/keepalived"
   }
-
-  restart = "no"
 
   networks_advanced {
     name = docker_network.services.id
@@ -313,7 +314,7 @@ resource "docker_container" "keepalived_init" {
 
 resource "docker_container" "keepalived" {
   name    = "code-server-keepalived"
-  image   = "keepalived:2.2.7"
+  image   = docker_image.keepalived.image_id
   user    = "0:0"
   restart = "unless-stopped"
 

@@ -1,0 +1,151 @@
+# Caddy Configuration for Phase 13 Application Routing
+# Updated to include routes for new application services
+
+:80 {
+    # Health check endpoint
+    @health path /health
+    handle @health {
+        respond "OK" 200
+    }
+
+    # Prometheus metrics endpoint
+    @prometheus path /metrics
+    handle @prometheus {
+        reverse_proxy code-server-prometheus:9090
+    }
+
+    # Grafana dashboard
+    @grafana path /grafana*
+    handle @grafana {
+        uri strip_prefix /grafana
+        reverse_proxy code-server-grafana:3000 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Prefix /grafana
+        }
+    }
+
+    # =========================================================================
+    # PHASE 13 APPLICATION SERVICE ROUTES
+    # =========================================================================
+
+    # API Gateway Application Services
+    @api path /api/v1*
+    handle @api {
+        uri strip_prefix /api/v1
+        reverse_proxy code-server-api-service:8000 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Path /api/v1
+        }
+    }
+
+    # User Management Service
+    @users path /api/users*
+    handle @users {
+        uri strip_prefix /api/users
+        reverse_proxy code-server-user-service:8001 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Path /api/users
+        }
+    }
+
+    # Data Processing Service
+    @data path /api/data*
+    handle @data {
+        uri strip_prefix /api/data
+        reverse_proxy code-server-data-service:8002 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Path /api/data
+        }
+    }
+
+    # Business Logic Service
+    @business path /api/business*
+    handle @business {
+        uri strip_prefix /api/business
+        reverse_proxy code-server-business-logic-service:8003 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Path /api/business
+        }
+    }
+
+    # Notification Service
+    @notifications path /api/notifications*
+    handle @notifications {
+        uri strip_prefix /api/notifications
+        reverse_proxy code-server-notification-service:8004 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Path /api/notifications
+        }
+    }
+
+    # Analytics Service
+    @analytics path /api/analytics*
+    handle @analytics {
+        uri strip_prefix /api/analytics
+        reverse_proxy code-server-analytics-service:8005 {
+            header_uri X-Forwarded-Proto http
+            header_uri X-Forwarded-Path /api/analytics
+        }
+    }
+
+    # =========================================================================
+    # INFRASTRUCTURE SERVICE ROUTES
+    # =========================================================================
+
+    # Prometheus API
+    @prometheus-api path /prometheus*
+    handle @prometheus-api {
+        uri strip_prefix /prometheus
+        reverse_proxy code-server-prometheus:9090
+    }
+
+    # Loki Logs
+    @loki path /loki*
+    handle @loki {
+        uri strip_prefix /loki
+        reverse_proxy code-server-loki:3100
+    }
+
+    # Tempo Traces
+    @tempo path /tempo*
+    handle @tempo {
+        uri strip_prefix /tempo
+        reverse_proxy code-server-tempo:3200
+    }
+
+    # Redpanda Console
+    @redpanda path /redpanda*
+    handle @redpanda {
+        uri strip_prefix /redpanda
+        reverse_proxy code-server-redpanda-console:8082
+    }
+
+    # Redis Commander
+    @redis path /redis*
+    handle @redis {
+        uri strip_prefix /redis
+        reverse_proxy code-server-redis-commander:8086
+    }
+
+    # PgAdmin
+    @pgadmin path /pgadmin*
+    handle @pgadmin {
+        uri strip_prefix /pgadmin
+        reverse_proxy code-server-pgadmin:5050
+    }
+
+    # Default 404
+    handle {
+        respond "Not Found" 404
+    }
+}
+
+# HTTPS configuration for production (when deployed with real certificates)
+# Uncomment and configure for production use:
+# 
+# api.kushnir.cloud {
+#     tls /etc/caddy/certs/api.kushnir.cloud.crt /etc/caddy/certs/api.kushnir.cloud.key
+#     
+#     # Same routes as above with HTTPS handling
+#     # ...
+# }

@@ -204,14 +204,6 @@ services:
     networks: [code-server-network]
     restart: unless-stopped
 
-  consul:
-    image: consul:1.17
-    container_name: code-server-consul
-    ports: ["8500:8500", "8600:8600/udp"]
-    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
-    networks: [code-server-network]
-    restart: unless-stopped
-
   # ============ WEB & UTILITIES ============
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -240,7 +232,7 @@ services:
     restart: unless-stopped
 
   ollama:
-    image: ollama/ollama:0.1.16
+    image: ollama/ollama:latest
     container_name: code-server-ollama
     ports: ["11434:11434"]
     environment:

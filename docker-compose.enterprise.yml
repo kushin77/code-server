@@ -168,6 +168,32 @@ services:
         max-file: "3"
 
   # ========================================================================
+  # APPSMITH - Low-code Internal Portal
+  # ========================================================================
+  appsmith:
+    image: appsmith/appsmith-ce:latest
+    container_name: code-server-appsmith
+    ports:
+      - "8084:80"
+    environment:
+      - APPSMITH_DISABLE_TELEMETRY=true
+    volumes:
+      - appsmith_stacks:/appsmith-stacks
+    networks:
+      - services
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
   # VAULT - Secrets Management
   # ========================================================================
   vault:
@@ -232,7 +258,7 @@ services:
   # CONTROL PLANE - Service Orchestration & Management
   # ========================================================================
   control-plane:
-    image: code-server-enterprise-control-plane:latest
+    image: code-server-control-plane:latest
     container_name: code-server-control-plane
     ports:
       - "8082:8082"
@@ -269,6 +295,8 @@ volumes:
   gitlab_runner_data:
     driver: local
   minio_data:
+    driver: local
+  appsmith_stacks:
     driver: local
   nexus_data:
     driver: local

@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
 
   mysql:
-    image: mysql:8.0-alpine
+    image: mysql:8.0
     container_name: code-server-mysql
     environment:
       MYSQL_ROOT_PASSWORD: mysql_root_password

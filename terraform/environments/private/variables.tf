@@ -45,3 +45,156 @@ variable "metrics_retention_days" {
   default     = 30
   description = "Prometheus metrics retention (days)"
 }
+
+# SERVICE VERSIONS (from terraform.tfvars)
+variable "caddy_version" {
+  type        = string
+  default     = "2.7.4"
+  description = "Caddy version to deploy"
+}
+
+variable "postgres_version" {
+  type        = string
+  default     = "16-alpine"
+  description = "PostgreSQL version to deploy"
+}
+
+variable "redis_version" {
+  type        = string
+  default     = "7-alpine"
+  description = "Redis version to deploy"
+}
+
+variable "redpanda_version" {
+  type        = string
+  default     = "v24.1.1"
+  description = "Redpanda version to deploy"
+}
+
+variable "opa_version" {
+  type        = string
+  default     = "0.58.0"
+  description = "OPA version to deploy"
+}
+
+variable "ollama_version" {
+  type        = string
+  default     = "0.1.16"
+  description = "Ollama version to deploy"
+}
+
+variable "qdrant_version" {
+  type        = string
+  default     = "1.7.0"
+  description = "Qdrant version to deploy"
+}
+
+variable "prometheus_version" {
+  type        = string
+  default     = "v2.50.0"
+  description = "Prometheus version to deploy"
+}
+
+variable "grafana_version" {
+  type        = string
+  default     = "10.2.0"
+  description = "Grafana version to deploy"
+}
+
+variable "loki_version" {
+  type        = string
+  default     = "2.9.1"
+  description = "Loki version to deploy"
+}
+
+variable "oauth2_proxy_version" {
+  type        = string
+  default     = "7.5.1"
+  description = "OAuth2-proxy version to deploy"
+}
+
+variable "tempo_version" {
+  type        = string
+  default     = "2.4.1"
+  description = "Tempo version to deploy"
+}
+
+# FEATURE FLAGS
+variable "enable_metrics" {
+  type        = bool
+  default     = true
+  description = "Enable Prometheus metrics collection"
+}
+
+variable "enable_tracing" {
+  type        = bool
+  default     = false
+  description = "Enable distributed tracing with Tempo"
+}
+
+variable "enable_debug_endpoints" {
+  type        = bool
+  default     = false
+  description = "Enable debug endpoints for troubleshooting"
+}
+
+variable "enable_deployment_validation" {
+  type        = bool
+  default     = true
+  description = "Run deployment validation and health checks"
+}
+
+variable "enable_deployment_simulation" {
+  type        = bool
+  default     = false
+  description = "Run dry-run simulation before actual deployment"
+}
+
+# PERSISTENCE & OBSERVABILITY
+variable "postgres_pool_size" {
+  type        = number
+  default     = 10
+  description = "PostgreSQL connection pool size"
+}
+
+variable "postgres_max_overflow" {
+  type        = number
+  default     = 20
+  description = "PostgreSQL max overflow connections"
+}
+
+variable "redis_max_memory" {
+  type        = string
+  default     = "512mb"
+  description = "Redis max memory setting"
+}
+
+variable "prometheus_retention_days" {
+  type        = number
+  default     = 30
+  description = "Prometheus metrics retention (days)"
+}
+
+variable "loki_retention_days" {
+  type        = number
+  default     = 7
+  description = "Loki logs retention (days)"
+}
+
+variable "force_recreate" {
+  type        = bool
+  default     = false
+  description = "Force recreate all containers on deployment"
+}
+
+variable "auto_rollback_on_failure" {
+  type        = bool
+  default     = true
+  description = "Automatically rollback deployment on failure"
+}
+
+variable "rollback_failure_threshold" {
+  type        = number
+  default     = 3
+  description = "Number of failed deployments before auto-rollback triggers"
+}

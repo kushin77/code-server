@@ -1,0 +1,432 @@
+---
+# Observability Configuration - IaC for Grafana Dashboards and Alerts
+# Deploy all monitoring infrastructure as code via API automation
+
+- name: Configure Observability Stack (IaC)
+  hosts: primary
+  vars:
+    cluster_name: code-server-enterprise
+    grafana_url: "http://localhost:3000"
+    grafana_api_key: "admin"  # Should use vault in production
+    compose_dir: "/home/akushnir/code-server-enterprise-ops"
+
+  tasks:
+    # =========================================================================
+    # STEP 1: WAIT FOR GRAFANA TO BE READY
+    # =========================================================================
+
+    - name: "Step 1: Wait for Grafana to be available"
+      uri:
+        url: "{{ grafana_url }}/api/health"
+        method: GET
+        status_code: 200
+      register: grafana_health
+      retries: 30
+      delay: 5
+      until: grafana_health.status == 200
+
+    # =========================================================================
+    # STEP 2: ADD DATASOURCES (Prometheus, Loki, Tempo)
+    # =========================================================================
+
+    - name: "Step 2: Configure Grafana datasources"
+      block:
+        # Prometheus datasource
+        - name: Add Prometheus datasource
+          uri:
+            url: "{{ grafana_url }}/api/datasources"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              name: "Prometheus"
+              type: "prometheus"
+              url: "http://{{ cluster_name }}-prometheus:9090"
+              access: "proxy"
+              isDefault: true
+            status_code: [200, 409]  # 409 if already exists
+
+        # Loki datasource
+        - name: Add Loki datasource
+          uri:
+            url: "{{ grafana_url }}/api/datasources"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              name: "Loki"
+              type: "loki"
+              url: "http://{{ cluster_name }}-loki:3100"
+              access: "proxy"
+            status_code: [200, 409]
+
+        # Tempo datasource
+        - name: Add Tempo datasource
+          uri:
+            url: "{{ grafana_url }}/api/datasources"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              name: "Tempo"
+              type: "tempo"
+              url: "http://{{ cluster_name }}-tempo:3200"
+              access: "proxy"
+            status_code: [200, 409]
+
+    # =========================================================================
+    # STEP 3: CREATE GRAFANA DASHBOARDS (4 Total)
+    # =========================================================================
+
+    - name: "Step 3: Create Grafana dashboards"
+      block:
+        # Dashboard 1: Infrastructure Overview
+        - name: Create Infrastructure Dashboard
+          uri:
+            url: "{{ grafana_url }}/api/dashboards/db"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              dashboard:
+                title: "Infrastructure Overview"
+                description: "System-level metrics (CPU, Memory, Network, Disk)"
+                tags: ["infrastructure", "monitoring"]
+                panels:
+                  - id: 1
+                    title: "CPU Usage (%)"
+                    targets:
+                      - expr: "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+                  - id: 2
+                    title: "Memory Usage (%)"
+                    targets:
+                      - expr: "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100"
+                  - id: 3
+                    title: "Disk Usage (%)"
+                    targets:
+                      - expr: "(node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100"
+                  - id: 4
+                    title: "Network I/O (MB/s)"
+                    targets:
+                      - expr: "rate(node_network_transmit_bytes_total[5m]) / 1024 / 1024"
+                  - id: 5
+                    title: "Container Count"
+                    targets:
+                      - expr: "count(container_info)"
+                  - id: 6
+                    title: "Service Uptime (%)"
+                    targets:
+                      - expr: "up"
+                refresh: "30s"
+                time:
+                  from: "now-1h"
+                  to: "now"
+              overwrite: true
+          register: dashboard_1
+          changed_when: dashboard_1.status == 200
+
+        # Dashboard 2: Application Services
+        - name: Create Application Services Dashboard
+          uri:
+            url: "{{ grafana_url }}/api/dashboards/db"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              dashboard:
+                title: "Application Services"
+                description: "API performance metrics (throughput, errors, latency)"
+                tags: ["applications", "monitoring"]
+                panels:
+                  - id: 1
+                    title: "Request Rate (req/s)"
+                    targets:
+                      - expr: "sum(rate(http_requests_total[5m]))"
+                  - id: 2
+                    title: "Error Rate (%)"
+                    targets:
+                      - expr: "sum(rate(http_requests_total{status=~'5..'}[5m])) / sum(rate(http_requests_total[5m])) * 100"
+                  - id: 3
+                    title: "Response Time p50 (ms)"
+                    targets:
+                      - expr: "histogram_quantile(0.50, http_request_duration_seconds_bucket)"
+                  - id: 4
+                    title: "Response Time p95 (ms)"
+                    targets:
+                      - expr: "histogram_quantile(0.95, http_request_duration_seconds_bucket)"
+                  - id: 5
+                    title: "Response Time p99 (ms)"
+                    targets:
+                      - expr: "histogram_quantile(0.99, http_request_duration_seconds_bucket)"
+                  - id: 6
+                    title: "Active Connections"
+                    targets:
+                      - expr: "sum(active_connections)"
+                refresh: "15s"
+                time:
+                  from: "now-6h"
+                  to: "now"
+              overwrite: true
+
+        # Dashboard 3: Database Performance
+        - name: Create Database Performance Dashboard
+          uri:
+            url: "{{ grafana_url }}/api/dashboards/db"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              dashboard:
+                title: "Database Performance"
+                description: "PostgreSQL, Redis, MongoDB metrics"
+                tags: ["database", "monitoring"]
+                panels:
+                  - id: 1
+                    title: "Active Connections"
+                    targets:
+                      - expr: "pg_stat_activity_count"
+                  - id: 2
+                    title: "Connection Pool (%)"
+                    targets:
+                      - expr: "pg_stat_activity_count / pg_setting_max_connections * 100"
+                  - id: 3
+                    title: "Query Latency p95 (ms)"
+                    targets:
+                      - expr: "histogram_quantile(0.95, pg_slow_queries_duration_seconds_bucket)"
+                  - id: 4
+                    title: "Cache Hit Ratio (%)"
+                    targets:
+                      - expr: "redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) * 100"
+                  - id: 5
+                    title: "Replication Lag (seconds)"
+                    targets:
+                      - expr: "pg_replication_lag"
+                  - id: 6
+                    title: "Slow Queries"
+                    targets:
+                      - expr: "count(pg_slow_queries)"
+                refresh: "20s"
+                time:
+                  from: "now-6h"
+                  to: "now"
+              overwrite: true
+
+        # Dashboard 4: Business Metrics
+        - name: Create Business Metrics Dashboard
+          uri:
+            url: "{{ grafana_url }}/api/dashboards/db"
+            method: POST
+            user: admin
+            password: admin
+            body_format: json
+            body:
+              dashboard:
+                title: "Business Metrics"
+                description: "Business KPIs and transaction metrics"
+                tags: ["business", "monitoring"]
+                panels:
+                  - id: 1
+                    title: "Transactions (24h)"
+                    targets:
+                      - expr: "sum(increase(transactions_total[24h]))"
+                  - id: 2
+                    title: "Success Rate (%)"
+                    targets:
+                      - expr: "sum(transactions_success) / sum(transactions_total) * 100"
+                  - id: 3
+                    title: "Active Users"
+                    targets:
+                      - expr: "count(distinct(user_id))"
+                  - id: 4
+                    title: "Data Processed (GB)"
+                    targets:
+                      - expr: "sum(data_processed_bytes) / 1024 / 1024 / 1024"
+                  - id: 5
+                    title: "Transaction Volume (trend)"
+                    targets:
+                      - expr: "increase(transactions_total[1h])"
+                  - id: 6
+                    title: "Revenue (24h)"
+                    targets:
+                      - expr: "sum(revenue_cents) / 100"
+                refresh: "60s"
+                time:
+                  from: "now-24h"
+                  to: "now"
+              overwrite: true
+
+    # =========================================================================
+    # STEP 4: CREATE ALERT RULES (10 Total)
+    # =========================================================================
+
+    - name: "Step 4: Configure alert rules in Prometheus"
+      block:
+        - name: Copy Prometheus alert rules
+          copy:
+            dest: "{{ compose_dir }}/config/prometheus/alert-rules.yml"
+            content: |
+              groups:
+                - name: critical_alerts
+                  interval: 30s
+                  rules:
+                    - alert: NodeDown
+                      expr: up{job="node-exporter"} == 0
+                      for: 2m
+                      labels:
+                        severity: critical
+                      annotations:
+                        summary: "Node {{ $labels.instance }} is down"
+                        description: "Node has not been responding for more than 2 minutes"
+
+                    - alert: HighErrorRate
+                      expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.05
+                      for: 5m
+                      labels:
+                        severity: critical
+                      annotations:
+                        summary: "High error rate detected"
+                        description: "Error rate is above 5%"
+
+                    - alert: DatabaseDown
+                      expr: pg_up == 0
+                      for: 1m
+                      labels:
+                        severity: critical
+                      annotations:
+                        summary: "PostgreSQL database is down"
+                        description: "PostgreSQL has not responded for more than 1 minute"
+
+                    - alert: ReplicationLagHigh
+                      expr: pg_replication_lag > 10
+                      for: 5m
+                      labels:
+                        severity: critical
+                      annotations:
+                        summary: "Database replication lag is high"
+                        description: "Replication lag is above 10 seconds"
+
+                    - alert: DiskSpaceCritical
+                      expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.10
+                      for: 5m
+                      labels:
+                        severity: critical
+                      annotations:
+                        summary: "Disk space is critically low"
+                        description: "Less than 10% disk space available"
+
+                - name: warning_alerts
+                  interval: 30s
+                  rules:
+                    - alert: HighCPUUsage
+                      expr: (1 - avg(irate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 80
+                      for: 10m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "High CPU usage detected"
+                        description: "CPU usage is above 80%"
+
+                    - alert: HighMemoryUsage
+                      expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+                      for: 10m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "High memory usage detected"
+                        description: "Memory usage is above 85%"
+
+                    - alert: HighResponseTime
+                      expr: histogram_quantile(0.95, http_request_duration_seconds_bucket) > 1
+                      for: 10m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "High response time detected"
+                        description: "p95 response time is above 1 second"
+
+                    - alert: ConnectionPoolHigh
+                      expr: pg_stat_activity_count > (pg_setting_max_connections * 0.80)
+                      for: 5m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "Database connection pool is high"
+                        description: "Connection pool usage is above 80%"
+
+                    - alert: LowCacheHitRatio
+                      expr: (redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) < 0.80
+                      for: 15m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "Cache hit ratio is low"
+                        description: "Cache hit ratio is below 80%"
+
+        - name: Reload Prometheus with new rules
+          shell: |
+            docker exec {{ cluster_name }}-prometheus \
+              kill -HUP 1 2>/dev/null || docker restart {{ cluster_name }}-prometheus
+          register: prometheus_reload
+
+    # =========================================================================
+    # STEP 5: CONFIGURE ALERTMANAGER NOTIFICATION CHANNELS
+    # =========================================================================
+
+    - name: "Step 5: Configure AlertManager notification channels"
+      block:
+        - name: Update AlertManager configuration
+          template:
+            src: alertmanager-config.yml.j2
+            dest: "{{ compose_dir }}/config/alertmanager/alertmanager.yml"
+          register: alertmanager_config
+
+        - name: Restart AlertManager with new config
+          shell: |
+            docker exec {{ cluster_name }}-alertmanager \
+              kill -HUP 1 2>/dev/null || docker restart {{ cluster_name }}-alertmanager
+
+    # =========================================================================
+    # STEP 6: VERIFY OBSERVABILITY DEPLOYMENT
+    # =========================================================================
+
+    - name: "Step 6: Verify observability stack"
+      block:
+        - name: Verify Grafana dashboards count
+          uri:
+            url: "{{ grafana_url }}/api/search"
+            method: GET
+            user: admin
+            password: admin
+          register: grafana_dashboards
+          retries: 5
+          delay: 5
+
+        - name: Verify Prometheus targets
+          uri:
+            url: "http://localhost:9090/api/v1/targets"
+            method: GET
+          register: prometheus_targets
+
+        - name: Verify alert rules loaded
+          uri:
+            url: "http://localhost:9090/api/v1/rules"
+            method: GET
+          register: alert_rules
+
+        - name: Display observability status
+          debug:
+            msg: |
+              ✅ Observability Stack Deployed
+              
+              Grafana Dashboards: {{ grafana_dashboards.json | length }}
+              Prometheus Targets: {{ prometheus_targets.json.data.activeTargets | length }}
+              Alert Rules: {{ alert_rules.json.data.groups | length }}
+              
+              Access Grafana: http://192.168.168.31:3000
+              Access Prometheus: http://192.168.168.31:9090

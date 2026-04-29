@@ -51,6 +51,10 @@ resource "docker_container" "opa" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
   labels {
     label = "io.elevatediq.component"
     value = "policy-engine"
@@ -103,6 +107,10 @@ resource "docker_container" "oauth2_proxy" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
 }
 
 # ── Caddy (Reverse Proxy / Gateway) ──────────────────────────────────────────
@@ -169,6 +177,10 @@ resource "docker_container" "caddy" {
   log_driver = "json-file"
   log_opts   = local.log_json_file_large
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
   labels {
     label = "io.elevatediq.component"
     value = "gateway"
@@ -202,10 +214,14 @@ resource "docker_container" "ollama" {
 
   healthcheck {
     test         = ["CMD", "ollama", "--version"]
-    interval     = "60s"
+    interval     = "1m0s"
     timeout      = "10s"
     retries      = 3
     start_period = "30s"
+  }
+
+  lifecycle {
+    ignore_changes = [image, network_mode]
   }
 
   networks_advanced {

@@ -36,7 +36,7 @@ resource "docker_container" "paperclip" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://paperclip:8007/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8010/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -53,6 +53,10 @@ resource "docker_container" "paperclip" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Execution Scheduler ───────────────────────────────────────────────────────
@@ -81,7 +85,7 @@ resource "docker_container" "execution_scheduler" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://execution-scheduler:8001/"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8080/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -98,6 +102,10 @@ resource "docker_container" "execution_scheduler" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Environment Provisioner (Control Plane) ───────────────────────────────────
@@ -144,7 +152,7 @@ resource "docker_container" "env_provisioner" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://env-provisioner:8000/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8050/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -157,6 +165,10 @@ resource "docker_container" "env_provisioner" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Activity Feed ─────────────────────────────────────────────────────────────
@@ -178,14 +190,8 @@ resource "docker_container" "activity_feed" {
     "LOG_LEVEL=INFO",
   ]
 
-  mounts {
-    target = "/app"
-    source = "${local.repo}/apps/activity_feed"
-    type   = "bind"
-  }
-
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://activity-feed:8004/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8000/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -198,6 +204,10 @@ resource "docker_container" "activity_feed" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Edge Agent ────────────────────────────────────────────────────────────────
@@ -225,7 +235,7 @@ resource "docker_container" "edge_agent" {
   ]
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://edge-agent:8002/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8060/health"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -238,4 +248,8 @@ resource "docker_container" "edge_agent" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }

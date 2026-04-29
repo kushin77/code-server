@@ -60,6 +60,10 @@ resource "docker_container" "prometheus" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
@@ -107,7 +111,7 @@ resource "docker_container" "grafana" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://grafana:3000/api/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -120,6 +124,10 @@ resource "docker_container" "grafana" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Loki ──────────────────────────────────────────────────────────────────────
@@ -167,6 +175,10 @@ resource "docker_container" "loki" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Alertmanager ──────────────────────────────────────────────────────────────
@@ -219,6 +231,10 @@ resource "docker_container" "alertmanager" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── OpenTelemetry Collector ───────────────────────────────────────────────────
@@ -276,6 +292,10 @@ resource "docker_container" "otel_collector" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Grafana Tempo ─────────────────────────────────────────────────────────────
@@ -312,7 +332,7 @@ resource "docker_container" "tempo" {
   }
 
   healthcheck {
-    test         = ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://tempo:3201/ready"]
+    test         = ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3200/status"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -325,4 +345,8 @@ resource "docker_container" "tempo" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }

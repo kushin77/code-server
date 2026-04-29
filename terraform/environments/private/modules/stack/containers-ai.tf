@@ -38,7 +38,7 @@ resource "docker_container" "memory_engine" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://memory-engine:8001/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8001/health"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -60,6 +60,10 @@ resource "docker_container" "memory_engine" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Multimodal AI ─────────────────────────────────────────────────────────────
@@ -89,7 +93,7 @@ resource "docker_container" "multimodal_ai" {
   ]
 
   healthcheck {
-    test         = ["CMD-SHELL", "curl -f http://multimodal-ai:8005/health || exit 1"]
+    test         = ["CMD-SHELL", "curl -f http://localhost:8040/health || exit 1"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -111,6 +115,10 @@ resource "docker_container" "multimodal_ai" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Reputation Engine ─────────────────────────────────────────────────────────
@@ -163,6 +171,10 @@ resource "docker_container" "reputation_engine" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Agent Runtime ─────────────────────────────────────────────────────────────
@@ -197,7 +209,7 @@ resource "docker_container" "agent_runtime" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://agent-runtime:9005/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -219,4 +231,8 @@ resource "docker_container" "agent_runtime" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }

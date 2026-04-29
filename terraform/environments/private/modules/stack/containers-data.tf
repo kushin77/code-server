@@ -50,6 +50,10 @@ resource "docker_container" "postgres" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
   labels {
     label = "io.elevatediq.component"
     value = "database"
@@ -96,6 +100,10 @@ resource "docker_container" "redis" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
 
   labels {
     label = "io.elevatediq.component"
@@ -167,7 +175,7 @@ resource "docker_container" "redpanda" {
   }
 
   healthcheck {
-    test         = ["CMD-SHELL", "curl -fsS http://redpanda:9644/v1/status/ready"]
+    test         = ["CMD-SHELL", "curl -fsS http://localhost:9644/v1/status/ready"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 5
@@ -175,11 +183,16 @@ resource "docker_container" "redpanda" {
   }
 
   networks_advanced {
-    name = docker_network.services.id
+    name    = docker_network.services.id
+    aliases = ["redpanda"]
   }
 
   log_driver = "json-file"
   log_opts   = local.log_json_file_large
+
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
 
   labels {
     label = "io.elevatediq.component"
@@ -221,7 +234,7 @@ resource "docker_container" "redpanda_console" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://redpanda-console:8080/overview"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8080/overview"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -234,6 +247,10 @@ resource "docker_container" "redpanda_console" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
 
   labels {
     label = "io.elevatediq.component"
@@ -297,6 +314,10 @@ resource "docker_container" "qdrant" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
 
   labels {
     label = "io.elevatediq.component"

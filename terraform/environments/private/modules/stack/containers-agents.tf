@@ -39,7 +39,7 @@ resource "docker_container" "agent_code_reviewer" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://agent-runtime:9005/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -52,6 +52,10 @@ resource "docker_container" "agent_code_reviewer" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Agent: Incident Responder ─────────────────────────────────────────────────
@@ -89,7 +93,7 @@ resource "docker_container" "agent_incident_responder" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://agent-runtime:9005/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -102,6 +106,10 @@ resource "docker_container" "agent_incident_responder" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Agent: Doc Writer ─────────────────────────────────────────────────────────
@@ -139,7 +147,7 @@ resource "docker_container" "agent_doc_writer" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://agent-runtime:9005/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -152,6 +160,10 @@ resource "docker_container" "agent_doc_writer" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }
 
 # ── Agent: Test Generator ─────────────────────────────────────────────────────
@@ -189,7 +201,7 @@ resource "docker_container" "agent_test_generator" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://agent-runtime:9005/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -202,4 +214,8 @@ resource "docker_container" "agent_test_generator" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
 }

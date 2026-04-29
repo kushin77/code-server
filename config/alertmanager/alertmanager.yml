@@ -1,0 +1,95 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'  # Set via environment variable
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+
+  routes:
+    # Critical alerts - immediate escalation
+    - match:
+        severity: critical
+      receiver: 'critical'
+      continue: true
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 1h
+
+    # Warning alerts - standard notification
+    - match:
+        severity: warning
+      receiver: 'warnings'
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+
+    # Alerts from specific services
+    - match:
+        service: 'api-gateway'
+      receiver: 'api-team'
+      continue: true
+
+    - match:
+        service: 'database'
+      receiver: 'database-team'
+      continue: true
+
+receivers:
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: 'warning'
+
+  - name: 'critical'
+    slack_configs:
+      - channel: '#critical-alerts'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+        color: 'danger'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .Alerts.Firing | len }} alerts'
+
+  - name: 'warnings'
+    slack_configs:
+      - channel: '#warnings'
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+        color: 'warning'
+
+  - name: 'api-team'
+    slack_configs:
+      - channel: '#api-team'
+        title: 'API Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+
+  - name: 'database-team'
+    slack_configs:
+      - channel: '#database-team'
+        title: 'Database Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+
+inhibit_rules:
+  # Suppress warnings if critical alert exists for same service
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+  # Suppress alerts during maintenance windows
+  - source_match:
+      severity: 'maintenance'
+    target_match_re:
+      severity: '.*'
+    equal: ['service']

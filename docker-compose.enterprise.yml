@@ -213,7 +213,7 @@ services:
       - services
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8200/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"]
+      test: ["CMD", "vault", "status"]
       interval: 30s
       timeout: 10s
       retries: 3

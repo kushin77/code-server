@@ -267,23 +267,8 @@ services:
     container_name: code-server-opa
     user: "1001:1001"
     command: run --server --set system.log.level=info
-    volumes:
-      - ./config/opa:/policies
     ports:
       - "8181:8181"
-    networks:
-      - code-server-network
-
-  oauth2-proxy:
-    image: oauth2-proxy/oauth2-proxy:7.5.1
-    container_name: code-server-oauth2-proxy
-    user: "65534:65534"
-    environment:
-      - OAUTH2_PROXY_PROVIDER=github
-      - OAUTH2_PROXY_UPSTREAMS=http://redpanda-console:8080
-      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
-    ports:
-      - "4180:4180"
     networks:
       - code-server-network
 

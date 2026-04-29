@@ -1,0 +1,9 @@
+# Docker Compose Override Configuration
+# Local environment overrides for development/private deployments
+# This file is auto-managed by Terraform and should not be edited directly
+
+version: '3.9'
+
+services:
+  # Override section for local development customizations
+  # Add service-specific overrides here as needed

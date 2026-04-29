@@ -14,6 +14,11 @@ resource "docker_volume" "caddy_config" {
   driver = "local"
 }
 
+resource "docker_volume" "keepalived_config" {
+  name   = "keepalived_config"
+  driver = "local"
+}
+
 resource "docker_volume" "prometheus_data" {
   name   = "prometheus_data"
   driver = "local"

@@ -240,3 +240,159 @@ resource "docker_container" "ollama" {
     value = "ai"
   }
 }
+
+# ── Keepalived (VRRP High Availability) ──────────────────────────────────────
+resource "docker_container" "keepalived_init" {
+  image   = "alpine:3.20"
+  command = [
+    "sh",
+    "-lc",
+    <<-EOT
+    mkdir -p /etc/keepalived
+    if [ "${var.host_role}" = "primary" ]; then
+      state="MASTER"
+      priority="100"
+    else
+      state="BACKUP"
+      priority="90"
+    fi
+    cat > /etc/keepalived/keepalived.conf << 'EOF'
+    global_defs {
+      router_id CODE_SERVER_HA
+      script_user root
+      enable_script_security
+    }
+    vrrp_script check_caddy {
+      script "/usr/local/bin/check-caddy-health.sh"
+      interval 3
+      fall 3
+      rise 2
+      weight -20
+    }
+    vrrp_instance VI_1 {
+      state $${state}
+      interface eth0
+      virtual_router_id 51
+      priority $${priority}
+      advert_int 1
+      authentication {
+        auth_type PASS
+        auth_pass CODE_SERVER_HA_2026
+      }
+      virtual_ipaddress {
+        192.168.168.30/24
+      }
+      track_script {
+        check_caddy
+      }
+      notify_master "/usr/local/bin/notify-vrrp.sh master"
+      notify_backup "/usr/local/bin/notify-vrrp.sh backup"
+    }
+    EOF
+    chown -R root:root /etc/keepalived
+    chmod 600 /etc/keepalived/keepalived.conf
+    EOT
+  ]
+  user = "0:0"
+
+  volumes {
+    volume_name = docker_volume.keepalived_config.name
+    container_path = "/etc/keepalived"
+  }
+
+  restart = "no"
+
+  networks_advanced {
+    name = docker_network.services.id
+  }
+
+  lifecycle {
+    ignore_changes = [image, network_mode]
+  }
+}
+
+resource "docker_container" "keepalived" {
+  name    = "code-server-keepalived"
+  image   = "keepalived:2.2.7"
+  user    = "0:0"
+  restart = "unless-stopped"
+
+  depends_on = [
+    docker_container.keepalived_init,
+    docker_container.caddy,
+  ]
+
+  capabilities {
+    add  = ["NET_ADMIN", "NET_BROADCAST", "NET_RAW", "SYS_ADMIN"]
+    drop = []
+  }
+
+  sysctls = {
+    "net.ipv4.ip_forward"      = "1"
+    "net.ipv4.ip_nonlocal_bind" = "1"
+    "net.ipv6.conf.all.forwarding" = "1"
+  }
+
+  network_mode = "host"
+
+  env = [
+    "HOST_ROLE=${var.host_role}",
+    "KEEPALIVED_CMD_LINE_ARGUMENTS=-l -D",
+  ]
+
+  volumes {
+    volume_name = docker_volume.keepalived_config.name
+    container_path = "/etc/keepalived"
+    read_only = true
+  }
+
+  volumes {
+    host_path = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
+    read_only = true
+  }
+
+  volumes {
+    host_path = "${local.repo}/scripts/ha/check-caddy-health.sh"
+    container_path = "/usr/local/bin/check-caddy-health.sh"
+    read_only = true
+  }
+
+  volumes {
+    host_path = "${local.repo}/scripts/ha/notify-vrrp.sh"
+    container_path = "/usr/local/bin/notify-vrrp.sh"
+    read_only = true
+  }
+
+  healthcheck {
+    test = [
+      "CMD",
+      "sh",
+      "-c",
+      "ps aux | grep -v grep | grep keepalived || exit 1"
+    ]
+    interval     = "30s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "10s"
+  }
+
+  log_driver = "json-file"
+  log_opts   = {
+    "max-size" = "10m"
+    "max-file" = "3"
+  }
+
+  labels {
+    label = "io.elevatediq.component"
+    value = "ha-vrrp"
+  }
+  labels {
+    label = "io.elevatediq.tier"
+    value = "infrastructure"
+  }
+
+  lifecycle {
+    ignore_changes = [image, network_mode]
+  }
+}

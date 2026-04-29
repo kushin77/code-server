@@ -17,6 +17,11 @@ resource "docker_image" "caddy" {
   keep_locally = true
 }
 
+resource "docker_image" "keepalived" {
+  name         = local.img.keepalived
+  keep_locally = true
+}
+
 resource "docker_image" "opa" {
   name         = local.img.opa
   keep_locally = true

@@ -3,7 +3,13 @@
 # Deploys production TLS/HTTPS configuration to both nodes
 
 set -e
+# Error handling
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
+# Logging functions
+log_info() { echo "ℹ️  $1"; }
+log_error() { echo "❌ $1" >&2; }
 PRIMARY_HOST="${1:-192.168.168.31}"
 REPLICA_HOST="${2:-192.168.168.42}"
 SSH_USER="${3:-akushnir}"

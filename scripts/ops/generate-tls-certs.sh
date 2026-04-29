@@ -5,6 +5,14 @@
 
 set -e
 
+# Error handling
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+
+# Logging functions
+log_info() { echo "ℹ️  $1"; }
+log_error() { echo "❌ $1" >&2; }
+
 CERT_DIR="${1:-.}"
 DOMAIN="${2:-kushnir.cloud}"
 VALIDITY_DAYS="${3:-365}"

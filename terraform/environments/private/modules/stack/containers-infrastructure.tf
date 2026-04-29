@@ -124,16 +124,16 @@ resource "docker_container" "caddy" {
 
   ports {
     internal = 80
-    external = 9088
+    external = 80
   }
   ports {
     internal = 443
-    external = 9443
+    external = 443
     protocol = "tcp"
   }
   ports {
     internal = 443
-    external = 9443
+    external = 443
     protocol = "udp"
   }
 

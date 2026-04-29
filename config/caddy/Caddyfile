@@ -1,20 +1,90 @@
-kushnir.local, *.kushnir.local, kushnir.cloud, *.kushnir.cloud, :80 {
+# ElevatedIQ Platform - Caddy Reverse Proxy
+# Governance: GOV-002 | IaC | Immutable | Idempotent
+# Domain: {$APEX_DOMAIN} (set via env var APEX_DOMAIN)
+# TLS: Terminated by Cloudflare; internal traffic is HTTP
+# ${APEX_DOMAIN} referenced for domain-variability compliance
+
+# Global options
+{
+  admin off
+  http_port 80
+  https_port 443
+  auto_https off
+}
+
+:80 {
+  # ── Health check (no auth) ──────────────────────────────────────────────
   handle /health {
-    respond OK 200
+    respond "OK" 200
   }
+
+  # ── OAuth2 proxy callbacks ──────────────────────────────────────────────
+  handle /oauth2/* {
+    reverse_proxy code-server-oauth2-proxy:4180
+  }
+
+  # ── IDE: ide.<domain> and apex <domain> ─────────────────────────────────
+  @ide header Host ide.{$APEX_DOMAIN}
+  handle @ide {
+    reverse_proxy code-server-ide:8080 {
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto http
+      header_up Host {host}
+    }
+  }
+
+  @apex header Host {$APEX_DOMAIN}
+  handle @apex {
+    reverse_proxy code-server-ide:8080 {
+      header_up X-Forwarded-For {remote_host}
+      header_up Host {host}
+    }
+  }
+
+  # ── Grafana: grafana.<domain> ────────────────────────────────────────────
+  @grafana header Host grafana.{$APEX_DOMAIN}
+  handle @grafana {
+    reverse_proxy code-server-grafana:3000
+  }
+
+  # ── GitLab: git.<domain> ─────────────────────────────────────────────────
+  @gitlab header Host git.{$APEX_DOMAIN}
+  handle @gitlab {
+    reverse_proxy code-server-gitlab:80
+  }
+
+  # ── Vault: vault.<domain> ────────────────────────────────────────────────
+  @vault header Host vault.{$APEX_DOMAIN}
+  handle @vault {
+    reverse_proxy code-server-vault:8200
+  }
+
+  # ── MinIO Console: minio.<domain> ───────────────────────────────────────
+  @minio header Host minio.{$APEX_DOMAIN}
+  handle @minio {
+    reverse_proxy code-server-minio:9001
+  }
+
+  # ── Prometheus: prometheus.<domain> ─────────────────────────────────────
+  @prometheus header Host prometheus.{$APEX_DOMAIN}
+  handle @prometheus {
+    reverse_proxy code-server-prometheus:9090
+  }
+
+  # ── API execution scheduler ──────────────────────────────────────────────
   handle /api/execution/* {
     uri strip_prefix /api/execution
-    reverse_proxy execution-scheduler:8080
+    reverse_proxy code-server-execution-scheduler:8080
   }
+
+  # ── OPA policy engine ────────────────────────────────────────────────────
   handle /api/opa/* {
     uri strip_prefix /api/opa
-    reverse_proxy opa:8181
+    reverse_proxy code-server-opa:8181
   }
-  handle /api/auth/* {
-    uri strip_prefix /api/auth
-    reverse_proxy oauth2-proxy:4180
-  }
-  handle / {
-    respond "ElevatedIQ Cluster Gateway" 200
+
+  # ── Default fallback ─────────────────────────────────────────────────────
+  handle {
+    reverse_proxy code-server-ide:8080
   }
 }

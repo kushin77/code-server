@@ -4,8 +4,6 @@
 # Note: This overlay assumes the core stack (postgres, redis, redpanda, etc) is already running.
 # Services should not declare depends_on for core infrastructure as it lives in an external network.
 
-version: "3.8"
-
 services:
   # ========================================================================
   # CODE-SERVER IDE - Web-based VS Code
@@ -213,9 +211,10 @@ services:
       - services
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: ["CMD-SHELL", "VAULT_ADDR=http://127.0.0.1:8200 vault status >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
+      start_period: 20s
       retries: 3
     logging:
       driver: "json-file"
@@ -243,6 +242,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8081/nexus/"]
       interval: 60s
       timeout: 10s
+      start_period: 300s
       retries: 3
     logging:
       driver: "json-file"

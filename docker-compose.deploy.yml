@@ -183,12 +183,8 @@ services:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
     container_name: code-server-oauth2-proxy
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
-    command:
-      - --config=/etc/oauth2-proxy/oauth2-proxy.cfg
     ports:
       - "${OAUTH2_PROXY_PORT}:${OAUTH2_PROXY_PORT}"
-    volumes:
-      - ./config/oauth2-proxy/oauth2-proxy.cfg:/etc/oauth2-proxy/oauth2-proxy.cfg:ro
     environment:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
@@ -236,7 +232,6 @@ services:
       - "9443:443"
       - "9443:443/udp"
     volumes:
-      - ./config/caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
@@ -334,8 +329,6 @@ services:
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     healthcheck:
       test:
         - CMD
@@ -371,9 +364,7 @@ services:
     user: "10001:10001"  # @security P0 #969 - Run as non-root loki user
     ports:
       - "${LOKI_PORT}:${LOKI_PORT}"
-    command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./config/monitoring/loki:/etc/loki:ro
       - loki_data:/loki
     environment:
       - LOG_LEVEL=info
@@ -410,13 +401,11 @@ services:
     container_name: code-server-alertmanager
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
       - "--web.external-url=http://alertmanager:${ALERTMANAGER_PORT}"
     ports:
       - "${ALERTMANAGER_PORT}:${ALERTMANAGER_PORT}"
     volumes:
-      - ./config/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     healthcheck:
       test:
@@ -474,7 +463,6 @@ services:
       - "${QDRANT_PORT}:${QDRANT_PORT}"
       - "${QDRANT_GRPC_PORT}:${QDRANT_GRPC_PORT}"
     volumes:
-      - ./config/qdrant-config.yaml:/qdrant/config/local_config.yaml:ro
       - qdrant_data:/qdrant/storage
     environment:
       - QDRANT_API_KEY=${QDRANT_API_KEY}
@@ -1426,9 +1414,6 @@ services:
     image: otel/opentelemetry-collector-contrib:0.96.0
     container_name: code-server-otel-collector
     user: "65534:65534"  # @security GOV-002 - run as non-root nobody user
-    command: ["--config=/etc/otel-collector.yaml"]
-    volumes:
-      - ./config/monitoring/otel/collector-config.yaml:/etc/otel-collector.yaml:ro
     ports:
       - "${OTEL_EXPORTER_OTLP_GRPC_PORT}:${OTEL_EXPORTER_OTLP_GRPC_PORT}"    # OTLP gRPC
       - "${OTEL_EXPORTER_OTLP_HTTP_PORT}:${OTEL_EXPORTER_OTLP_HTTP_PORT}"    # OTLP HTTP
@@ -1493,9 +1478,7 @@ services:
     image: grafana/tempo:2.4.1
     container_name: code-server-tempo
     user: "10001:10001"  # @security GOV-002 - run as non-root tempo user
-    command: ["-config.file=/etc/tempo.yaml"]
     volumes:
-      - ./config/monitoring/tempo/tempo-config.yaml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
       - "${TEMPO_HTTP_PORT}:${TEMPO_HTTP_PORT}"    # Tempo HTTP API

@@ -1,0 +1,139 @@
+# Advanced Disaster Recovery Backup Strategy
+# Implements 3-2-1 backup rule: 3 copies, 2 different media, 1 offsite
+
+backup_policy:
+  version: "1.0"
+  
+  # Backup tiers with retention
+  tiers:
+    # Tier 1: Local Hot Backups (fast recovery)
+    local_hot:
+      location: /backup/hot
+      retention: "7 days"
+      frequency: "hourly"
+      type: "incremental"
+      compression: "zstd"
+      verify: "every 6 hours"
+      use_case: "Quick local restore (<1 hour)"
+      rto: "15 minutes"
+      rpo: "1 hour"
+    
+    # Tier 2: Local Warm Backups (reliable)
+    local_warm:
+      location: /backup/warm
+      retention: "30 days"
+      frequency: "daily"
+      type: "full"
+      compression: "zstd"
+      verify: "daily"
+      use_case: "Local restore with verification (1-4 hours)"
+      rto: "1 hour"
+      rpo: "24 hours"
+    
+    # Tier 3: S3 Standard (offsite, retrievable)
+    s3_standard:
+      bucket: "code-server-backups-standard"
+      retention: "90 days"
+      frequency: "daily"
+      type: "full"
+      compression: "zstd"
+      encryption: "AES-256"
+      verify: "weekly"
+      use_case: "Regional restore with verification (4-24 hours)"
+      rto: "4 hours"
+      rpo: "24 hours"
+      storage_class: "STANDARD"
+    
+    # Tier 4: S3 Glacier Deep Archive (long-term, cold)
+    s3_glacier:
+      bucket: "code-server-backups-glacier"
+      retention: "7 years"
+      frequency: "weekly"
+      type: "full"
+      compression: "zstd"
+      encryption: "AES-256"
+      verify: "monthly"
+      use_case: "Compliance, long-term archive (24-48 hours retrieve)"
+      rto: "24 hours"
+      rpo: "1 week"
+      storage_class: "GLACIER_IR"
+    
+    # Tier 5: Cross-Region S3 (extreme failover)
+    s3_cross_region:
+      bucket: "code-server-backups-xregion"
+      region: "us-west-2"  # Different region from primary
+      retention: "90 days"
+      frequency: "daily"
+      type: "full"
+      compression: "zstd"
+      encryption: "AES-256"
+      verify: "weekly"
+      use_case: "Complete region failure recovery (4-12 hours)"
+      rto: "4 hours"
+      rpo: "24 hours"
+      replication: "cross-region"
+
+# Backup components
+backup_components:
+  databases:
+    - name: "code-server-postgres"
+      type: "postgresql"
+      backup_method: "pg_basebackup + WAL archival"
+      wal_retention: "30 days"
+      full_backup_frequency: "daily"
+      incremental_frequency: "hourly"
+      parallel_jobs: 4
+      compression_level: 9
+      
+  caches:
+    - name: "code-server-redis"
+      type: "redis"
+      backup_method: "RDB snapshots"
+      frequency: "hourly"
+      retention: "7 days"
+      
+  vaults:
+    - name: "code-server-vault"
+      type: "hashicorp-vault"
+      backup_method: "raft snapshot"
+      frequency: "daily"
+      retention: "30 days"
+      
+  configurations:
+    - name: "terraform-state"
+      type: "state-file"
+      backup_method: "git + S3 versioning"
+      frequency: "every commit"
+      retention: "1 year"
+      
+    - name: "application-config"
+      type: "yaml/json"
+      backup_method: "git versioning"
+      frequency: "every deployment"
+      retention: "2 years"
+
+# Recovery time objectives (RTO) and recovery point objectives (RPO)
+sla_targets:
+  tier1:
+    name: "Critical (Tier 1)"
+    rto_max: "15 minutes"  # 99.99% = 52 min/year
+    rpo_max: "1 hour"
+    examples: ["Active database", "Cache layer", "Auth services"]
+    
+  tier2:
+    name: "High Priority (Tier 2)"
+    rto_max: "1 hour"
+    rpo_max: "4 hours"
+    examples: ["API gateway", "Analytics", "Non-critical services"]
+    
+  tier3:
+    name: "Medium Priority (Tier 3)"
+    rto_max: "4 hours"
+    rpo_max: "24 hours"
+    examples: ["Logs", "Metrics", "Archive data"]
+    
+  tier4:
+    name: "Low Priority (Tier 4)"
+    rto_max: "24 hours"
+    rpo_max: "7 days"
+    examples: ["Historical data", "Compliance archive"]

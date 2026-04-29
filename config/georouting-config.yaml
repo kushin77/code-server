@@ -1,0 +1,162 @@
+# Geo-Routing and Global Traffic Management
+# Route users to nearest region with failover
+
+georouting:
+  version: "1.0"
+  
+  # DNS configuration (Route53)
+  dns_provider: "aws_route53"
+  
+  routing_policies:
+    primary_policy:
+      name: "geolocation_with_failover"
+      
+      rules:
+        # North America → US East (Primary)
+        - region: "North America"
+          target: "use1-primary.example.com"
+          primary_endpoint: "192.168.168.31:443"
+          secondary_endpoint: "192.168.168.42:443"
+          failover_order: ["use1", "usw2", "euw1"]
+          health_check_interval: "5s"
+          ttl: "5"
+        
+        # South America → US East (Primary)
+        - region: "South America"
+          target: "use1-primary.example.com"
+          failover_order: ["use1", "usw2", "euw1"]
+        
+        # Europe → EU West
+        - region: "Europe"
+          target: "euw1.example.com"
+          failover_order: ["euw1", "usw2"]  # Cannot failover to us-east due to GDPR
+          health_check_interval: "5s"
+          ttl: "5"
+        
+        # Asia-Pacific → US West
+        - region: "Asia Pacific"
+          target: "usw2.example.com"
+          failover_order: ["usw2", "use1", "euw1"]
+          health_check_interval: "5s"
+          ttl: "5"
+        
+        # Default/Rest of World
+        - region: "*"
+          target: "use1-primary.example.com"
+          failover_order: ["use1", "usw2", "euw1"]
+    
+    latency_based_backup:
+      name: "failover_latency_based"
+      
+      endpoints:
+        - region: "use1"
+          latency_ms: 0
+          weight: 100
+          
+        - region: "usw2"
+          latency_ms: 75
+          weight: 30
+          
+        - region: "euw1"
+          latency_ms: 150
+          weight: 10
+  
+  # Health checks
+  health_checks:
+    primary_health_check:
+      target: "use1-primary.example.com:443/health"
+      protocol: "HTTPS"
+      interval: "5s"
+      failure_threshold: 3
+      success_threshold: 2
+      timeout: "3s"
+      measure_latency: true
+      
+      alert_conditions:
+        - "3 consecutive failures"
+        - "Latency >500ms"
+        - "SSL certificate expiry <30 days"
+    
+    secondary_health_check:
+      target: "usw2.example.com:443/health"
+      protocol: "HTTPS"
+      interval: "5s"
+      failure_threshold: 3
+      timeout: "3s"
+    
+    tertiary_health_check:
+      target: "euw1.example.com:443/health"
+      protocol: "HTTPS"
+      interval: "5s"
+      failure_threshold: 3
+      timeout: "3s"
+  
+  # Failover triggers
+  failover:
+    automatic_failover: true
+    
+    triggers:
+      - "Health check failures >3 consecutive"
+      - "Latency spike >2x baseline for >60s"
+      - "Connection timeouts >10% of requests"
+      - "HTTP 5XX errors >5% of requests"
+    
+    actions:
+      on_region_failure:
+        - "Remove failed region from DNS"
+        - "Alert on-call team"
+        - "Log failover event"
+        - "Redirect traffic to next failover region"
+        - "Trigger data consistency checks"
+    
+    failback:
+      strategy: "gradual"
+      steps:
+        - "Verify recovered region is healthy (5m stable)"
+        - "Add back to DNS with 10% weight"
+        - "Monitor for 10 minutes"
+        - "Gradually increase weight to 50%"
+        - "Monitor for 20 minutes"
+        - "Restore to original weight (100%)"
+    
+    manual_override:
+      enabled: true
+      requires: "on-call approval"
+      cooldown: "5 minutes between operations"
+
+# Traffic shaping
+traffic_shaping:
+  rate_limiting:
+    per_region: "10,000 req/sec"
+    per_client: "1,000 req/sec"
+    burst_allowed: "50% overage for 10s"
+  
+  circuit_breaker:
+    open_after: "5% error rate for 30s"
+    half_open_attempts: 5
+    reset_timeout: "60s"
+  
+  request_prioritization:
+    tier_1: "Authentication requests (highest)"
+    tier_2: "Critical API calls"
+    tier_3: "Normal API calls"
+    tier_4: "Batch/background jobs"
+
+# Regional performance optimization
+performance:
+  edge_caching:
+    enabled: true
+    provider: "cloudfront"
+    cache_ttl:
+      static: "30 days"
+      dynamic: "5 minutes"
+      api: "< 1 second (no cache)"
+  
+  compression:
+    algorithm: "brotli"
+    min_size: "1KB"
+  
+  latency_targets:
+    p50: "< 100ms"
+    p95: "< 500ms"
+    p99: "< 1000ms"

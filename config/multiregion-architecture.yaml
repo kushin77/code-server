@@ -1,0 +1,227 @@
+# Multi-region Architecture Design
+# Global platform with regional data residency and compliance
+
+architecture:
+  version: "1.0"
+  
+  # Region definitions
+  regions:
+    us_east_primary:
+      name: "US East (Primary)"
+      code: "use1"
+      aws_region: "us-east-1"
+      datacenter: "us-east-1a"
+      role: "primary"
+      capacity: "100%"
+      traffic_weight: 50
+      
+      hosts:
+        - ip: "192.168.168.31"
+          name: "primary-node"
+          role: "primary-active"
+          
+        - ip: "192.168.168.42"
+          name: "replica-node"
+          role: "replica-standby"
+      
+      services: 90  # code-server (44) + purebliss (7) + infrastructure (39)
+      storage: "1TB SSD"
+      bandwidth: "10Gbps"
+      
+      compliance:
+        - "SOC2 Type II"
+        - "HIPAA BAA"
+        - "PCI-DSS Level 1"
+      
+      data_residency:
+        - "Data must reside in US"
+        - "Backups: US only"
+        - "Encryption keys: US-based HSM"
+    
+    us_west_secondary:
+      name: "US West (Secondary)"
+      code: "usw2"
+      aws_region: "us-west-2"
+      datacenter: "us-west-2a"
+      role: "secondary"
+      capacity: "50%"
+      traffic_weight: 30
+      
+      hosts:
+        - ip: "10.0.1.10"
+          name: "secondary-primary"
+          role: "secondary-primary"
+          
+        - ip: "10.0.1.11"
+          name: "secondary-replica"
+          role: "secondary-replica"
+      
+      services: 60
+      storage: "500GB SSD"
+      bandwidth: "5Gbps"
+      
+      compliance:
+        - "SOC2 Type II"
+        - "HIPAA BAA"
+      
+      data_residency:
+        - "Data replicated from US East"
+        - "Read-only copies (warm standby)"
+        - "RTO: 5-15 minutes"
+    
+    eu_west_tertiary:
+      name: "EU West (Tertiary)"
+      code: "euw1"
+      aws_region: "eu-west-1"
+      datacenter: "eu-west-1a"
+      role: "tertiary"
+      capacity: "30%"
+      traffic_weight: 20
+      
+      hosts:
+        - ip: "10.1.1.10"
+          name: "tertiary-primary"
+          role: "tertiary-primary"
+      
+      services: 30
+      storage: "250GB SSD"
+      bandwidth: "3Gbps"
+      
+      compliance:
+        - "GDPR"
+        - "Data Protection Act 2018"
+        - "SOC2 Type II"
+      
+      data_residency:
+        - "Data must reside in EU"
+        - "No export to US (except anonymized)"
+        - "Separate encryption key (EU HSM)"
+        - "GDPR-compliant data subject rights"
+
+  # Replication topology
+  replication_topology:
+    # Database replication
+    database:
+      primary: "US East (use1)"
+      secondaries:
+        - region: "US West (usw2)"
+          mode: "streaming_replica"
+          lag_target: "<5 seconds"
+          
+        - region: "EU West (euw1)"
+          mode: "streaming_replica"
+          lag_target: "<30 seconds"
+      
+      conflict_resolution: "last-write-wins"
+      
+    # Cache replication
+    cache:
+      primary: "US East (use1)"
+      secondaries:
+        - region: "US West (usw2)"
+          mode: "sentinel_replica"
+          lag_target: "<1 second"
+          
+        - region: "EU West (euw1)"
+          mode: "sentinel_replica"
+          lag_target: "<5 seconds"
+
+  # Failover priorities (automatic switching order)
+  failover_priorities:
+    if_primary_down:
+      "Step 1": "Promote US West (usw2) to primary"
+      "Step 2": "Redirect write traffic to US West"
+      "Step 3": "Promote EU West (euw1) to secondary"
+    
+    if_us_west_down:
+      "Step 1": "Promote EU West (euw1) to primary"
+      "Step 2": "Redirect all traffic to EU West"
+      "Step 3": "Warn about GDPR data access implications"
+    
+    if_eu_west_down:
+      "Step 1": "Reduce EU capacity (read-only backups only)"
+      "Step 2": "Continue replication from US East"
+
+  # Global traffic management
+  traffic_management:
+    strategy: "geo-proximity + latency-based"
+    
+    routing_rules:
+      - source_region: "us-east"
+        target: "use1"
+        failover: ["usw2", "euw1"]
+        
+      - source_region: "us-west"
+        target: "usw2"
+        failover: ["use1", "euw1"]
+        
+      - source_region: "eu"
+        target: "euw1"
+        failover: ["usw2"]  # Cannot failover to US due to GDPR
+    
+    load_balancing:
+      algorithm: "latency-based"
+      health_check_interval: "5s"
+      failover_threshold: "3 consecutive failures"
+    
+    dns_config:
+      provider: "route53"
+      ttl: "5 seconds"
+      geolocation_routing: true
+      health_checks: true
+
+# Regional service distribution
+service_distribution:
+  global_services:
+    - "DNS (Route53)"
+    - "CDN (CloudFront)"
+    - "WAF (Shield)"
+    - "Certificate Authority (ACM)"
+  
+  regional_services:
+    - "PostgreSQL"
+    - "Redis"
+    - "Vault"
+    - "Consul"
+    - "API Gateway"
+    - "Object Storage"
+    - "Load Balancer"
+    - "Container Registry"
+
+# Regional capacity planning
+capacity_planning:
+  us_east_primary:
+    cpu_capacity: "64 vCPU"
+    memory_capacity: "256 GB"
+    disk_capacity: "1 TB SSD + 5 TB archive"
+    network_capacity: "10 Gbps"
+    
+    utilization_targets:
+      cpu: "60-70%"
+      memory: "65-75%"
+      disk: "70-80%"
+      network: "50-60%"
+  
+  us_west_secondary:
+    cpu_capacity: "32 vCPU"
+    memory_capacity: "128 GB"
+    disk_capacity: "500 GB SSD + 2.5 TB archive"
+    network_capacity: "5 Gbps"
+    
+    utilization_targets:
+      cpu: "40-50%"
+      memory: "45-55%"
+      disk: "60-70%"
+      network: "30-40%"
+  
+  eu_west_tertiary:
+    cpu_capacity: "16 vCPU"
+    memory_capacity: "64 GB"
+    disk_capacity: "250 GB SSD + 1.25 TB archive"
+    network_capacity: "3 Gbps"
+    
+    utilization_targets:
+      cpu: "30-40%"
+      memory: "35-45%"
+      disk: "50-60%"
+      network: "20-30%"

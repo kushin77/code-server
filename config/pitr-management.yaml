@@ -1,0 +1,150 @@
+# Point-in-Time Recovery (PITR) Management
+# Enables recovery to any point within retention window
+
+pitr_config:
+  version: "1.0"
+  
+  # WAL (Write-Ahead Log) archival
+  wal_archival:
+    enabled: true
+    destination: "s3://code-server-backups-wal/"
+    compression: "gzip"
+    encryption: "AES-256"
+    
+    postgresql:
+      wal_level: "replica"
+      wal_retention: "30 days"
+      max_wal_size: "4GB"
+      archive_command: "aws s3 cp %p s3://code-server-backups-wal/wal-%f.gz"
+      archive_timeout: "300s"
+      continuous_archival: true
+      
+      # WAL compression settings
+      compression:
+        type: "gzip"
+        level: 9
+        parallel_jobs: 4
+      
+      # WAL retention policy
+      retention:
+        min_space_free: "50GB"  # Keep at least 50GB free on disk
+        archive_retention: "30 days"
+        min_segments_to_keep: 1000
+  
+  # Full backup configuration for PITR base
+  full_backup:
+    frequency: "daily"
+    time: "02:00 UTC"  # Off-peak hours
+    method: "pg_basebackup"
+    location: "/backup/base"
+    parallel_jobs: 4
+    compression: "gzip"
+    compression_level: 9
+    
+    # Backup verification
+    verification:
+      enabled: true
+      frequency: "every 24 hours"
+      test_restore: "weekly"
+      restore_location: "/backup/test-restore"
+  
+  # PITR targets (restore to specific times)
+  pitr_windows:
+    critical_databases:
+      - database: "code-server-production"
+        retention: "30 days"
+        rpo_target: "1 hour"
+        
+    application_databases:
+      - database: "code-server-app"
+        retention: "14 days"
+        rpo_target: "4 hours"
+    
+    analytics_databases:
+      - database: "code-server-analytics"
+        retention: "7 days"
+        rpo_target: "24 hours"
+  
+  # Recovery procedure
+  recovery_procedure:
+    estimated_time: "20-35 minutes"
+    steps:
+      - step: 1
+        name: "Select restore point"
+        time: "< 1 minute"
+        
+      - step: 2
+        name: "Restore from base backup"
+        time: "5-15 minutes"
+        description: "Restore full backup to target PostgreSQL instance"
+        
+      - step: 3
+        name: "Apply WAL records"
+        time: "5-10 minutes"
+        description: "Replay WAL logs up to target recovery time"
+        
+      - step: 4
+        name: "Verify consistency"
+        time: "2-5 minutes"
+        description: "Run consistency checks, verify data integrity"
+        
+      - step: 5
+        name: "Bring online"
+        time: "< 1 minute"
+        description: "Start PostgreSQL, verify connections working"
+  
+  # PITR testing (monthly drills)
+  testing:
+    frequency: "monthly"
+    test_targets:
+      - restore_to_t_minus_24h
+      - restore_to_t_minus_7d
+      - restore_to_t_minus_14d
+    
+    test_procedure:
+      - "Select backup from 24 hours ago"
+      - "Restore to isolated test environment"
+      - "Run consistency checks"
+      - "Verify all tables and indexes"
+      - "Test specific recovery scenarios"
+      - "Document findings"
+      - "Destroy test environment"
+    
+    success_criteria:
+      - "Recovery completes in <35 minutes"
+      - "Zero data corruption detected"
+      - "All tests pass automatically"
+      - "Monthly report generated"
+
+  # Disaster recovery runbooks
+  runbooks:
+    single_table_recovery:
+      description: "Recover a single table to specific point in time"
+      estimated_time: "5-10 minutes"
+      steps:
+        - "Create separate PostgreSQL instance"
+        - "Restore from backup + WAL to target time"
+        - "Dump table to file"
+        - "Import to production database"
+    
+    database_recovery:
+      description: "Recover entire database to specific point in time"
+      estimated_time: "20-35 minutes"
+      steps:
+        - "Verify backup integrity"
+        - "Restore base backup"
+        - "Apply WAL logs to target time"
+        - "Verify consistency"
+        - "Test queries"
+        - "Switch to production endpoint"
+    
+    full_system_recovery:
+      description: "Complete disaster recovery to specific point in time"
+      estimated_time: "2-4 hours"
+      steps:
+        - "Provision new infrastructure"
+        - "Restore all databases"
+        - "Restore application state"
+        - "Restore configuration"
+        - "Run smoke tests"
+        - "Switch DNS to new infrastructure"

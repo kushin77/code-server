@@ -193,6 +193,7 @@ services:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
       - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET:?OAUTH2_COOKIE_SECRET must be set}
+      - OAUTH2_PROXY_UPSTREAMS=http://code-server-caddy:9088/
     healthcheck:
       test:
         - CMD
@@ -226,7 +227,10 @@ services:
   caddy:
     image: caddy:2.7.4@sha256:505de4e957da923672a8c79f16581e9b717a2479a8d5ddb909ab2d1b351f2ba4
     container_name: code-server-caddy
-    user: "0:0"  # Temporarily root to fix /data/pki permission issue
+    user: "101:101"  # Run as caddy user, init container sets permissions
+    depends_on:
+      caddy-init:
+        condition: service_completed_successfully
     ports:
       - "9088:80"
       - "9443:443"
@@ -613,7 +617,7 @@ services:
     ports:
       - "${RAG_ENGINE_PORT}:${RAG_ENGINE_PORT}"
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
       - KAFKA_BROKER=redpanda:9092
       - OPA_URL=${OPA_URL}
       - LOG_LEVEL=INFO
@@ -802,7 +806,7 @@ services:
     environment:
       - OPA_URL=${OPA_URL}
       - REPUTATION_ENGINE_URL=${REPUTATION_ENGINE_URL}
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
       - LOG_LEVEL=INFO
     depends_on:
       postgres:
@@ -852,7 +856,7 @@ services:
     user: "1003:1003"
     environment:
       - KAFKA_BROKER=redpanda:9092
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
       - SCHEDULER_API_KEY=${SCHEDULER_API_KEY:?SCHEDULER_API_KEY must be set}
       - LOG_LEVEL=INFO
     depends_on:

@@ -17,11 +17,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
-REPO_DIR="${REPO_ROOT}"
-CONFIG_DIR="${REPO_DIR}/config"
-LOG_FILE="${REPO_DIR}/logs/rbac-setup.log"
+CONFIG_DIR="${REPO_ROOT}/config"
+LOG_FILE="${REPO_ROOT}/logs/rbac-setup.log"
 
-mkdir -p "${CONFIG_DIR}/rbac" "${REPO_DIR}/logs"
+mkdir -p "${CONFIG_DIR}/rbac" "${REPO_ROOT}/logs"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"

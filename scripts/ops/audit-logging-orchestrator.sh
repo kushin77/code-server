@@ -20,9 +20,8 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-AUDIT_LOG_DIR="${REPO_DIR}/logs/audit"
-AUDIT_CONFIG="${REPO_DIR}/config/audit-config.json"
+AUDIT_LOG_DIR="${REPO_ROOT}/logs/audit"
+AUDIT_CONFIG="${REPO_ROOT}/config/audit-config.json"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 AUDIT_ID=$(date '+%s%N' | cut -b1-13)
 

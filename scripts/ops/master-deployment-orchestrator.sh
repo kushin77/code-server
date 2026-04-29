@@ -11,8 +11,6 @@ set -euo pipefail
 # Error Handling & Cleanup
 # ============================================================================
 trap 'log_error "Deployment failed at line $LINENO (exit code: $?)"; cleanup_on_error; exit 1' ERR
-trap 'log_info "Performing cleanup..."; rm -f /tmp/orchestration-*.tmp 2>/dev/null || true' EXIT
-
 cleanup_on_error() {
     rm -f /tmp/orchestration-*.tmp 2>/dev/null || true
 }
@@ -21,22 +19,14 @@ cleanup_on_error() {
 # Configuration
 # ============================================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# Source common initialization before any path derivation
+source "${SCRIPT_DIR}/../_common/init.sh"
 DRY_RUN="${DRY_RUN:-false}"
 DEPLOYMENT_MODE_REQUESTED="${DEPLOYMENT_MODE:-auto}"  # auto, local, remote, terraform
 DEPLOYMENT_MODE="${DEPLOYMENT_MODE_REQUESTED}"
 ORCHESTRATION_ID="ORCHESTRATION-$(date +%s)"
 LOG_DIR="${REPO_ROOT}/artifacts"
 LOG_FILE="${LOG_DIR}/master-deployment-${ORCHESTRATION_ID}.log"
-
-# Source common initialization
-source "${SCRIPT_DIR}/../_common/init.sh" 2>/dev/null || {
-    # Fallback logging if init.sh unavailable
-    log_info() { echo "[INFO] $*"; }
-    log_success() { echo "[SUCCESS] $*"; }
-    log_error() { echo "[ERROR] $*" >&2; }
-    log_warn() { echo "[WARN] $*"; }
-}
 
 if [[ -f "${REPO_ROOT}/.env.deployment" ]]; then
     set -a

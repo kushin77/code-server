@@ -42,11 +42,10 @@ trap 'log_info "Pipeline cleanup..."; true' EXIT
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-PROJECT_ROOT="${REPO_ROOT}"
 ENVIRONMENT=${1:-production}
 DEPLOYMENT_ID=$(date +%s)
-LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
+LOG_FILE="${REPO_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
+ARTIFACT_DIR="${REPO_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/deployment-pipeline-${DEPLOYMENT_ID}.json"
 
 # Argument flags
@@ -60,10 +59,10 @@ for arg in "$@"; do
     esac
 done
 
-if [[ -f "${PROJECT_ROOT}/.env.infrastructure" ]]; then
+if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
     # Load deployment-specific variables without requiring extra helper functions.
     set -a
-    source "${PROJECT_ROOT}/.env.infrastructure"
+    source "${REPO_ROOT}/.env.infrastructure"
     set +a
 fi
 

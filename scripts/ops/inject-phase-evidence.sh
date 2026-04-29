@@ -2,8 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR%/scripts*}" && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh" || exit 1
+source "${SCRIPT_DIR}/../_common/init.sh" || exit 1
 
 trap 'log_error "Evidence injection failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Cleanup complete"; true' EXIT

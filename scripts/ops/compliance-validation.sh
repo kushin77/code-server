@@ -13,14 +13,13 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-readonly LOG_FILE="./artifacts/compliance-check-$(date +%s).log"
-readonly COMPLIANCE_REPORT="./artifacts/compliance-report-$(date +%s).json"
-readonly CHECKLIST_FILE="./artifacts/compliance-checklist-$(date +%s).md"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/compliance-check-$(date +%s).log"
+readonly COMPLIANCE_REPORT="${REPO_ROOT}/artifacts/compliance-report-$(date +%s).json"
+readonly CHECKLIST_FILE="${REPO_ROOT}/artifacts/compliance-checklist-$(date +%s).md"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"

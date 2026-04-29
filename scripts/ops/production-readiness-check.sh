@@ -25,10 +25,9 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # Configuration
 # ============================================================================
 
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REPORT_FILE="${PROJECT_ROOT}/artifacts/production-readiness-$(date +%Y%m%d-%H%M%S).json"
+REPORT_FILE="${REPO_ROOT}/artifacts/production-readiness-$(date +%Y%m%d-%H%M%S).json"
 
-mkdir -p "${PROJECT_ROOT}/artifacts"
+mkdir -p "${REPO_ROOT}/artifacts"
 
 declare -i CHECKS_TOTAL=0
 declare -i CHECKS_PASSED=0

@@ -18,8 +18,6 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-PROJECT_ROOT="${REPO_ROOT}"
-
 log_warn() {
     log_warning "$1"
 }
@@ -28,7 +26,7 @@ log_warn() {
 # Configuration
 # ============================================================================
 
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
+ARTIFACT_DIR="${REPO_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/infrastructure-health-check-$(date +%s).json"
 CRITICAL_THRESHOLD=1
 WARNING_THRESHOLD=3

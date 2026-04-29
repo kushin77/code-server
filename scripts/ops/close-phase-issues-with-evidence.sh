@@ -12,7 +12,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR%/scripts*}" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 # Error handling
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR

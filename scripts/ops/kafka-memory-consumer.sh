@@ -23,10 +23,8 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 # @governance GOV-002
 # @idempotent YES
 
-PROJECT_ROOT="${REPO_ROOT}"
-
 # Source shared service endpoints
-source "${PROJECT_ROOT}/scripts/_common/service-names.env"
+source "${REPO_ROOT}/scripts/_common/service-names.env"
 
 # Configuration - use shared Redpanda endpoint
 KAFKA_BROKER="${KAFKA_BROKER:-${REDPANDA_KAFKA_ENDPOINT}}"
@@ -54,7 +52,7 @@ setup_memory_topics() {
 
 
 create_consumer_python_script() {
-    local consumer_script="${PROJECT_ROOT}/apps/memory-engine/kafka_consumer.py"
+    local consumer_script="${REPO_ROOT}/apps/memory-engine/kafka_consumer.py"
     
     log_info "Creating Kafka consumer script: $consumer_script"
     mkdir -p "$(dirname "$consumer_script")"

@@ -12,11 +12,11 @@ set -euo pipefail
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-readonly LOG_FILE="./artifacts/idempotency-$(date +%s).log"
-readonly STATE_DIR="./state"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/idempotency-$(date +%s).log"
+readonly STATE_DIR="${REPO_ROOT}/state"
 readonly DRY_RUN="${DRY_RUN:-false}"
 
 log() {

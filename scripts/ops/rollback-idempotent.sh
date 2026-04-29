@@ -14,10 +14,8 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-PROJECT_ROOT="${REPO_ROOT}"
-
-readonly BACKUP_DIR="${PROJECT_ROOT}/state/backups"
-readonly LOG_FILE="${PROJECT_ROOT}/artifacts/rollback-$(date +%s).log"
+readonly BACKUP_DIR="${REPO_ROOT}/state/backups"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/rollback-$(date +%s).log"
 
 mkdir -p "$BACKUP_DIR"
 

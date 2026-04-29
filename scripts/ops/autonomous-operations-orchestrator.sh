@@ -13,13 +13,12 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
 
 readonly ORCHESTRATION_ID="ops-$(date +%s)"
-readonly LOG_DIR="./artifacts/autonomous-ops-${ORCHESTRATION_ID}"
+readonly LOG_DIR="${REPO_ROOT}/artifacts/autonomous-ops-${ORCHESTRATION_ID}"
 readonly MASTER_REPORT="${LOG_DIR}/AUTONOMOUS-OPERATIONS-MASTER-REPORT.md"
 
 mkdir -p "$LOG_DIR"

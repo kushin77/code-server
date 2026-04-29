@@ -8,11 +8,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-PROJECT_ROOT="${REPO_ROOT}"
-
 readonly DEPLOYMENT_ID="deployment-$(date +%s)"
-readonly STATE_DIR="${PROJECT_ROOT}/state/deployments"
-readonly LOG_FILE="${PROJECT_ROOT}/artifacts/deploy-${DEPLOYMENT_ID}.log"
+readonly STATE_DIR="${REPO_ROOT}/state/deployments"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/deploy-${DEPLOYMENT_ID}.log"
 
 mkdir -p "$STATE_DIR"
 

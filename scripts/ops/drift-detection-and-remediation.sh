@@ -13,15 +13,14 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-readonly LOG_FILE="./artifacts/drift-detection-$(date +%s).log"
-readonly STATE_DIR="./state/drift"
-readonly DRIFT_REPORT="./artifacts/drift-report-$(date +%s).json"
-readonly REMEDIATION_LOG="./artifacts/drift-remediation-$(date +%s).log"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/drift-detection-$(date +%s).log"
+readonly STATE_DIR="${REPO_ROOT}/state/drift"
+readonly DRIFT_REPORT="${REPO_ROOT}/artifacts/drift-report-$(date +%s).json"
+readonly REMEDIATION_LOG="${REPO_ROOT}/artifacts/drift-remediation-$(date +%s).log"
 
 mkdir -p "$STATE_DIR"
 

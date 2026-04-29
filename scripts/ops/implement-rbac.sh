@@ -23,10 +23,8 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-PROJECT_ROOT="${REPO_ROOT}"
-
-OPA_POLICY_DIR="${PROJECT_ROOT}/policies"
-REDIS_ACL_TEMPLATE="${PROJECT_ROOT}/config/redis.acl.example"
+OPA_POLICY_DIR="${REPO_ROOT}/policies"
+REDIS_ACL_TEMPLATE="${REPO_ROOT}/config/redis.acl.example"
 
 setup_opa_rbac() {
     log_info "Configuring OPA RBAC policies..."

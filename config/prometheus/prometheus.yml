@@ -1,0 +1,95 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    region: 'primary'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - code-server-alertmanager:9093
+
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['code-server-postgres:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['code-server-redis:6379']
+    scrape_interval: 30s
+
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['code-server-grafana:3000']
+    metrics_path: '/api/datasources/proxy/1/api/prom/api/v1/query'
+    scrape_interval: 30s
+
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['code-server-ollama:11434']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['code-server-qdrant:6333']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['code-server-loki:3100']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'caddy'
+    static_configs:
+      - targets: ['code-server-caddy:9088']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['code-server-alertmanager:9093']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['unix:///var/run/docker.sock']
+    scrape_interval: 30s
+
+  - job_name: 'application-containers'
+    static_configs:
+      - targets:
+          - 'code-server-c-19:8080'
+          - 'code-server-c-20:8080'
+          - 'code-server-c-21:8080'
+          - 'code-server-c-22:8080'
+          - 'code-server-c-23:8080'
+          - 'code-server-c-24:8080'
+          - 'code-server-c-25:8080'
+          - 'code-server-c-26:8080'
+          - 'code-server-c-27:8080'
+          - 'code-server-c-28:8080'
+          - 'code-server-c-29:8080'
+          - 'code-server-c-30:8080'
+          - 'code-server-c-31:8080'
+          - 'code-server-c-32:8080'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 5s

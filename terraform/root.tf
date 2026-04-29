@@ -5,15 +5,15 @@ terraform {
   required_providers {
     docker = {
       source  = "kreuzwerker/docker"
-      version = "~> 3.0"
+      version = ">= 3.0, < 4.0"
     }
     local = {
       source  = "hashicorp/local"
-      version = "~> 2.0"
+      version = ">= 2.0, < 3.0"
     }
   }
 
-  required_version = ">= 1.0"
+  required_version = ">= 1.0, < 2.0"
 }
 
 # ============================================================================

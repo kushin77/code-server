@@ -1,8 +1,7 @@
-# Docker Compose - Enterprise Services
-# Additional services: code-server IDE, gitlab, runners, testing, storage
+# Docker Compose - Enterprise Services (Simple)
+# Deployable services only: code-server IDE, gitlab, runners, minio, vault
 # Purpose: Complete the enterprise deployment stack as an overlay on core stack
 # Note: This overlay assumes the core stack (postgres, redis, redpanda, etc) is already running.
-# Services should not declare depends_on for core infrastructure as it lives in an external network.
 
 version: "3.8"
 
@@ -109,36 +108,6 @@ services:
         max-file: "3"
 
   # ========================================================================
-  # TESTING SERVICE - Automated Test Runner
-  # ========================================================================
-  testing-service:
-    image: code-server-enterprise-testing:latest
-    container_name: code-server-testing
-    environment:
-      - SERVICE_NAME=testing-service
-      - TEST_RUNNER_HOST=0.0.0.0
-      - TEST_RUNNER_PORT=8888
-      - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
-      - REDIS_URL=redis://code-server-redis:6379/3
-      - KAFKA_BOOTSTRAP_SERVERS=code-server-redpanda:9092
-    ports:
-      - "8888:8888"
-    networks:
-      - services
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # ========================================================================
   # MINIO - S3-compatible Object Storage
   # ========================================================================
   minio:
@@ -171,7 +140,7 @@ services:
   # VAULT - Secrets Management
   # ========================================================================
   vault:
-    image: vault:latest
+    image: hashicorp/vault:1.13.0
     container_name: code-server-vault
     ports:
       - "8200:8200"
@@ -227,35 +196,6 @@ services:
         reservations:
           cpus: "0.5"
           memory: 256M
-
-  # ========================================================================
-  # CONTROL PLANE - Service Orchestration & Management
-  # ========================================================================
-  control-plane:
-    image: code-server-enterprise-control-plane:latest
-    container_name: code-server-control-plane
-    ports:
-      - "8082:8082"
-    environment:
-      - SERVICE_NAME=control-plane
-      - CONTROL_PLANE_PORT=8082
-      - CONTROL_PLANE_HOST=0.0.0.0
-      - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
-      - REDIS_URL=redis://code-server-redis:6379/4
-    networks:
-      - services
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 volumes:
   code_server_data:

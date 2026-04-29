@@ -198,3 +198,95 @@ variable "rollback_failure_threshold" {
   default     = 3
   description = "Number of failed deployments before auto-rollback triggers"
 }
+
+# ============================================================================
+# CONTAINER STACK VARIABLES (added for docker_container resource approach)
+# ============================================================================
+
+# Host repo paths
+variable "primary_repo_path" {
+  type        = string
+  default     = "/home/akushnir/code-server-enterprise"
+  description = "Absolute path of repo checkout on the primary host"
+}
+
+variable "replica_repo_path" {
+  type        = string
+  default     = "/home/akushnir/code-server-enterprise"
+  description = "Absolute path of repo checkout on the replica host"
+}
+
+# App image tag
+variable "app_image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Tag for all custom-built app images in the internal registry"
+}
+
+# Database
+variable "db_user" {
+  type        = string
+  default     = "postgres"
+  description = "PostgreSQL superuser name"
+}
+
+variable "db_password" {
+  type        = string
+  sensitive   = true
+  description = "PostgreSQL superuser password (set via TF_VAR_db_password)"
+}
+
+variable "db_name" {
+  type        = string
+  default     = "code_server"
+  description = "PostgreSQL database name"
+}
+
+# Redis
+variable "redis_password" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Redis AUTH password (set via TF_VAR_redis_password)"
+}
+
+# Grafana
+variable "grafana_admin_user" {
+  type        = string
+  default     = "admin"
+  description = "Grafana admin username"
+}
+
+variable "grafana_admin_password" {
+  type        = string
+  sensitive   = true
+  description = "Grafana admin password (set via TF_VAR_grafana_admin_password)"
+}
+
+# Qdrant
+variable "qdrant_api_key" {
+  type        = string
+  sensitive   = true
+  description = "Qdrant REST API key (set via TF_VAR_qdrant_api_key)"
+}
+
+# Scheduler
+variable "scheduler_api_key" {
+  type        = string
+  sensitive   = true
+  description = "Execution Scheduler API key (set via TF_VAR_scheduler_api_key)"
+}
+
+# OAuth2
+variable "oauth2_client_id" {
+  type        = string
+  default     = ""
+  description = "OAuth2 client ID"
+}
+
+variable "oauth2_client_secret" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "OAuth2 client secret (set via TF_VAR_oauth2_client_secret)"
+}

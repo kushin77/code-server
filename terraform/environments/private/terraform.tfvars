@@ -8,12 +8,30 @@
 # NOTE: These values are sourced from environment variables at runtime
 # Do NOT hardcode values here - use 'export TF_VAR_apex_domain="kushnir.cloud"'
 # Or set defaults in variables.tf
-# apex_domain     = "kushnir.cloud"     # ← Use TF_VAR_apex_domain instead
-# primary_host    = "primary.example.internal"    # ← Use TF_VAR_primary_host instead
-# replica_host    = "replica.example.internal"    # ← Use TF_VAR_replica_host instead
-# nas_host        = "nas.example.internal"        # ← Use TF_VAR_nas_host instead
-# registry_url    = "registry.kushnir.cloud:5000"  # ← Use TF_VAR_registry_domain
-# admin_email     = "ops@kushnir.cloud" # ← Use TF_VAR_admin_email
+apex_domain     = "kushnir.cloud"
+primary_host    = "192.168.168.31"
+replica_host    = "192.168.168.42"
+nas_host        = "192.168.168.56"
+registry_url    = "registry.kushnir.cloud:5000"
+admin_email     = "ops@kushnir.cloud"
+
+# HOST REPO PATHS
+primary_repo_path = "/home/akushnir/code-server-enterprise"
+replica_repo_path = "/home/akushnir/code-server-enterprise"
+
+# SECRETS (sourced from .env.production)
+db_user                = "postgres"
+db_password            = "postgres_password_2026"
+db_name                = "code_server"
+redis_password         = ""
+grafana_admin_user     = "admin"
+grafana_admin_password = "grafana_admin_2026"
+qdrant_api_key         = "qdrant_api_key_2026"
+scheduler_api_key      = "sk_scheduler_a7f3b8e2d1c9f4a6e5b2c1d3"
+oauth2_client_id       = "code-server-oauth2-client-id"
+oauth2_client_secret   = "code-server-oauth2-client-secret"
+oauth2_cookie_secret = "oauth2_cookie_secret_long_random"
+app_image_tag          = "latest"
 
 # DEPLOYMENT MODE (immutable)
 deployment_mode = "private" # Options: private, air-gapped, federated

@@ -1,5 +1,20 @@
 terraform {
   required_version = ">= 1.6.0, < 1.15.0"
+
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "= 3.0.2"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "= 2.4.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "= 3.2.1"
+    }
+  }
 }
 
 variable "apex_domain" {
@@ -80,4 +95,90 @@ output "deployment_mode" {
 
 output "apex_domain" {
   value = var.apex_domain
+}
+
+# ============================================================================
+# FULL STACK — PRIMARY HOST (192.168.168.31)
+# All 40 containers declared as Terraform resources on the primary host.
+# terraform plan  → shows every container diff
+# terraform apply → creates/updates/destroys containers declaratively
+# ============================================================================
+
+module "primary" {
+  source = "./modules/stack"
+
+  providers = {
+    docker = docker.primary
+  }
+
+  host_role        = "primary"
+  remote_repo_path = var.primary_repo_path
+
+  # Domain
+  apex_domain = var.apex_domain
+  tls_email   = var.admin_email
+  auth_domain = "auth.${var.apex_domain}"
+  log_level   = var.log_level
+
+  # Registry
+  registry_url  = var.registry_url
+  app_image_tag = var.app_image_tag
+
+  # Secrets
+  db_user                = var.db_user
+  db_password            = var.db_password
+  db_name                = var.db_name
+  redis_password         = var.redis_password
+  grafana_admin_user     = var.grafana_admin_user
+  grafana_admin_password = var.grafana_admin_password
+  qdrant_api_key         = var.qdrant_api_key
+  scheduler_api_key      = var.scheduler_api_key
+  oauth2_client_id       = var.oauth2_client_id
+  oauth2_client_secret   = var.oauth2_client_secret
+  oauth2_cookie_secret   = var.oauth2_cookie_secret
+
+  # Observability
+  prometheus_retention_days = var.prometheus_retention_days
+}
+
+# ============================================================================
+# FULL STACK — REPLICA HOST (192.168.168.42)
+# Identical stack on the replica. Edge agent gets a different ID.
+# ============================================================================
+
+module "replica" {
+  source = "./modules/stack"
+
+  providers = {
+    docker = docker.replica
+  }
+
+  host_role        = "replica"
+  remote_repo_path = var.replica_repo_path
+
+  # Domain
+  apex_domain = var.apex_domain
+  tls_email   = var.admin_email
+  auth_domain = "auth.${var.apex_domain}"
+  log_level   = var.log_level
+
+  # Registry
+  registry_url  = var.registry_url
+  app_image_tag = var.app_image_tag
+
+  # Secrets
+  db_user                = var.db_user
+  db_password            = var.db_password
+  db_name                = var.db_name
+  redis_password         = var.redis_password
+  grafana_admin_user     = var.grafana_admin_user
+  grafana_admin_password = var.grafana_admin_password
+  qdrant_api_key         = var.qdrant_api_key
+  scheduler_api_key      = var.scheduler_api_key
+  oauth2_client_id       = var.oauth2_client_id
+  oauth2_client_secret   = var.oauth2_client_secret
+  oauth2_cookie_secret   = var.oauth2_cookie_secret
+
+  # Observability
+  prometheus_retention_days = var.prometheus_retention_days
 }

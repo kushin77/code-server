@@ -112,6 +112,9 @@ services:
   # TESTING SERVICE - Automated Test Runner
   # ========================================================================
   testing-service:
+    build:
+      context: .
+      dockerfile: apps/testing-service/Dockerfile
     image: code-server-enterprise-testing:latest
     container_name: code-server-testing
     environment:
@@ -197,7 +200,7 @@ services:
   # VAULT - Secrets Management
   # ========================================================================
   vault:
-    image: vault:latest
+    image: hashicorp/vault:1.13.0
     container_name: code-server-vault
     ports:
       - "8200:8200"
@@ -210,7 +213,7 @@ services:
       - services
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8200/v1/sys/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8200/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -230,6 +233,7 @@ services:
       - "8083:8081"
     environment:
       - NEXUS_CONTEXT=nexus
+      - INSTALL4J_ADD_VM_PARAMS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m
     volumes:
       - nexus_data:/nexus-data
     networks:
@@ -258,10 +262,13 @@ services:
   # CONTROL PLANE - Service Orchestration & Management
   # ========================================================================
   control-plane:
+    build:
+      context: .
+      dockerfile: apps/control-plane/Dockerfile
     image: code-server-control-plane:latest
     container_name: code-server-control-plane
     ports:
-      - "8082:8082"
+      - "8086:8082"
     environment:
       - SERVICE_NAME=control-plane
       - CONTROL_PLANE_PORT=8082

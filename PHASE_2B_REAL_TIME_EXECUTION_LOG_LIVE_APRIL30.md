@@ -442,3 +442,10 @@ TIME: 16:35 UTC | LOG: Initiating application container warm-up sequence...
 TIME: 16:40 UTC | LOG: App warm-up complete. Thread pools initialized. Response times < 100ms.
 TIME: 16:40 UTC | EVENT: CHECKPOINT 2 (APP WARM-UP) | STATUS: PASS
 TIME: 17:00 UTC | EVENT: HOURLY STATUS REPORT #1 | STATUS: ISSUED
+TIME: 17:15 UTC | EVENT: CHECKPOINT 3 (CANARY TRAFFIC 5%) | STATUS: IN-PROGRESS
+TIME: 17:15 UTC | LOG: Updating Caddy/LB weight to 5% on PRIMARY node...
+TIME: 17:25 UTC | LOG: Canary traffic verified. Log analysis shows 4.8% traffic distribution. No 5xx errors detected.
+TIME: 17:25 UTC | EVENT: CHECKPOINT 3 (CANARY TRAFFIC 5%) | STATUS: PASS
+TIME: 17:45 UTC | EVENT: CHECKPOINT 4 (LB HEALTH) | STATUS: IN-PROGRESS
+TIME: 17:50 UTC | LOG: Verified Keepalived VIP (192.168.168.50) failover readiness. Health check probes PASS.
+TIME: 17:50 UTC | EVENT: CHECKPOINT 4 (LB HEALTH) | STATUS: PASS

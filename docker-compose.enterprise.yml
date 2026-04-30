@@ -291,7 +291,7 @@ services:
     - 8083:8081
     environment:
     - NEXUS_CONTEXT=nexus
-    - INSTALL4J_ADD_VM_PARAMS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m
+    - INSTALL4J_ADD_VM_PARAMS=-Xms1024m -Xmx1024m -XX:MaxDirectMemorySize=1024m
     volumes:
     - nexus_data:/nexus-data
     networks:
@@ -315,11 +315,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 512M
+          cpus: '1.5'
+          memory: 2G
         reservations:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '1'
+          memory: 1G
   control-plane:
     build:
       context: .

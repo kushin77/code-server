@@ -37,4 +37,16 @@ validate_required_env() {
     done
 }
 
+# Auto-source environment variables if available
+if [[ -f "${REPO_ROOT}/.env.deployment" ]]; then
+    # Parse variables safely while avoiding export issues with comments/empty lines
+    while IFS='=' read -r key value || [[ -n "$key" ]]; do
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        # Strip potential quotes
+        value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
+        export "$key=$value"
+    done < "${REPO_ROOT}/.env.deployment"
+fi
+
 trap - ERR

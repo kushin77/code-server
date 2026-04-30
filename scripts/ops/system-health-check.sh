@@ -82,6 +82,7 @@ check_host_health() {
     fi
 HEALTH_EOF
   echo ""
+  return 0
 }
 
 # Check both hosts
@@ -141,3 +142,4 @@ echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║  Health check completed at $(date +%Y-%m-%d\ %H:%M:%S)                   ║"
 echo "╚════════════════════════════════════════════════════════════╝"
+}

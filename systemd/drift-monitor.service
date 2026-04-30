@@ -1,0 +1,25 @@
+[Unit]
+Description=code-server drift monitoring watchdog service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/akushnir/code-server/scripts/ops/drift-monitoring-watchdog.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=drift-monitor
+User=akushnir
+
+# Security and resource limits
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadOnlyPaths=/
+ReadWritePaths=/tmp /var/lib /home/akushnir
+
+# Timeout for long-running terraform plan
+TimeoutStartSec=120
+
+# Restart policy
+Restart=on-failure
+RestartSec=10

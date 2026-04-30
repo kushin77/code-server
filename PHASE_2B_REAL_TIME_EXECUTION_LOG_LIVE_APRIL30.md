@@ -437,3 +437,7 @@ TIME: 16:15 UTC | EVENT: CHECKPOINT 1 (DB CONSISTENCY) | STATUS: IN-PROGRESS
 TIME: 16:15 UTC | LOG: Initiating PostgreSQL streaming replication lag check...
 TIME: 16:20 UTC | LOG: DB Consistency Check: REPLICA lag < 5ms. Tablespace integrity verified.
 TIME: 16:20 UTC | EVENT: CHECKPOINT 1 (DB CONSISTENCY) | STATUS: PASS
+TIME: 16:30 UTC | EVENT: CHECKPOINT 2 (APP WARM-UP) | STATUS: IN-PROGRESS
+TIME: 16:35 UTC | LOG: Initiating application container warm-up sequence...
+TIME: 16:40 UTC | LOG: App warm-up complete. Thread pools initialized. Response times < 100ms.
+TIME: 16:40 UTC | EVENT: CHECKPOINT 2 (APP WARM-UP) | STATUS: PASS

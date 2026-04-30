@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -65,22 +66,36 @@ LOG_PATTERNS = (
 )
 
 
-def github_request(method: str, url: str, payload=None):
+def github_request(method: str, url: str, payload=None, retries=4):
     if not TOKEN:
         raise RuntimeError("GitHub token is required for live sync")
-    data = None
-    headers = {
-        "Authorization": f"token {TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "code-server-slog-sync",
-    }
-    if payload is not None:
-        data = json.dumps(payload).encode()
-        headers["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=30) as response:
-        content = response.read().decode()
-        return json.loads(content) if content else {}
+    
+    for attempt in range(retries):
+        try:
+            data = None
+            headers = {
+                "Authorization": f"token {TOKEN}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "code-server-slog-sync",
+            }
+            if payload is not None:
+                data = json.dumps(payload).encode()
+                headers["Content-Type"] = "application/json"
+            req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            with urllib.request.urlopen(req, timeout=30) as response:
+                content = response.read().decode()
+                return json.loads(content) if content else {}
+        except urllib.error.HTTPError as e:
+            if e.code == 403:
+                error_body = e.read().decode()
+                if "rate limit" in error_body.lower():
+                    if attempt < retries - 1:
+                        wait_time = (2 ** attempt) * 5
+                        print(f"⏳ Rate limit (attempt {attempt+1}/{retries}), waiting {wait_time}s...", file=sys.stderr)
+                        import time
+                        time.sleep(wait_time)
+                        continue
+            raise
 
 
 def repository_labels():

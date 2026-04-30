@@ -196,9 +196,34 @@ kushnir.local, *.kushnir.local, ${APEX_DOMAIN}, *.${APEX_DOMAIN} {
 		}
 	}
 
-	# Public endpoints - no auth required
+	# Root domain routes to Appsmith IDE (OAuth protected entry point)
+	# kushnir.cloud → Appsmith with system-wide access
 	handle / {
-		respond "ElevatedIQ DevOS v1.0" 200
+		# OAuth redirect to Appsmith login
+		reverse_proxy http://appsmith:80 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+			header_up Host appsmith:80
+		}
+	}
+
+	# Code-Server IDE access (direct port routing)
+	handle /ide* {
+		reverse_proxy http://code-server-ide:8080 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+		}
+	}
+
+	# GitLab access
+	handle /gitlab* {
+		reverse_proxy http://gitlab:80 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+		}
 	}
 
 	# Catch-all: deny unknown paths

@@ -1,0 +1,371 @@
+# @file alert-relay-config.yml
+# @module monitoring
+# @description Alert Relay configuration for webhook processing and deduplication
+
+# Alert Relay Routes - Maps AlertManager receiver groups to webhook processors
+routes:
+  # Critical alerts - immediate action required
+  critical:
+    # Pattern match for critical severity alerts
+    match:
+      - key: severity
+        value: critical
+        type: exact
+
+    # Processors for critical alerts (execute in order)
+    processors:
+      - type: "enrich"
+        # Add context from Prometheus
+        data_source: prometheus
+        include_metrics:
+          - "up"
+          - "rate(errors_total[5m])"
+
+      - type: "deduplicate"
+        # Suppress duplicate alerts within window
+        window: 5m
+        group_by:
+          - alertname
+          - service
+
+      - type: "escalate"
+        # Multi-tier escalation
+        channels:
+          - type: "slack"
+            webhook: "${SLACK_WEBHOOK}"
+            channel: "#incidents-critical"
+            mention: "@critical-oncall"
+            priority: 1
+            timeout: 10s
+
+          - type: "email"
+            smtp_host: "${SMTP_HOST}"
+            smtp_port: "${SMTP_PORT}"
+            from: "${SMTP_FROM}"
+            to:
+              - "ops@kushnir.cloud"
+              - "critical-team@kushnir.cloud"
+            template: "critical-alert-email.html"
+            priority: 2
+            timeout: 30s
+
+          - type: "pagerduty"
+            integration_key: "${PAGERDUTY_KEY}"
+            severity: "critical"
+            priority: 3
+            timeout: 15s
+
+      - type: "notify"
+        # Send to custom webhook
+        url: "${CUSTOM_WEBHOOK_URL}"
+        method: POST
+        timeout: 10s
+        retry:
+          max_attempts: 3
+          backoff: exponential
+
+  # Warning alerts - attention needed
+  warning:
+    match:
+      - key: severity
+        value: warning
+        type: exact
+
+    processors:
+      - type: "deduplicate"
+        window: 10m
+        group_by:
+          - alertname
+          - service
+
+      - type: "escalate"
+        channels:
+          - type: "email"
+            smtp_host: "${SMTP_HOST}"
+            smtp_port: "${SMTP_PORT}"
+            from: "${SMTP_FROM}"
+            to:
+              - "ops@kushnir.cloud"
+            template: "warning-alert-email.html"
+            priority: 1
+            timeout: 30s
+
+          - type: "slack"
+            webhook: "${SLACK_WEBHOOK}"
+            channel: "#incidents"
+            priority: 2
+            timeout: 10s
+
+  # Info/Debug alerts - informational only
+  info:
+    match:
+      - key: severity
+        value: info
+        type: regex
+
+    processors:
+      - type: "deduplicate"
+        window: 30m
+        group_by:
+          - alertname
+
+      - type: "escalate"
+        channels:
+          - type: "slack"
+            webhook: "${SLACK_WEBHOOK}"
+            channel: "#debug-logs"
+            priority: 1
+            timeout: 10s
+
+# Grouping rules - Batch related alerts
+grouping:
+  enabled: true
+  by_labels:
+    - alertname
+    - cluster
+    - service
+    - severity
+  wait_duration: 30s
+  max_group_size: 50
+
+# Deduplication rules - Prevent alert storms
+deduplication:
+  enabled: true
+  
+  rules:
+    # Suppress duplicate container restarts
+    - alert_pattern: "Container(Restarting|CrashLoop)"
+      window: 5m
+      action: deduplicate
+
+    # Suppress cascading database alerts
+    - alert_pattern: "Database.*"
+      window: 10m
+      action: group
+
+    # Alert storm suppression
+    - error_rate_threshold: 0.5  # 50% error rate = storm
+      suppression_duration: 5m
+      action: throttle
+
+# Inhibition rules - Suppress lower priority alerts when higher priority fires
+inhibition:
+  enabled: true
+
+  rules:
+    # Suppress warning/info when critical fires for same service
+    - source_matchers:
+        - severity = critical
+      target_matchers:
+        - severity =~ "warning|info"
+      equal:
+        - alertname
+        - service
+
+    # Suppress recovery alerts during active incident
+    - source_matchers:
+        - alertname = "SystemFailure"
+        - status = "firing"
+      target_matchers:
+        - alertname = "ServiceRecovered"
+      equal:
+        - service
+
+# Receiver endpoints - Where alerts are sent
+receivers:
+  slack:
+    enabled: "${SLACK_WEBHOOK:+true}"
+    webhook_url: "${SLACK_WEBHOOK}"
+    default_channel: "#incidents"
+    template_format: "json"
+    message_format: |
+      *{{ .GroupLabels.alertname }}* ({{ .GroupLabels.severity }})
+      {{ range .Alerts }}
+        • {{ .Labels.instance }}: {{ .Annotations.summary }}
+      {{ end }}
+
+  email:
+    enabled: true
+    smtp_host: "${SMTP_HOST}"
+    smtp_port: "${SMTP_PORT}"
+    smtp_user: "${SMTP_USER}"
+    smtp_password: "${SMTP_PASSWORD}"
+    smtp_tls: true
+    from_address: "${SMTP_FROM}"
+    reply_to: "ops@kushnir.cloud"
+
+  pagerduty:
+    enabled: "${PAGERDUTY_KEY:+true}"
+    integration_key: "${PAGERDUTY_KEY}"
+    api_url: "https://api.pagerduty.com"
+    event_action: "trigger"
+
+  webhook:
+    enabled: "${CUSTOM_WEBHOOK_URL:+true}"
+    url: "${CUSTOM_WEBHOOK_URL}"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer ${WEBHOOK_AUTH_TOKEN:}"
+    timeout: 10s
+
+# Logging configuration
+logging:
+  level: info
+  format: json
+  output: stdout
+
+# Metrics exported by relay
+metrics:
+  enabled: true
+  port: 8081
+  path: /metrics
+
+# API endpoints
+api:
+  listen_address: "0.0.0.0:8080"
+  base_path: "/api"
+  tls:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+
+# Health check configuration
+health:
+  enabled: true
+  endpoint: "/health"
+  check_interval: 30s
+
+---
+# Alert Relay API Endpoints
+
+# POST /api/alerts/critical
+# Accept critical-level alerts from AlertManager
+# Required headers:
+#   Content-Type: application/json
+# Body: Standard Prometheus AlertGroup format
+# Response: 202 Accepted
+
+# POST /api/alerts/warning
+# Accept warning-level alerts from AlertManager
+# Response: 202 Accepted
+
+# POST /api/alerts/info
+# Accept info-level alerts from AlertManager
+# Response: 202 Accepted
+
+# GET /health
+# Health check endpoint
+# Response: 200 OK with status JSON
+
+# GET /metrics
+# Prometheus metrics endpoint
+# Response: text/plain with metrics
+
+# GET /api/stats
+# Relay statistics and performance metrics
+# Response: 200 OK with JSON stats
+
+---
+# Alert Relay Metrics (exposed on :8081/metrics)
+
+# alert_relay_alerts_received_total
+# Total alerts received by severity
+# Labels: severity, receiver
+
+# alert_relay_alerts_processed_total
+# Total alerts successfully processed
+# Labels: receiver, status
+
+# alert_relay_alerts_deduped_total
+# Total duplicate alerts suppressed
+# Labels: alert_pattern
+
+# alert_relay_processing_duration_seconds
+# Time to process alert through pipeline
+# Labels: receiver, status
+
+# alert_relay_receiver_errors_total
+# Errors when sending to receivers
+# Labels: receiver, error_type
+
+# alert_relay_queue_depth
+# Current queue depth for processing
+# Labels: receiver
+
+---
+# Webhook Payload Examples
+
+# Critical Alert to Webhook:
+# {
+#   "receiver": "critical-webhook",
+#   "status": "firing",
+#   "alerts": [
+#     {
+#       "status": "firing",
+#       "labels": {
+#         "alertname": "DatabaseUnavailable",
+#         "severity": "critical",
+#         "service": "postgres",
+#         "instance": "192.168.168.31:5432"
+#       },
+#       "annotations": {
+#         "summary": "PostgreSQL database is unreachable",
+#         "description": "Database on primary host not responding to connections",
+#         "runbook": "docs/RUNBOOK-DB-RECOVERY.md"
+#       },
+#       "startsAt": "2026-04-30T12:00:00.000Z",
+#       "endsAt": "0001-01-01T00:00:00Z"
+#     }
+#   ],
+#   "groupLabels": {
+#     "alertname": "DatabaseUnavailable"
+#   },
+#   "commonLabels": {
+#     "severity": "critical",
+#     "service": "postgres"
+#   },
+#   "commonAnnotations": {
+#     "summary": "PostgreSQL database is unreachable",
+#     "runbook": "docs/RUNBOOK-DB-RECOVERY.md"
+#   },
+#   "externalURL": "http://alertmanager:9093"
+# }
+
+---
+# Configuration Notes
+
+# 1. Environment Variables
+#    - All ${VAR} references are substituted from environment
+#    - Use .env file for local development
+#    - Use deployment secrets for production
+#
+# 2. Receiver Priority
+#    - Channels within a route execute in order (by priority)
+#    - Failures on higher priority don't block lower priority
+#    - All channels attempt delivery
+#
+# 3. Deduplication Window
+#    - Moving 5m window for exact duplicate suppression
+#    - Subsequent identical alerts within window are silently dropped
+#    - Alert is re-fired if not seen for 2x window duration
+#
+# 4. Escalation Strategy
+#    - Critical: Slack + Email + PagerDuty (parallel)
+#    - Warning: Email first, Slack as backup
+#    - Info: Slack only
+#
+# 5. Slack Template
+#    - Markdown formatting supported
+#    - Mentions use @<role> format for on-call rotations
+#    - Thread replies for follow-up context
+#
+# 6. Email Template
+#    - HTML templates in config/monitoring/templates/
+#    - Supports alert count aggregation
+#    - Includes runbook links for remediation
+#
+# 7. Custom Webhook
+#    - Must accept POST requests
+#    - Standard AlertManager format
+#    - Retry on 5xx errors

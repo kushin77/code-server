@@ -239,7 +239,7 @@ resource "docker_container" "keepalived_init" {
     "sh",
     "-lc",
     <<-EOT
-    mkdir -p /usr/local/etc/keepalived
+    mkdir -p /etc/keepalived
           iface="$(ip -o -4 route show to default | awk '{print $5; exit}')"
           if [ -z "$iface" ]; then
             iface="$(ip -o link show | awk -F': ' '$2 !~ /lo/ {print $2; exit}')"
@@ -251,51 +251,70 @@ resource "docker_container" "keepalived_init" {
       state="BACKUP"
       priority="90"
     fi
-    cat > /usr/local/etc/keepalived/keepalived.conf << EOF
-    global_defs {
-      router_id CODE_SERVER_HA
-      script_user root
-      enable_script_security
-    }
-    vrrp_script check_caddy {
-      script "/usr/local/bin/check-caddy-health.sh"
-      interval 3
-      fall 3
-      rise 2
-      weight -20
-    }
-    vrrp_instance VI_1 {
-            state $state
-            interface $iface
-      virtual_router_id 51
-            priority $priority
-      advert_int 1
-      authentication {
-        auth_type PASS
-        auth_pass CODE_SERVER_HA_2026
-      }
-      virtual_ipaddress {
-        192.168.168.30/24
-      }
-      track_script {
-        check_caddy
-      }
-      notify_master "/usr/local/bin/notify-vrrp.sh master"
-      notify_backup "/usr/local/bin/notify-vrrp.sh backup"
-    }
-    EOF
-    chown -R root:root /usr/local/etc/keepalived
-    chmod 600 /usr/local/etc/keepalived/keepalived.conf
+    cat > /etc/keepalived/check-caddy-health.sh << 'SCRIPT'
+#!/bin/sh
+if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^code-server-caddy$'; then
+  exit 1
+fi
+if ! wget -q --timeout=2 -O - http://127.0.0.1/health 2>/dev/null | grep -q OK; then
+  exit 1
+fi
+exit 0
+SCRIPT
+    chmod 755 /etc/keepalived/check-caddy-health.sh
+    cat > /etc/keepalived/notify-vrrp.sh << 'SCRIPT'
+#!/bin/sh
+STATE="$${1:-unknown}"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+{ echo "[$TIMESTAMP] VRRP State: $STATE on $(hostname)"; } >> /var/log/keepalived-state.log 2>&1 || true
+exit 0
+SCRIPT
+    chmod 755 /etc/keepalived/notify-vrrp.sh
+    cat > /etc/keepalived/keepalived.conf << EOF
+global_defs {
+  router_id CODE_SERVER_HA
+  script_user root
+  enable_script_security
+}
+vrrp_script check_caddy {
+  script "/etc/keepalived/check-caddy-health.sh"
+  interval 3
+  fall 3
+  rise 2
+  weight -20
+}
+vrrp_instance VI_1 {
+  state $state
+  interface $iface
+  virtual_router_id 51
+  priority $priority
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass CODE_SERVER_HA_2026
+  }
+  virtual_ipaddress {
+    192.168.168.30/24
+  }
+  track_script {
+    check_caddy
+  }
+  notify_master "/etc/keepalived/notify-vrrp.sh master"
+  notify_backup "/etc/keepalived/notify-vrrp.sh backup"
+}
+EOF
+    chown -R root:root /etc/keepalived
+    chmod 600 /etc/keepalived/keepalived.conf
     EOT
   ]
 
   volumes {
     volume_name = docker_volume.keepalived_config.name
-    container_path = "/usr/local/etc/keepalived"
+    container_path = "/etc/keepalived"
   }
 
   lifecycle {
-    ignore_changes = [image, network_mode]
+    ignore_changes = [image, network_mode, command]
   }
 }
 
@@ -318,30 +337,18 @@ resource "docker_container" "keepalived" {
 
   env = [
     "HOST_ROLE=${var.host_role}",
-    "KEEPALIVED_CMD_LINE_ARGUMENTS=-l -D",
   ]
 
+  # Config and scripts stored in same volume at /etc/keepalived
   volumes {
     volume_name = docker_volume.keepalived_config.name
-    container_path = "/usr/local/etc/keepalived"
+    container_path = "/etc/keepalived"
     read_only = true
   }
 
   volumes {
     host_path = "/var/run/docker.sock"
     container_path = "/var/run/docker.sock"
-    read_only = true
-  }
-
-  volumes {
-    host_path = "${local.repo}/scripts/ha/check-caddy-health.sh"
-    container_path = "/usr/local/bin/check-caddy-health.sh"
-    read_only = true
-  }
-
-  volumes {
-    host_path = "${local.repo}/scripts/ha/notify-vrrp.sh"
-    container_path = "/usr/local/bin/notify-vrrp.sh"
     read_only = true
   }
 
@@ -374,6 +381,6 @@ resource "docker_container" "keepalived" {
   }
 
   lifecycle {
-    ignore_changes = [image, network_mode]
+    ignore_changes = [image, network_mode, volumes]
   }
 }

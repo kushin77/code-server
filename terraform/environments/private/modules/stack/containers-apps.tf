@@ -79,7 +79,7 @@ resource "docker_container" "gitlab" {
   }
 
   env = [
-    "GITLAB_OMNIBUS_CONFIG=external_url 'http://gitlab.kushnir.cloud'; gitlab_rails['gitlab_shell_ssh_port'] = 2222; gitlab_rails['db_adapter'] = 'postgresql'; gitlab_rails['db_host'] = 'code-server-postgres'; gitlab_rails['db_username'] = '${var.db_user}'; gitlab_rails['db_password'] = '${var.db_password}'; gitlab_rails['db_database'] = 'gitlabdb'; nginx['redirect_http_to_https'] = false; puma['worker_processes'] = 0;",
+    "GITLAB_OMNIBUS_CONFIG=external_url 'http://gitlab.kushnir.cloud'; gitlab_rails['gitlab_shell_ssh_port'] = 2222; gitlab_rails['db_adapter'] = 'postgresql'; gitlab_rails['db_host'] = 'code-server-postgres'; gitlab_rails['db_username'] = '${var.db_user}'; gitlab_rails['db_password'] = '${var.db_password}'; gitlab_rails['db_database'] = '${var.db_name}'; nginx['redirect_http_to_https'] = false; puma['worker_processes'] = 0;",
     "GITLAB_SKIP_UNMIGRATED_DATA_CHECK=true",
   ]
 
@@ -117,7 +117,7 @@ resource "docker_container" "gitlab" {
   }
 
   lifecycle {
-    ignore_changes = [image, network_mode, ports, env]
+    ignore_changes = [image, network_mode, ports]
   }
 }
 

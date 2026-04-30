@@ -37,16 +37,22 @@ validate_required_env() {
     done
 }
 
+# Safely source KEY=VALUE style env files with optional comments and CRLF endings.
+source_env_file() {
+    local env_file="${1:-}"
+    if [[ -z "${env_file}" || ! -f "${env_file}" ]]; then
+        return 0
+    fi
+
+    # shellcheck disable=SC1090
+    set -a
+    source "${env_file}"
+    set +a
+}
+
 # Auto-source environment variables if available
 if [[ -f "${REPO_ROOT}/.env.deployment" ]]; then
-    # Parse variables safely while avoiding export issues with comments/empty lines
-    while IFS='=' read -r key value || [[ -n "$key" ]]; do
-        [[ "$key" =~ ^#.*$ ]] && continue
-        [[ -z "$key" ]] && continue
-        # Strip potential quotes
-        value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
-        export "$key=$value"
-    done < "${REPO_ROOT}/.env.deployment"
+    source_env_file "${REPO_ROOT}/.env.deployment"
 fi
 
 trap - ERR

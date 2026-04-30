@@ -45,11 +45,43 @@ log_success() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
 }
 
+probe_http_code() {
+  local endpoint="$1"
+  local code
+
+  code=$(curl -s -o /dev/null -w '%{http_code}' "${endpoint}" 2>/dev/null || echo "000")
+  if [[ "${code}" != "000" ]]; then
+    echo "${code}"
+    return 0
+  fi
+
+  if [[ -n "${PRIMARY_HOST:-}" ]]; then
+    local remote_user="${REMOTE_USER:-akushnir}"
+    code=$(ssh -o BatchMode=yes "${remote_user}@${PRIMARY_HOST}" \
+      "curl -s -o /dev/null -w '%{http_code}' '${endpoint}' 2>/dev/null || echo 000" 2>/dev/null || echo "000")
+    echo "${code}"
+    return 0
+  fi
+
+  echo "000"
+}
+
 check_endpoint_health() {
   local endpoint="$1"
   local timeout="$2"
   
   log_info "Checking endpoint health: ${endpoint} (timeout: ${timeout}s)"
+
+  if [[ "${timeout}" -le 0 ]]; then
+    local http_code
+    http_code=$(probe_http_code "${endpoint}")
+    if [[ "${http_code}" == "200" ]]; then
+      log_success "Endpoint healthy (HTTP ${http_code})"
+      return 0
+    fi
+    log_error "Endpoint health check failed (HTTP ${http_code})"
+    return 1
+  fi
   
   local start_time=$(date +%s)
   local attempt=0
@@ -58,7 +90,8 @@ check_endpoint_health() {
   while [[ $(($(date +%s) - start_time)) -lt ${timeout} ]]; do
     attempt=$((attempt + 1))
     
-    local http_code=$(curl -s -o /dev/null -w '%{http_code}' "${endpoint}" 2>/dev/null || echo "000")
+    local http_code
+    http_code=$(probe_http_code "${endpoint}")
     
     if [[ "${http_code}" == "200" ]]; then
       log_success "Endpoint healthy (HTTP ${http_code})"

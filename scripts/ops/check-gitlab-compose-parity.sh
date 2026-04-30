@@ -41,7 +41,7 @@ check_host() {
   log_info "Checking ${role} host ${host}..."
 
   local remote_sha
-  remote_sha="$((ssh -o BatchMode=yes "${REMOTE_USER}@${host}" "sha256sum ${REMOTE_COMPOSE_PATH}" 2>/dev/null || true) | awk '{print $1}')"
+  remote_sha="$( (ssh -o BatchMode=yes "${REMOTE_USER}@${host}" "sha256sum ${REMOTE_COMPOSE_PATH}" 2>/dev/null || true) | awk '{print $1}')"
   if [[ -z "${remote_sha}" ]]; then
     log_error "Could not read remote compose checksum on ${host}"
     return 1

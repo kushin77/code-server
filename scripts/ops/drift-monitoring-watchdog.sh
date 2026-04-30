@@ -18,19 +18,23 @@ ALERT_LOG="${STATE_DIR}/alerts.log"
 LAST_DRIFT_STATE="${STATE_DIR}/last-drift-state"
 LAST_HEALTH_STATE="${STATE_DIR}/last-health-state"
 
+# Load alert router
+source "${SCRIPT_DIR}/../lib/alert-router.sh" || {
+  echo "ERROR: Failed to load alert router module"
+  exit 1
+}
+
 # Ensure state directory exists
 mkdir -p "${STATE_DIR}"
+mkdir -p "$(dirname "$ALERT_HISTORY")"
 
 # Configuration
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-ALERT_THRESHOLD_DRIFT_INCREASE=5  # Alert if drift increases by more than N resources
-ALERT_THRESHOLD_HEALTH=1 # Alert if health containers down > 0
-
-# Alert channels
-ALERT_ENABLED="${ALERT_ENABLED:-1}"
-ALERT_EMAIL="${ALERT_EMAIL:-}"
-ALERT_WEBHOOK="${ALERT_WEBHOOK:-}"
+ALERT_THRESHOLD_DRIFT_INCREASE="${ALERT_THRESHOLD_DRIFT_INCREASE:-5}"
+ALERT_THRESHOLD_HEALTH="${ALERT_THRESHOLD_HEALTH:-1}"
+ALERT_THRESHOLD_PARITY="${ALERT_THRESHOLD_PARITY:-2}"
+ALERT_THRESHOLD_DISK="${ALERT_THRESHOLD_DISK:-80}"
 
 log_alert() {
   local severity="$1"
@@ -39,9 +43,17 @@ log_alert() {
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   
   echo "[${timestamp}] ${severity}: ${message}" >> "${ALERT_LOG}"
+  echo "[${timestamp}] ${severity}: ${message}" >&2
   
-  if [[ "${ALERT_ENABLED}" == "1" ]]; then
-    echo "[${severity}] ${message}" >&2
+  # Send via alert router if enabled
+  local level="$severity"
+  [[ "$severity" == "WARNING" ]] && level="WARNING"
+  [[ "$severity" == "ERROR" ]] && level="ERROR"
+  [[ "$severity" == "INFO" ]] && level="INFO"
+  
+  # Only send non-info alerts via router
+  if [[ "$level" != "INFO" ]]; then
+    send_alert "$level" "drift-watchdog" "$severity" "$message"
   fi
 }
 
@@ -149,8 +161,8 @@ check_container_parity() {
     diff=$((diff * -1))
   fi
   
-  # Allow small differences (1-2 containers)
-  if (( diff > 2 )); then
+  # Allow small differences (configurable via ALERT_THRESHOLD_PARITY)
+  if (( diff > ALERT_THRESHOLD_PARITY )); then
     log_alert "WARNING" "Container count mismatch: primary=${primary_count}, replica=${replica_count}"
     return 1
   fi
@@ -163,7 +175,7 @@ check_container_parity() {
 check_disk_space() {
   echo "Checking disk space..."
   
-  local threshold_percent=80
+  local threshold_percent="${ALERT_THRESHOLD_DISK}"
   local primary_usage
   local replica_usage
   

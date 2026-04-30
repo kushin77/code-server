@@ -14,6 +14,14 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 METRICS_DIR="${METRICS_DIR:-.metrics}"
 REPORT_FILE="${METRICS_DIR}/slo-report-$(date +%Y%m%d).json"
 
+# Load alert router (optional - don't fail if not available)
+if [[ -f "${SCRIPT_DIR}/../lib/alert-router.sh" ]]; then
+  source "${SCRIPT_DIR}/../lib/alert-router.sh"
+  ALERT_ROUTER_AVAILABLE=true
+else
+  ALERT_ROUTER_AVAILABLE=false
+fi
+
 # Ensure metrics directory exists (use user-writable directory)
 mkdir -p "${METRICS_DIR}" 2>/dev/null || mkdir -p "${HOME}/.code-server-metrics" && METRICS_DIR="${HOME}/.code-server-metrics"
 
@@ -67,6 +75,23 @@ collect_health_check_metric() {
 }
 
 # ============================================================================
+# ALERT FUNCTIONS
+# ============================================================================
+
+send_slo_alert() {
+  local slo_name="$1"
+  local target="$2"
+  local actual="$3"
+  
+  [[ "$ALERT_ROUTER_AVAILABLE" != "true" ]] && return 0
+  
+  local message="SLO Breach: $slo_name target=${target}% actual=${actual}%"
+  local details="{\"slo_name\": \"$slo_name\", \"target\": $target, \"actual\": $actual}"
+  
+  send_alert "WARNING" "slo-tracker" "SLO Breach: $slo_name" "$message" "$details"
+}
+
+# ============================================================================
 # REPORT GENERATION
 # ============================================================================
 
@@ -93,6 +118,7 @@ generate_slo_report() {
     availability_status="${GREEN}PASS${NC}"
   else
     availability_status="${RED}FAIL${NC}"
+    send_slo_alert "Availability" "${SLO_AVAILABILITY}" "${availability}"
   fi
   echo -e "   Status: ${availability_status}"
   echo "   Monthly error budget: ${AVAILABILITY_ERROR_BUDGET} minutes"
@@ -108,6 +134,7 @@ generate_slo_report() {
     deploy_status="${GREEN}PASS${NC}"
   else
     deploy_status="${RED}FAIL${NC}"
+    send_slo_alert "Deployment Success" "${SLO_DEPLOYMENT_SUCCESS}" "${deploy_rate}"
   fi
   echo -e "   Status: ${deploy_status}"
   local deploy_count=$(echo "$deployments" | jq -r '.total // 0')
@@ -123,6 +150,7 @@ generate_slo_report() {
     drift_status="${GREEN}PASS${NC}"
   else
     drift_status="${RED}FAIL${NC}"
+    send_slo_alert "Drift-Free" "${SLO_DRIFT_FREE}" "${drift}"
   fi
   echo -e "   Status: ${drift_status}"
   echo ""
@@ -136,6 +164,7 @@ generate_slo_report() {
     health_status="${GREEN}PASS${NC}"
   else
     health_status="${RED}FAIL${NC}"
+    send_slo_alert "Health Check" "${SLO_HEALTH_PASS}" "${health}"
   fi
   echo -e "   Status: ${health_status}"
   echo ""

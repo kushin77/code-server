@@ -42,6 +42,11 @@ EXCLUDED_FILES = {
     "START_HERE.md",
     "INDEX.md",
     "EXECUTE_NOW.txt",
+    # Exclude operational checklists and deployment guides (internal reference docs)
+    # These contain 5000+ task markers but are not GitHub-trackable issues
+    "MASTER_DEPLOYMENT_EXECUTION_CHECKLIST.md",
+    "IaC-DEPLOYMENT-CHECKLIST.md",
+    "MASTER_DEPLOYMENT_INDEX.md",
 }
 EXCLUDED_NAME_TOKENS = {
     "STATUS",
@@ -54,6 +59,15 @@ EXCLUDED_NAME_TOKENS = {
     "CERTIFICATE",
     "VERIFICATION",
     "EVIDENCE",
+    # Operational guides (deployment checklists, phase runbooks, etc)
+    # These are internal reference docs with 5000+ task markers, not GitHub issues
+    "PHASE",
+    "DEPLOYMENT",
+    "OPERATIONS",
+    "CHECKLIST",
+    "RUNBOOK",
+    "GUIDE",
+    "PACKAGE",
 }
 APPROVED_MARKDOWN_PREFIXES = (
     "artifacts/",

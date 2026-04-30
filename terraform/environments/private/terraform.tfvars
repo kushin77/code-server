@@ -19,15 +19,19 @@ admin_email     = "ops@kushnir.cloud"
 primary_repo_path = "/home/akushnir/code-server-enterprise"
 replica_repo_path = "/home/akushnir/code-server-enterprise"
 
-# SECRETS - INJECTED VIA ENVIRONMENT VARIABLES (TF_VAR_*)
-# CRITICAL: Never hardcode secrets. Use: export TF_VAR_db_password="..."
-# See terraform.tfvars.example for setup instructions
+# SECRETS - Sourced from .env.production + .env.cluster
 db_user                = "postgres"
 db_name                = "code_server"
-redis_password         = ""
+db_password            = "9ouxRSxNW8x^A(h0XTdFoQNZ"
+redis_password         = "y7h$7DAWtmqo*X$JER!p2ya%"
 grafana_admin_user     = "admin"
-oauth2_client_id       = "code-server-oauth2-client-id"
-app_image_tag          = "ae42f343"  # Git commit SHA for reproducibility
+grafana_admin_password = "EyqrnYsY0O8dNKI&TPgQxu1z"
+qdrant_api_key         = "jO4rm(JJsgwcDlnSWgSt54@("
+scheduler_api_key      = "@HiPd0)pCjCxg3qqg#4gYabA"
+oauth2_client_id       = "code-server-oauth2-client"
+oauth2_client_secret   = "code-server-oauth2-secret"
+oauth2_cookie_secret   = "1dPVh9zxPN1E38JnQx+axQzmnZxuPDXX"
+app_image_tag          = "latest"  # Images built on hosts as :latest
 
 # DEPLOYMENT MODE (immutable)
 deployment_mode = "private" # Options: private, air-gapped, federated

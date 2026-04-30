@@ -20,9 +20,15 @@ resource "docker_container" "postgres" {
     "POSTGRES_INITDB_ARGS=--encoding=UTF8",
   ]
 
-  ports {
-    internal = 5432
-    external = 5432
+  # Only bind the host port on primary — replica host port 5432 is occupied
+  # by other cluster workloads. Replica postgres remains accessible via docker
+  # network to all code-server services on that host.
+  dynamic "ports" {
+    for_each = var.host_role == "primary" ? [5432] : []
+    content {
+      internal = ports.value
+      external = ports.value
+    }
   }
 
   mounts {

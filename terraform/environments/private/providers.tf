@@ -17,11 +17,11 @@ provider "docker" {
   alias    = "primary"
   host     = "ssh://${var.ssh_user}@${var.primary_host}:${var.ssh_port}"
   ssh_opts = [
-    "-o", "ControlMaster=auto",
-    "-o", "ControlPath=/tmp/docker-ssh-primary-%r-%h-%p",
-    "-o", "ControlPersist=60s",
-    "-o", "StrictHostKeyChecking=accept-new",  # Accept new hosts once; fail on key mismatch
+    "-o", "StrictHostKeyChecking=accept-new",
     "-o", "BatchMode=yes",
+    "-o", "ConnectTimeout=30",
+    "-o", "ServerAliveInterval=15",
+    "-o", "ServerAliveCountMax=4",
   ]
 }
 
@@ -29,11 +29,11 @@ provider "docker" {
   alias    = "replica"
   host     = "ssh://${var.ssh_user}@${var.replica_host}:${var.ssh_port}"
   ssh_opts = [
-    "-o", "ControlMaster=auto",
-    "-o", "ControlPath=/tmp/docker-ssh-replica-%r-%h-%p",
-    "-o", "ControlPersist=60s",
-    "-o", "StrictHostKeyChecking=accept-new",  # Accept new hosts once; fail on key mismatch
+    "-o", "StrictHostKeyChecking=accept-new",
     "-o", "BatchMode=yes",
+    "-o", "ConnectTimeout=30",
+    "-o", "ServerAliveInterval=15",
+    "-o", "ServerAliveCountMax=4",
   ]
 }
 

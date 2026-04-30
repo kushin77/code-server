@@ -62,7 +62,7 @@ resource "docker_container" "memory_engine" {
   }
 
   lifecycle {
-    ignore_changes = [network_mode]  # Docker provider doesn't track reliably
+    ignore_changes = [image, network_mode, ports]  # Docker provider doesn't track reliably
   }
 }
 
@@ -117,7 +117,7 @@ resource "docker_container" "multimodal_ai" {
   }
 
   lifecycle {
-    ignore_changes = [network_mode]
+    ignore_changes = [image, network_mode, ports]
   }
 }
 
@@ -176,7 +176,7 @@ resource "docker_container" "reputation_engine" {
   }
 
   lifecycle {
-    ignore_changes = [network_mode]
+    ignore_changes = [image, network_mode, command, entrypoint, ports]
   }
 }
 

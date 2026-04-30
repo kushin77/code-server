@@ -60,7 +60,7 @@ locals {
 
   # ── Service endpoint map (used in container env vars) ────────────────────────
   svc = {
-    postgres_url          = "postgresql://${var.db_user}:${var.db_password}@code-server-postgres:5432/${var.db_name}"
+    postgres_url          = "postgresql://${var.db_user}:${urlencode(var.db_password)}@code-server-postgres:5432/${var.db_name}"
     kafka_broker          = "code-server-redpanda:9092"
     opa_url               = "http://code-server-opa:8181"
     ollama_url            = "http://code-server-ollama:11434"

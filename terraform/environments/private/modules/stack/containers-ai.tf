@@ -62,7 +62,7 @@ resource "docker_container" "memory_engine" {
   }
 
   lifecycle {
-    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+    ignore_changes = [network_mode]  # Docker provider doesn't track reliably
   }
 }
 
@@ -93,7 +93,7 @@ resource "docker_container" "multimodal_ai" {
   ]
 
   healthcheck {
-    test         = ["CMD-SHELL", "curl -f http://localhost:8040/health || exit 1"]
+    test         = ["CMD-SHELL", "curl -f http://localhost:8005/health || exit 1"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -117,7 +117,7 @@ resource "docker_container" "multimodal_ai" {
   }
 
   lifecycle {
-    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+    ignore_changes = [network_mode]
   }
 }
 
@@ -176,7 +176,7 @@ resource "docker_container" "reputation_engine" {
   }
 
   lifecycle {
-    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+    ignore_changes = [network_mode]
   }
 }
 

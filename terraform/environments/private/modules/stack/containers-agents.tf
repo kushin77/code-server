@@ -53,7 +53,7 @@ resource "docker_container" "agent_code_reviewer" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode]
   }
 
 }
@@ -107,7 +107,7 @@ resource "docker_container" "agent_incident_responder" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode]
   }
 
 }
@@ -161,7 +161,7 @@ resource "docker_container" "agent_doc_writer" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode]
   }
 
 }
@@ -215,7 +215,7 @@ resource "docker_container" "agent_test_generator" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode]
   }
 
 }

@@ -20,7 +20,7 @@ provider "docker" {
     "-o", "ControlMaster=auto",
     "-o", "ControlPath=/tmp/docker-ssh-primary-%r-%h-%p",
     "-o", "ControlPersist=60s",
-    "-o", "StrictHostKeyChecking=no",
+    "-o", "StrictHostKeyChecking=accept-new",  # Accept new hosts once; fail on key mismatch
     "-o", "BatchMode=yes",
   ]
 }
@@ -32,7 +32,7 @@ provider "docker" {
     "-o", "ControlMaster=auto",
     "-o", "ControlPath=/tmp/docker-ssh-replica-%r-%h-%p",
     "-o", "ControlPersist=60s",
-    "-o", "StrictHostKeyChecking=no",
+    "-o", "StrictHostKeyChecking=accept-new",  # Accept new hosts once; fail on key mismatch
     "-o", "BatchMode=yes",
   ]
 }

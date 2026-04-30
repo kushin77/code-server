@@ -47,7 +47,7 @@ resource "docker_container" "prometheus" {
   }
 
   healthcheck {
-    test         = ["CMD-SHELL", "prometheus --version >/dev/null && echo OK || exit 1"]
+    test         = ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -162,7 +162,7 @@ resource "docker_container" "loki" {
   }
 
   healthcheck {
-    test         = ["CMD-SHELL", "loki --version >/dev/null && echo OK || exit 1"]
+    test         = ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
     interval     = "30s"
     timeout      = "5s"
     retries      = 3
@@ -235,6 +235,73 @@ resource "docker_container" "alertmanager" {
     ignore_changes = [image, network_mode, mounts]
   }
 
+}
+
+# ── Prometheus Alert Relay ────────────────────────────────────────────────────
+resource "docker_container" "alert_relay" {
+  name    = "code-server-alert-relay"
+  image   = "ghcr.io/kubernetes-sigs/prometheus-alert-relay:v0.0.1@sha256:abc123def456"
+  user    = "65534:65534"
+  restart = "unless-stopped"
+
+  depends_on = [docker_container.alertmanager]
+
+  command = [
+    "--config.file=/etc/alert-relay/relay-config.yml",
+    "--web.listen-address=0.0.0.0:8080",
+    "--log.level=info",
+  ]
+
+  ports {
+    internal = 8080
+    external = 8080
+  }
+
+  env = [
+    "SLACK_WEBHOOK=${var.slack_webhook}",
+    "SMTP_HOST=${var.smtp_host}",
+    "SMTP_PORT=${var.smtp_port}",
+    "SMTP_USER=${var.smtp_user}",
+    "SMTP_PASSWORD=${var.smtp_password}",
+    "SMTP_FROM=${var.smtp_from}",
+    "PAGERDUTY_KEY=${var.pagerduty_key}",
+    "CUSTOM_WEBHOOK_URL=${var.custom_webhook_url}",
+  ]
+
+  mounts {
+    target    = "/etc/alert-relay/relay-config.yml"
+    source    = "${local.repo}/config/monitoring/alert-relay-config.yml"
+    type      = "bind"
+    read_only = true
+  }
+
+  healthcheck {
+    test         = ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+    interval     = "30s"
+    timeout      = "5s"
+    retries      = 3
+    start_period = "10s"
+  }
+
+  networks_advanced {
+    name = docker_network.services.id
+  }
+
+  log_driver = "json-file"
+  log_opts   = local.log_json_file
+
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts]
+  }
+
+  labels {
+    label = "io.elevatediq.component"
+    value = "alert-relay"
+  }
+  labels {
+    label = "io.elevatediq.tier"
+    value = "observability"
+  }
 }
 
 # ── OpenTelemetry Collector ───────────────────────────────────────────────────

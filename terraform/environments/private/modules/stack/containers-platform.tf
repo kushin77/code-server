@@ -54,7 +54,7 @@ resource "docker_container" "paperclip" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode, mounts]
   }
 
 }
@@ -103,7 +103,7 @@ resource "docker_container" "execution_scheduler" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode, mounts]
   }
 
 }
@@ -166,7 +166,7 @@ resource "docker_container" "env_provisioner" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode, mounts]
   }
 
 }
@@ -249,7 +249,7 @@ resource "docker_container" "edge_agent" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
   lifecycle {
-    ignore_changes = [image, network_mode, mounts]
+    ignore_changes = [network_mode, mounts]
   }
 
 }

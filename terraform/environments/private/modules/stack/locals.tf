@@ -15,7 +15,7 @@ locals {
   img = {
     alpine         = "alpine:3.20@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e"
     caddy          = "caddy:2.7.4@sha256:505de4e957da923672a8c79f16581e9b717a2479a8d5ddb909ab2d1b351f2ba4"
-    keepalived     = "osixia/keepalived:2.0.20"
+    keepalived     = "keepalived:2.2.7"  # Must match docker-compose.yml:340
     opa            = "openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe"
     oauth2_proxy   = "quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85"
     prometheus     = "prom/prometheus:v2.48.0@sha256:b440bc0e8aa5bab44a782952c09516b6a50f9d7b2325c1ffafac7bc833298e2e"

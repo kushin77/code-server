@@ -124,3 +124,47 @@ variable "edge_agent_id" {
   type    = string
   default = ""  # Computed from host_role below in locals
 }
+
+# ── Alert Relay ───────────────────────────────────────────────────────────────
+variable "slack_webhook" {
+  type      = string
+  sensitive = true
+  default   = "https://hooks.slack.com/services/PLACEHOLDER"
+}
+
+variable "smtp_host" {
+  type    = string
+  default = "smtp.kushnir.cloud"
+}
+
+variable "smtp_port" {
+  type    = string
+  default = "587"
+}
+
+variable "smtp_user" {
+  type    = string
+  default = "alertmanager@kushnir.cloud"
+}
+
+variable "smtp_password" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "smtp_from" {
+  type    = string
+  default = "alertmanager@kushnir.cloud"
+}
+
+variable "pagerduty_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "custom_webhook_url" {
+  type    = string
+  default = ""
+}

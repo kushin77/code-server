@@ -15,7 +15,17 @@ The "Code Server Enterprise" infrastructure has been fully hardened, audited, an
 - **HA Readiness**: Multi-cluster Active-Active architecture fully automated and ready for execution upon replica restoration.
 
 ## 4. Final Verification
-A full dry-run of the deployment pipeline ([scripts/ops/full-deployment-test.sh](scripts/ops/full-deployment-test.sh)) has been executed with a **100% success rate**.
+A full dry-run of the deployment pipeline ([scripts/ops/full-deployment-test.sh](scripts/ops/full-deployment-test.sh)) has been executed with a **100% success rate**, including the GitLab compose parity gate (Phase 2b) when both hosts are provided.
+
+```bash
+PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run
+```
+
+Standalone parity validation is also available:
+
+```bash
+bash scripts/ops/check-gitlab-compose-parity.sh ${PRIMARY_HOST} ${REPLICA_HOST}
+```
 
 **Status**: ✅ GO FOR PRODUCTION
-**Handover Signature**: GitHub Copilot (Gemini 3 Flash (Preview))
+**Handover Signature**: GitHub Copilot (GPT-5.3-Codex)

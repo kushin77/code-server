@@ -1,7 +1,7 @@
 # Deployment Operations Toolkit
 
 **Version**: 1.0  
-**Last Updated**: April 28, 2026  
+**Last Updated**: April 30, 2026  
 **Purpose**: Actionable procedures for production deployment and day-1 operations
 
 ---
@@ -23,7 +23,10 @@ ssh ${PRIMARY_HOST} "echo 'Primary OK'"
 ssh ${REPLICA_HOST} "echo 'Replica OK'"
 
 # 4. Final validation
-bash scripts/ops/full-deployment-test.sh --dry-run
+PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run
+
+# 5. Explicit compose parity gate (optional standalone)
+bash scripts/ops/check-gitlab-compose-parity.sh ${PRIMARY_HOST} ${REPLICA_HOST}
 ```
 
 ### Deployment Phase 1 - Staging (192.168.168.42)
@@ -83,6 +86,7 @@ bash scripts/ops/validate-deployment.sh
 ### Infrastructure Verification (10 min)
 - [ ] Primary host reachable: `ssh ${PRIMARY_HOST} "uptime"`
 - [ ] Replica host reachable: `ssh ${REPLICA_HOST} "uptime"`
+- [ ] GitLab compose parity: `bash scripts/ops/check-gitlab-compose-parity.sh ${PRIMARY_HOST} ${REPLICA_HOST}`
 - [ ] SSH keys configured: No password prompts needed
 - [ ] Disk space sufficient: `df -h` shows >20GB available
 - [ ] Docker daemon running: `docker ps` works on both hosts

@@ -86,8 +86,14 @@ All 21 autonomous implementation phases are **COMPLETE**. The platform is **PROD
 ### Phase 1: Validate Pre-Deployment
 ```bash
 cd /home/akushnir/code-server
-bash scripts/ops/full-deployment-test.sh --dry-run
-# Expected: Test Suite Result: PASS/PASS/PASS/PASS/PASS
+PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run
+# Expected: Test Suite Result: PASS/PASS/PASS/PASS/PASS/PASS (includes Phase 2b parity gate)
+```
+
+Optional standalone parity verification:
+
+```bash
+bash scripts/ops/check-gitlab-compose-parity.sh ${PRIMARY_HOST} ${REPLICA_HOST}
 ```
 
 ### Phase 2: Deploy Infrastructure
@@ -165,7 +171,7 @@ bash scripts/phase21/validate-replica-monitoring.sh
 ## Ongoing Operations
 
 ### Daily Tasks
-1. **Monitor Release Gate**: `bash scripts/ops/full-deployment-test.sh --dry-run`
+1. **Monitor Release Gate**: `PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run`
 2. **Check Replica Parity**: `bash scripts/phase21/validate-replica-monitoring.sh`
 3. **Review Alerts**: Check Prometheus/Grafana for HIGH/CRITICAL alerts
 
@@ -213,9 +219,9 @@ bash scripts/phase21/validate-replica-monitoring.sh
 3. After resolution, run blameless RCA process
 
 ### For Deployments
-1. Always run `bash scripts/ops/full-deployment-test.sh --dry-run` first
+1. Always run `PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run` first
 2. Use terraform plan/apply with careful review
-3. Verify all 5 phases passing: drift/health/deployment/validation/rollback
+3. Verify all phases passing, including GitLab compose parity (Phase 2b)
 
 ---
 

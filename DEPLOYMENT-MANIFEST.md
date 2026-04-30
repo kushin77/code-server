@@ -52,6 +52,18 @@ export TF_BACKEND_REGION=us-east-1
 - [ ] Bash 4.0+
 - [ ] Git 2.30+
 - [ ] SSH keys configured for deployment
+- [ ] GitLab compose parity validated: `bash scripts/ops/check-gitlab-compose-parity.sh ${PRIMARY_HOST} ${REPLICA_HOST}`
+
+### Pre-Deployment Dry-Run Gate
+
+Run the host-aware deployment dry-run so Phase 2b (GitLab compose parity) is included:
+
+```bash
+PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run
+```
+
+Expected release gate output includes parity as:
+- PASS/PASS/PASS/PASS/PASS/PASS (with Phase 2b enabled)
 
 ---
 

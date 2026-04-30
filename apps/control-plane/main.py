@@ -11,6 +11,17 @@ from typing import Dict, Any
 
 from apps._shared.python.config import get_config
 
+import os
+
+try:
+    from .risk_engine import RiskEngine
+    from .policy_propagator import PolicyPropagator
+    from .compliance_reporter import ComplianceReporter
+except ImportError:
+    from risk_engine import RiskEngine
+    from policy_propagator import PolicyPropagator
+    from compliance_reporter import ComplianceReporter
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

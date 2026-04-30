@@ -233,12 +233,17 @@ resource "docker_container" "keepalived_init" {
   user      = "0:0"
   restart   = "no"
   must_run  = false
+  network_mode = "host"
   
   command = [
     "sh",
     "-lc",
     <<-EOT
-    mkdir -p /etc/keepalived
+    mkdir -p /usr/local/etc/keepalived
+          iface="$(ip -o -4 route show to default | awk '{print $5; exit}')"
+          if [ -z "$iface" ]; then
+            iface="$(ip -o link show | awk -F': ' '$2 !~ /lo/ {print $2; exit}')"
+    fi
     if [ "${var.host_role}" = "primary" ]; then
       state="MASTER"
       priority="100"
@@ -246,7 +251,7 @@ resource "docker_container" "keepalived_init" {
       state="BACKUP"
       priority="90"
     fi
-    cat > /etc/keepalived/keepalived.conf << 'EOF'
+    cat > /usr/local/etc/keepalived/keepalived.conf << EOF
     global_defs {
       router_id CODE_SERVER_HA
       script_user root
@@ -260,10 +265,10 @@ resource "docker_container" "keepalived_init" {
       weight -20
     }
     vrrp_instance VI_1 {
-      state $${state}
-      interface eth0
+            state $state
+            interface $iface
       virtual_router_id 51
-      priority $${priority}
+            priority $priority
       advert_int 1
       authentication {
         auth_type PASS
@@ -279,18 +284,14 @@ resource "docker_container" "keepalived_init" {
       notify_backup "/usr/local/bin/notify-vrrp.sh backup"
     }
     EOF
-    chown -R root:root /etc/keepalived
-    chmod 600 /etc/keepalived/keepalived.conf
+    chown -R root:root /usr/local/etc/keepalived
+    chmod 600 /usr/local/etc/keepalived/keepalived.conf
     EOT
   ]
 
   volumes {
     volume_name = docker_volume.keepalived_config.name
-    container_path = "/etc/keepalived"
-  }
-
-  networks_advanced {
-    name = docker_network.services.id
+    container_path = "/usr/local/etc/keepalived"
   }
 
   lifecycle {
@@ -322,7 +323,7 @@ resource "docker_container" "keepalived" {
 
   volumes {
     volume_name = docker_volume.keepalived_config.name
-    container_path = "/etc/keepalived"
+    container_path = "/usr/local/etc/keepalived"
     read_only = true
   }
 

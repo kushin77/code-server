@@ -60,10 +60,10 @@ resource "docker_container" "memory_engine" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
-  lifecycle {
-    ignore_changes = [image, network_mode, mounts]
-  }
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+  }
 }
 
 # ── Multimodal AI ─────────────────────────────────────────────────────────────
@@ -115,10 +115,10 @@ resource "docker_container" "multimodal_ai" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
-  lifecycle {
-    ignore_changes = [image, network_mode, mounts]
-  }
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+  }
 }
 
 # ── Reputation Engine ─────────────────────────────────────────────────────────
@@ -137,6 +137,8 @@ resource "docker_container" "reputation_engine" {
   ports {
     internal = 8002
     external = 8006
+    ip       = "0.0.0.0"
+    protocol = "tcp"
   }
 
   env = [
@@ -150,6 +152,7 @@ resource "docker_container" "reputation_engine" {
     target = "/app"
     source = "${local.repo}/apps/reputation_engine"
     type   = "bind"
+    read_only = false
   }
 
   networks_advanced {
@@ -171,10 +174,10 @@ resource "docker_container" "reputation_engine" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
-  lifecycle {
-    ignore_changes = [image, network_mode, mounts]
-  }
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+  }
 }
 
 # ── Agent Runtime ─────────────────────────────────────────────────────────────
@@ -231,8 +234,8 @@ resource "docker_container" "agent_runtime" {
     label = "io.elevatediq.tier"
     value = "ai"
   }
-  lifecycle {
-    ignore_changes = [image, network_mode, mounts]
-  }
 
+  lifecycle {
+    ignore_changes = [image, network_mode, mounts, ports, healthcheck, command, entrypoint]
+  }
 }

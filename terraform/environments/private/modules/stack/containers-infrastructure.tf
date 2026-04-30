@@ -122,21 +122,6 @@ resource "docker_container" "caddy" {
 
   depends_on = [docker_container.caddy_init]
 
-  ports {
-    internal = 80
-    external = 80
-  }
-  ports {
-    internal = 443
-    external = 443
-    protocol = "tcp"
-  }
-  ports {
-    internal = 443
-    external = 443
-    protocol = "udp"
-  }
-
   env = [
     "APEX_DOMAIN=${var.apex_domain}",
     "TLS_EMAIL=${var.tls_email}",
@@ -243,10 +228,11 @@ resource "docker_container" "ollama" {
 
 # ── Keepalived (VRRP High Availability) ──────────────────────────────────────
 resource "docker_container" "keepalived_init" {
-  name    = "code-server-keepalived-init"
-  image   = docker_image.alpine.image_id
-  user    = "0:0"
-  restart = "no"
+  name      = "code-server-keepalived-init"
+  image     = docker_image.alpine.image_id
+  user      = "0:0"
+  restart   = "no"
+  must_run  = false
   
   command = [
     "sh",
@@ -320,18 +306,11 @@ resource "docker_container" "keepalived" {
 
   depends_on = [
     docker_container.keepalived_init,
-    docker_container.caddy,
   ]
 
   capabilities {
     add  = ["NET_ADMIN", "NET_BROADCAST", "NET_RAW", "SYS_ADMIN"]
     drop = []
-  }
-
-  sysctls = {
-    "net.ipv4.ip_forward"      = "1"
-    "net.ipv4.ip_nonlocal_bind" = "1"
-    "net.ipv6.conf.all.forwarding" = "1"
   }
 
   network_mode = "host"

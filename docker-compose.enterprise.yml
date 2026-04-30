@@ -49,7 +49,7 @@ services:
 
         gitlab_rails[''db_adapter''] = ''postgresql''
 
-        gitlab_rails[''db_host''] = ''code-server-postgres''
+        gitlab_rails[''db_host''] = ''${DB_HOST:-code-server-postgres}''
 
         gitlab_rails[''db_username''] = ''${DB_USER}''
 
@@ -144,8 +144,8 @@ services:
     - TEST_RUNNER_HOST=0.0.0.0
     - TEST_RUNNER_PORT=8888
     - LOG_LEVEL=INFO
-    - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
-    - REDIS_URL=redis://code-server-redis:6379/3
+    - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-code-server-postgres}:5432/${DB_NAME}
+    - REDIS_URL=redis://${REDIS_HOST:-code-server-redis}:6379/3
     - KAFKA_BOOTSTRAP_SERVERS=code-server-redpanda:9092
     ports:
     - 8888:8888
@@ -335,8 +335,8 @@ services:
     - CONTROL_PLANE_PORT=8082
     - CONTROL_PLANE_HOST=0.0.0.0
     - LOG_LEVEL=INFO
-    - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
-    - REDIS_URL=redis://code-server-redis:6379/4
+    - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-code-server-postgres}:5432/${DB_NAME}
+    - REDIS_URL=redis://${REDIS_HOST:-code-server-redis}:6379/4
     networks:
     - services
     restart: unless-stopped

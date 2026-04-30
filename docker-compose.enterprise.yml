@@ -55,17 +55,11 @@ services:
 
         gitlab_rails[''db_password''] = ''${DB_PASSWORD}''
 
-        gitlab_rails[''db_database''] = ''gitlabdb''
-
-        gitlab_rails[''redis_host''] = ''code-server-redis''
-
-        gitlab_rails[''redis_port''] = 6379
-
-        gitlab_rails[''redis_database''] = 2
+        gitlab_rails[''db_database''] = ''${DB_NAME:-gitlabdb}''
 
         nginx[''redirect_http_to_https''] = false
 
-        puma[''worker_processes''] = 2
+        puma[''worker_processes''] = 0
 
         '
       GITLAB_SKIP_UNMIGRATED_DATA_CHECK: "true"
@@ -97,10 +91,10 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 2G
+          memory: 4G
         reservations:
           cpus: '1'
-          memory: 1G
+          memory: 2G
   gitlab-runner:
     image: gitlab/gitlab-runner:latest
     container_name: code-server-gitlab-runner

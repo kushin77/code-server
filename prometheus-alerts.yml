@@ -1,0 +1,274 @@
+groups:
+  - name: postgresql
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgresql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is down (instance {{ $labels.instance }})"
+          description: "PostgreSQL database on {{ $labels.instance }} has been down for more than 1 minute."
+          runbook: "https://wiki.example.com/runbooks/postgresql-down"
+
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag_seconds > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL replication lag detected (instance {{ $labels.instance }})"
+          description: "Replication lag on {{ $labels.instance }} is {{ $value | humanize }}s, exceeding 10 seconds."
+          runbook: "https://wiki.example.com/runbooks/postgresql-replication-lag"
+
+      - alert: PostgreSQLReplicationNotActive
+        expr: pg_replication_active == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL replication not active (instance {{ $labels.instance }})"
+          description: "PostgreSQL replication is not active on {{ $labels.instance }}. Failover will not be automatic."
+          runbook: "https://wiki.example.com/runbooks/postgresql-replication-not-active"
+
+      - alert: PostgreSQLConnectionsHigh
+        expr: pg_connections > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connection count high (instance {{ $labels.instance }})"
+          description: "PostgreSQL has {{ $value }} connections, approaching limit on {{ $labels.instance }}."
+          runbook: "https://wiki.example.com/runbooks/postgresql-high-connections"
+
+      - alert: PostgreSQLCacheMissRateHigh
+        expr: rate(pg_index_blks_read[5m]) / (rate(pg_index_blks_read[5m]) + rate(pg_index_blks_hit[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL cache miss rate high (instance {{ $labels.instance }})"
+          description: "Index cache miss rate on {{ $labels.instance }} is {{ $value | humanizePercentage }}, exceeding 10%."
+          runbook: "https://wiki.example.com/runbooks/postgresql-cache-miss-rate"
+
+  - name: redis
+    interval: 30s
+    rules:
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis is down (instance {{ $labels.instance }})"
+          description: "Redis instance {{ $labels.instance }} has been down for more than 1 minute."
+          runbook: "https://wiki.example.com/runbooks/redis-down"
+
+      - alert: RedisMemoryUsageHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis memory usage high (instance {{ $labels.instance }})"
+          description: "Redis on {{ $labels.instance }} is using {{ $value | humanizePercentage }} of available memory."
+          runbook: "https://wiki.example.com/runbooks/redis-memory-high"
+
+      - alert: RedisSentinelDown
+        expr: up{job="redis-sentinel"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis Sentinel is down (instance {{ $labels.instance }})"
+          description: "Redis Sentinel on {{ $labels.instance }} has been down for more than 1 minute."
+          runbook: "https://wiki.example.com/runbooks/redis-sentinel-down"
+
+  - name: containers
+    interval: 30s
+    rules:
+      - alert: ContainerDown
+        expr: up{job="cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Container monitoring down (host {{ $labels.host }})"
+          description: "cAdvisor monitoring on {{ $labels.host }} has been down for more than 1 minute."
+          runbook: "https://wiki.example.com/runbooks/cadvisor-down"
+
+      - alert: ContainerCPUUsageHigh
+        expr: (100 - (avg by (container_name) (rate(container_cpu_usage_seconds_total{container_name!=""}[5m])) * 100)) < 10
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container CPU usage high ({{ $labels.container_name }})"
+          description: "Container {{ $labels.container_name }} CPU usage is high on {{ $labels.host }}."
+          runbook: "https://wiki.example.com/runbooks/container-cpu-high"
+
+      - alert: ContainerMemoryUsageHigh
+        expr: (container_memory_working_set_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container memory usage high ({{ $labels.container_name }})"
+          description: "Container {{ $labels.container_name }} memory usage is {{ $value | humanizePercentage }} of limit."
+          runbook: "https://wiki.example.com/runbooks/container-memory-high"
+
+      - alert: ContainerRestarting
+        expr: rate(container_last_seen[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container is restarting frequently ({{ $labels.container_name }})"
+          description: "Container {{ $labels.container_name }} on {{ $labels.host }} is restarting frequently."
+          runbook: "https://wiki.example.com/runbooks/container-restarting"
+
+  - name: api
+    interval: 30s
+    rules:
+      - alert: APIResponseTimeHigh
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API response time high (P95 > 1s)"
+          description: "API P95 response time is {{ $value | humanize }}s, exceeding 1 second threshold."
+          runbook: "https://wiki.example.com/runbooks/api-response-time-high"
+
+      - alert: APIErrorRateHigh
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API error rate high (> 1%)"
+          description: "API error rate is {{ $value | humanizePercentage }}, exceeding 1% threshold."
+          runbook: "https://wiki.example.com/runbooks/api-error-rate-high"
+
+      - alert: APIDown
+        expr: up{job="api-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API server is down (instance {{ $labels.instance }})"
+          description: "API server {{ $labels.instance }} has been down for more than 1 minute."
+          runbook: "https://wiki.example.com/runbooks/api-down"
+
+  - name: infrastructure
+    interval: 60s
+    rules:
+      - alert: HostCPUUsageHigh
+        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Host CPU usage high ({{ $labels.instance }})"
+          description: "Host {{ $labels.instance }} CPU usage is {{ $value | humanize }}%."
+          runbook: "https://wiki.example.com/runbooks/host-cpu-high"
+
+      - alert: HostMemoryUsageHigh
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Host memory usage high ({{ $labels.instance }})"
+          description: "Host {{ $labels.instance }} memory usage is {{ $value | humanizePercentage }}."
+          runbook: "https://wiki.example.com/runbooks/host-memory-high"
+
+      - alert: HostDiskUsageHigh
+        expr: (1 - (node_filesystem_avail_bytes{fstype=~"ext4|ext3|ext2|btrfs|xfs|zfs"} / node_filesystem_size_bytes)) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Host disk usage high ({{ $labels.mountpoint }})"
+          description: "Host {{ $labels.instance }} disk {{ $labels.mountpoint }} usage is {{ $value | humanizePercentage }}."
+          runbook: "https://wiki.example.com/runbooks/host-disk-high"
+
+      - alert: HostDown
+        expr: up{job="node-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Host is down ({{ $labels.instance }})"
+          description: "Host {{ $labels.instance }} has been down for more than 2 minutes."
+          runbook: "https://wiki.example.com/runbooks/host-down"
+
+  - name: network
+    interval: 30s
+    rules:
+      - alert: NetworkErrorsHigh
+        expr: rate(node_network_transmit_errs_total[5m]) > 0.01 or rate(node_network_receive_errs_total[5m]) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Network errors detected ({{ $labels.instance }})"
+          description: "Network errors on {{ $labels.instance }} interface {{ $labels.device }} exceeded threshold."
+          runbook: "https://wiki.example.com/runbooks/network-errors-high"
+
+      - alert: NetworkLatencyHigh
+        expr: probe_duration_seconds > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Network latency high ({{ $labels.instance }})"
+          description: "Network latency to {{ $labels.instance }} is {{ $value | humanize }}s."
+          runbook: "https://wiki.example.com/runbooks/network-latency-high"
+
+  - name: availability
+    interval: 60s
+    rules:
+      - alert: ServiceAvailabilityLow
+        expr: (count(up{job=~"api-server|postgres|redis"} == 1) / count(up{job=~"api-server|postgres|redis"})) < 0.9
+        for: 5m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: "Service availability low (< 90%)"
+          description: "Overall service availability is {{ $value | humanizePercentage }}, below 90% threshold."
+          runbook: "https://wiki.example.com/runbooks/service-availability-low"
+
+      - alert: CriticalServiceDown
+        expr: up{job=~"postgres|redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: "Critical service down ({{ $labels.job }})"
+          description: "Critical service {{ $labels.job }} on {{ $labels.instance }} is down."
+          runbook: "https://wiki.example.com/runbooks/critical-service-down"

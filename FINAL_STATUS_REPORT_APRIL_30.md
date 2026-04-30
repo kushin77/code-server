@@ -239,7 +239,7 @@ Response: {batch_results: {...}, total_passed: 399, total_failed: 0}
 - [x] Caddyfile configured with all routes
 - [x] docker-compose.enterprise.yml verified
 - [x] Appsmith dashboard JSON ready
-- [x] .env template prepared
+- [x] .env setup documented (create locally)
 
 **Documentation:**
 - [x] 6 comprehensive guides created (150+ KB)

@@ -523,7 +523,7 @@ deploy:
 
 ✅ **Git Repository:**
 - [x] All configuration versioned
-- [x] .env template provided
+- [x] .env setup documented (create locally)
 - [x] docker-compose.yml committed
 - [x] Deployment documentation committed
 

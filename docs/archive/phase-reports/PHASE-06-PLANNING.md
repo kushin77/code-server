@@ -29,7 +29,8 @@ Following Phase 5 infrastructure deployment, Phase 6 focuses on:
 
 **Tasks**:
 
-#### 6.1.1 Create Production .env Template
+#### 6.1.1 Create Production .env File (Local Only)
+Note: Create this file locally and do not commit it to git.
 ```
 # Database Configuration
 DATABASE_URL=postgresql://postgres:password@code-server-postgres:5432/code_server

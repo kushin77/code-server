@@ -34,10 +34,10 @@
    - OAuth2 datasource configuration
    - Security policies configured
 
-✅ .env Template
+✅ .env setup instructions
+   - Create .env locally (do not commit)
    - OAuth credentials (Google)
-   - Database configuration
-   - Instance settings
+   - Database configuration and instance settings
 ```
 
 ### 2. Deployment Automation (Ready to Execute)
@@ -330,7 +330,7 @@ curl -k https://kushnir.cloud/api/hermes/health
 - 1x Caddyfile
 - 1x docker-compose.enterprise.yml
 - 1x Appsmith dashboard JSON
-- 1x .env template
+- 1x .env setup instructions (create locally)
 
 ### Automation
 - 1x deploy-production.sh (executable)

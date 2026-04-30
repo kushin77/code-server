@@ -251,13 +251,24 @@ resource "docker_container" "keepalived_init" {
       state="BACKUP"
       priority="90"
     fi
+    # Discover Caddy's bridge IP and store it for the keepalived health check script.
+    # The keepalived container uses BusyBox nc (no -U) and no curl/socat, so the IP
+    # is written once here (Alpine curl supports --unix-socket) and read at check time.
+    apk add --no-cache curl >/dev/null 2>&1 || true
+    curl -s --unix-socket /var/run/docker.sock \
+      'http://localhost/containers/code-server-caddy/json' 2>/dev/null \
+      | grep -o '"IPAddress":"[0-9][0-9.]*"' | head -1 | cut -d'"' -f4 \
+      > /etc/keepalived/caddy.ip || true
     cat > /etc/keepalived/check-caddy-health.sh << 'SCRIPT'
 #!/bin/sh
-if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^code-server-caddy$'; then
-  exit 1
-fi
-if ! wget -q --timeout=2 -O - http://127.0.0.1/health 2>/dev/null | grep -q OK; then
-  exit 1
+# Read Caddy's bridge IP stored at init time (avoids needing docker CLI in keepalived)
+caddy_ip=$(cat /etc/keepalived/caddy.ip 2>/dev/null | tr -d '[:space:]')
+[ -z "$caddy_ip" ] && exit 1
+# Caddy is healthy if it responds with any HTTP status (200, 308, etc.)
+http_code=$(wget -q --server-response --timeout=3 -O /dev/null \
+  "http://$caddy_ip/" 2>&1 | awk '/HTTP\//{print $2}' | tail -1)
+[ -n "$http_code" ] && exit 0
+exit 1
 fi
 exit 0
 SCRIPT
@@ -309,12 +320,18 @@ EOF
   ]
 
   volumes {
-    volume_name = docker_volume.keepalived_config.name
+    volume_name    = docker_volume.keepalived_config.name
     container_path = "/etc/keepalived"
   }
 
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
+    read_only      = true
+  }
+
   lifecycle {
-    ignore_changes = [image, network_mode, command]
+    ignore_changes = [image, network_mode]
   }
 }
 

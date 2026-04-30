@@ -22,9 +22,9 @@ All autonomous preparation for Phases 1-2 is complete. The infrastructure, docum
 
 **Gateway Check**: 
 ```bash
-bash scripts/ops/full-deployment-test.sh --dry-run 2>&1 | tail -1
+PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run 2>&1 | tail -1
 ```
-Expected: `Test Suite Result: PASS/PASS/PASS/PASS/PASS`
+Expected: `Test Suite Result: PASS/PASS/PASS/PASS/PASS/PASS`
 
 ---
 
@@ -190,7 +190,7 @@ bash scripts/ops/validate-sla-metrics.sh
 | Check | Result | Go/No-Go |
 |-------|--------|----------|
 | All 68 services UP | ✅ | **GO** |
-| Release gate PASS/PASS/PASS/PASS/PASS | ✅ | **GO** |
+| Release gate PASS/PASS/PASS/PASS/PASS/PASS | ✅ | **GO** |
 | Database replication sync'd | ✅ | **GO** |
 | OpenSearch cluster GREEN | ✅ | **GO** |
 | Failover time <30s | ✅ | **GO** |
@@ -210,9 +210,9 @@ bash scripts/phase1/test-failover-procedures.sh
 bash scripts/phase2/validate-slog-stack.sh
 
 # Stage 3: Release gate verification
-bash scripts/ops/full-deployment-test.sh
+PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run
 
-# Expected result: PASS/PASS/PASS/PASS/PASS
+# Expected result: PASS/PASS/PASS/PASS/PASS/PASS
 ```
 
 ---

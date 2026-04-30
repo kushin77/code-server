@@ -19,7 +19,7 @@ Real-time tracking dashboard for all 16 phases of the Elite Enterprise Engineeri
 - [ ] DNS failover configured ✅
 - [ ] Health monitoring operational ✅
 - [ ] Verify 99.99% uptime SLA
-- [ ] **Release Gate**: `bash scripts/ops/full-deployment-test.sh --dry-run` → PASS/PASS/PASS/PASS/PASS
+- [ ] **Release Gate**: `PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run` → PASS/PASS/PASS/PASS/PASS/PASS
 
 **Actual Execution**:
 ```bash
@@ -40,7 +40,7 @@ bash scripts/phase1/test-failover-procedures.sh
 - [ ] Prometheus metrics collection active
 - [ ] Grafana dashboards provisioned ✅
 - [ ] Alert rules defined
-- [ ] **Release Gate**: `bash scripts/ops/full-deployment-test.sh --dry-run` → PASS/PASS/PASS/PASS/PASS
+- [ ] **Release Gate**: `PRIMARY_HOST=${PRIMARY_HOST} REPLICA_HOST=${REPLICA_HOST} bash scripts/ops/full-deployment-test.sh --dry-run` → PASS/PASS/PASS/PASS/PASS/PASS
 
 **Actual Execution**:
 ```bash

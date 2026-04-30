@@ -68,6 +68,7 @@ services:
         puma[''worker_processes''] = 2
 
         '
+      GITLAB_SKIP_UNMIGRATED_DATA_CHECK: "true"
     volumes:
     - gitlab_config:/etc/gitlab
     - gitlab_logs:/var/log/gitlab

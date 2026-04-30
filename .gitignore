@@ -43,7 +43,6 @@ logs/
 .env.*
 !.env.example
 !.env.infrastructure
-!.env.template
 !env.yaml.example
 *.pem
 *.key

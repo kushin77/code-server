@@ -6,15 +6,6 @@
 
 set -e
 
-# Error handling (required by pre-commit hooks)
-trap 'log_error "Script failed at line $LINENO"; exit 1' ERR 2>/dev/null || true
-trap 'cleanup' EXIT
-
-cleanup() {
-    # Clean up temporary files if any
-    rm -f /tmp/appsmith-oauth-check.* 2>/dev/null || true
-}
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -53,6 +44,14 @@ log_section() {
     echo -e "${BLUE}$1${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
+
+cleanup() {
+    rm -f /tmp/appsmith-oauth-check.* 2>/dev/null || true
+}
+
+# Error handling (required by pre-commit hooks)
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Performing cleanup..."; cleanup' EXIT
 
 # Main verification
 

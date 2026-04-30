@@ -290,3 +290,38 @@ variable "oauth2_client_secret" {
   default     = ""
   description = "OAuth2 client secret (set via TF_VAR_oauth2_client_secret)"
 }
+
+# ── App-tier services ─────────────────────────────────────────────────────────
+variable "code_server_password" {
+  type        = string
+  sensitive   = true
+  default     = "password123"
+  description = "Password for the code-server IDE web UI"
+}
+
+variable "minio_root_user" {
+  type        = string
+  default     = "minioadmin"
+  description = "MinIO root/admin username"
+}
+
+variable "minio_root_password" {
+  type        = string
+  sensitive   = true
+  default     = "minioadmin"
+  description = "MinIO root/admin password"
+}
+
+variable "vault_token" {
+  type        = string
+  sensitive   = true
+  default     = "devtoken"
+  description = "Vault dev root token ID"
+}
+
+variable "gitlab_runner_token" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "GitLab runner registration token"
+}

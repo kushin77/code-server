@@ -68,3 +68,44 @@ resource "docker_volume" "tempo_data" {
   name   = "tempo_data"
   driver = "local"
 }
+
+# ── App-tier volumes ──────────────────────────────────────────────────────────
+resource "docker_volume" "code_server_data" {
+  name   = "code_server_data"
+  driver = "local"
+}
+
+resource "docker_volume" "gitlab_config" {
+  name   = "gitlab_config"
+  driver = "local"
+}
+
+resource "docker_volume" "gitlab_logs" {
+  name   = "gitlab_logs"
+  driver = "local"
+}
+
+resource "docker_volume" "gitlab_data" {
+  name   = "gitlab_data"
+  driver = "local"
+}
+
+resource "docker_volume" "gitlab_runner_data" {
+  name   = "gitlab_runner_data"
+  driver = "local"
+}
+
+resource "docker_volume" "appsmith_stacks" {
+  name   = "appsmith_stacks"
+  driver = "local"
+}
+
+resource "docker_volume" "minio_data" {
+  name   = "minio_data"
+  driver = "local"
+}
+
+resource "docker_volume" "nexus_data" {
+  name   = "nexus_data"
+  driver = "local"
+}

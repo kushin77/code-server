@@ -30,6 +30,15 @@ locals {
     ollama         = "ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a"
     otel_collector = "otel/opentelemetry-collector-contrib:0.96.0@sha256:ef20ffeb9ae06d75f94bd031cde7713a1d1bcad20e5ebc0f7dc6c2ee52b8ae4a"
     tempo          = "grafana/tempo:2.4.1@sha256:cf1ed1d5cc671c80d389f7c59cfa491a9e5b99d28a42fccb9d6cbbef0da378e4"
+
+    # ── App-tier services ────────────────────────────────────────────────────
+    code_server_ide = "codercom/code-server:4.19.0"
+    gitlab          = "gitlab/gitlab-ce:15.11.11-ce.0"
+    gitlab_runner   = "gitlab/gitlab-runner:latest"
+    minio           = "minio/minio:latest"
+    appsmith        = "appsmith/appsmith-ce:latest"
+    vault           = "hashicorp/vault:1.13.0"
+    nexus           = "sonatype/nexus3:3.68.1"
   }
 
   # ── Custom-built app image references (locally built on host) ────────────────
@@ -45,6 +54,8 @@ locals {
     execution_scheduler  = "code-server-execution-scheduler:${var.app_image_tag}"
     env_provisioner      = "code-server-env-provisioner:${var.app_image_tag}"
     edge_agent           = "code-server-edge-agent:${var.app_image_tag}"
+    testing              = "code-server-enterprise-testing:${var.app_image_tag}"
+    control_plane        = "code-server-control-plane:${var.app_image_tag}"
   }
 
   # ── Standard logging config ───────────────────────────────────────────────────

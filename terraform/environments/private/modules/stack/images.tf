@@ -95,6 +95,42 @@ resource "docker_image" "ollama" {
   keep_locally = true
 }
 
+# ── App-tier services ─────────────────────────────────────────────────────────
+resource "docker_image" "code_server_ide" {
+  name         = local.img.code_server_ide
+  keep_locally = true
+}
+
+resource "docker_image" "gitlab" {
+  name         = local.img.gitlab
+  keep_locally = true
+}
+
+resource "docker_image" "gitlab_runner" {
+  name         = local.img.gitlab_runner
+  keep_locally = true
+}
+
+resource "docker_image" "minio" {
+  name         = local.img.minio
+  keep_locally = true
+}
+
+resource "docker_image" "appsmith" {
+  name         = local.img.appsmith
+  keep_locally = true
+}
+
+resource "docker_image" "vault" {
+  name         = local.img.vault
+  keep_locally = true
+}
+
+resource "docker_image" "nexus" {
+  name         = local.img.nexus
+  keep_locally = true
+}
+
 # ── Custom app images ─────────────────────────────────────────────────────────
 # Custom app images are built directly on each host from source (apps/ tree).
 # No docker_image resources needed — containers reference local name:tag directly.

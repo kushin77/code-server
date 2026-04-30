@@ -168,3 +168,33 @@ variable "custom_webhook_url" {
   type    = string
   default = ""
 }
+
+# ── App-tier services ─────────────────────────────────────────────────────────
+variable "code_server_password" {
+  type      = string
+  sensitive = true
+  default   = "password123"
+}
+
+variable "minio_root_user" {
+  type    = string
+  default = "minioadmin"
+}
+
+variable "minio_root_password" {
+  type      = string
+  sensitive = true
+  default   = "minioadmin"
+}
+
+variable "vault_token" {
+  type      = string
+  sensitive = true
+  default   = "devtoken"
+}
+
+variable "gitlab_runner_token" {
+  type      = string
+  sensitive = true
+  default   = ""
+}

@@ -155,6 +155,13 @@ module "primary" {
 
   # Observability
   prometheus_retention_days = var.prometheus_retention_days
+
+  # App-tier
+  code_server_password = var.code_server_password
+  minio_root_user      = var.minio_root_user
+  minio_root_password  = var.minio_root_password
+  vault_token          = var.vault_token
+  gitlab_runner_token  = var.gitlab_runner_token
 }
 
 # ============================================================================
@@ -197,4 +204,11 @@ module "replica" {
 
   # Observability
   prometheus_retention_days = var.prometheus_retention_days
+
+  # App-tier
+  code_server_password = var.code_server_password
+  minio_root_user      = var.minio_root_user
+  minio_root_password  = var.minio_root_password
+  vault_token          = var.vault_token
+  gitlab_runner_token  = var.gitlab_runner_token
 }

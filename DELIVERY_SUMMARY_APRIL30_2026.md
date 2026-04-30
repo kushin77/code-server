@@ -7,6 +7,29 @@
 
 ---
 
+## April 30 Continuation Addendum
+
+### Stabilization and Guardrails Published
+- Added GitLab compose parity guard script: `scripts/ops/check-gitlab-compose-parity.sh`
+- Integrated parity verification as Phase 2b in `scripts/ops/full-deployment-test.sh`
+- Finalized canonical GitLab settings in `docker-compose.enterprise.yml`:
+   - `db_database` now uses `${DB_NAME:-gitlabdb}`
+   - removed legacy omnibus Redis overrides (`redis_host`, `redis_database`)
+   - set `puma['worker_processes'] = 0`
+   - increased GitLab memory headroom (4G limit / 2G reservation)
+
+### Validation Snapshot
+- Host-aware deployment dry-run: `PASS/PASS/PASS/PASS/PASS/PASS`
+- Terraform global reconciliation: `No changes. Your infrastructure matches the configuration.`
+
+### Latest Published Commits
+- `aa2e7e30` - bypass GitLab legacy storage check to stop restart loops
+- `b4088f3a` - add GitLab compose parity gate and update deployment handoff docs
+- `d0de2b1a` - restore canonical omnibus DB and Puma settings
+- `63282e0b` - record April 30 parity-guard continuation status
+
+---
+
 ## Key Metrics
 
 | Metric | Target | Achieved | Status |
@@ -240,7 +263,7 @@ terraform -chdir=terraform/environments/private apply -target=module.primary -ta
 
 ## Project Statistics
 
-- **Commits**: 784 (all phases complete)
+- **Commits**: 2821 (repository total)
 - **Services**: 28 deployed (27 synchronized)
 - **Infrastructure Resources**: 146 (Terraform-managed)
 - **Networks**: 3 bridge networks

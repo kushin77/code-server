@@ -5,7 +5,11 @@
 # Completed: April 30, 2026 | Status: READY FOR PRODUCTION DEPLOYMENT
 ################################################################################
 
-echo "╔════════════════════════════════════════════════════════════╗"
+set -e
+
+# Error handling
+trap 'echo "❌ ERROR: Script failed at line $LINENO"; exit 1' ERR
+trap 'echo "ℹ️  INFO: Cleanup complete"; rm -f /tmp/deployment_*.tmp 2>/dev/null || true' EXIT
 echo "║         PHASE 5 DEPLOYMENT EXECUTION SUMMARY              ║"
 echo "║         All Tasks Completed - Production Ready            ║"
 echo "╚════════════════════════════════════════════════════════════╝"

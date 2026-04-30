@@ -1,0 +1,40 @@
+═══════════════════════════════════════════════════════════════════════════════
+Deployment Validation Report
+Generated: Thu Apr 30 01:54:11 PM EDT 2026
+═══════════════════════════════════════════════════════════════════════════════
+
+[✗] Container: appsmith (Containers)
+    Details: Not running
+[✗] Container: hermes-integration (Containers)
+    Details: Not running
+[✗] Container: code-server-ide (Containers)
+    Details: Not running
+[✗] Container: code-server-postgres (Containers)
+    Details: Not running
+[✗] Container: code-server-redis (Containers)
+    Details: Not running
+[✗] API Health (API)
+    Details: Health endpoint not responding
+[✗] API Metrics (API)
+    Details: Metrics endpoint issue
+[✗] Database Connection (Database)
+    Details: PostgreSQL not responsive
+[✓] TLS Version (Security)
+    Details: TLSv1.3 enabled
+[✓] SSL Certificate (Security)
+    Details: Valid certificate
+[✗] HSTS Header (Security)
+    Details: HSTS not found
+[✗] DNS Resolution (Network)
+    Details: DNS resolution issue
+[✓] Disk Space (Resources)
+    Details: 8% used
+
+═══════════════════════════════════════════════════════════════════════════════
+Summary
+═══════════════════════════════════════════════════════════════════════════════
+Total Checks:  13
+Passed:        3
+Failed:        10
+Pass Rate:     23%
+═══════════════════════════════════════════════════════════════════════════════

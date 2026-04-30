@@ -12,6 +12,36 @@ Full end-to-end infrastructure deployment completed across dual-node cluster. **
 
 ---
 
+## April 30 Continuation Update (Parity Guard + GitLab Stability)
+
+### Changes Completed
+- Added a cross-host GitLab compose parity safeguard: `scripts/ops/check-gitlab-compose-parity.sh`
+- Integrated parity verification as **Phase 2b** in `scripts/ops/full-deployment-test.sh`
+- Updated operations and handoff documentation with host-aware invocation:
+   - `PRIMARY_HOST=<primary> REPLICA_HOST=<replica> bash scripts/ops/full-deployment-test.sh --dry-run`
+- Finalized canonical GitLab compose settings in `docker-compose.enterprise.yml`:
+   - `db_database` uses `${DB_NAME:-gitlabdb}`
+   - removed legacy `redis_host` / `redis_database` overrides from omnibus config
+   - set `puma['worker_processes'] = 0`
+   - increased GitLab memory headroom to `limits: 4G`, `reservations: 2G`
+
+### Verification Results
+- Full deployment dry-run (host-aware) passed with parity enabled:
+   - `PASS/PASS/PASS/PASS/PASS/PASS`
+- Terraform reconciliation gate confirms no drift:
+   - `No changes. Your infrastructure matches the configuration.`
+- Branch publication completed and synced to origin.
+
+### Published Commits
+- `aa2e7e30` - Bypass GitLab legacy storage check to stop restart loops
+- `b4088f3a` - add GitLab compose parity gate and update deployment handoff docs
+- `d0de2b1a` - restore canonical GitLab omnibus DB and Puma settings
+
+### Operational Outcome
+Platform remains production-ready with stronger anti-drift controls for GitLab rollout safety and updated runbooks reflecting the enforced parity gate.
+
+---
+
 ## Infrastructure Overview
 
 ### Cluster Topology

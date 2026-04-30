@@ -355,6 +355,47 @@ services:
         reservations:
           cpus: '0.25'
           memory: 512M
+
+  hermes-integration:
+    build:
+      context: ./apps/hermes-integration
+      dockerfile: Dockerfile
+    image: hermes-integration:latest
+    container_name: hermes-integration
+    ports:
+      - "8000:8000"
+    environment:
+      - HERMES_REPO_PATH=/mnt/hermes-agent
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /home/akushnir/hermes-agent:/mnt/hermes-agent:ro
+      - /home/akushnir/code-server/apps/hermes-integration:/app
+    networks:
+      - services
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8000/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+
 volumes:
   code_server_data:
     driver: local

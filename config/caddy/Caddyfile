@@ -1,20 +1,29 @@
-:80 {
-  handle /health {
-    respond OK 200
-  }
-  handle /api/execution/* {
-    uri strip_prefix /api/execution
-    reverse_proxy execution-scheduler:8080
-  }
-  handle /api/opa/* {
-    uri strip_prefix /api/opa
-    reverse_proxy opa:8181
-  }
-  handle /api/auth/* {
-    uri strip_prefix /api/auth
-    reverse_proxy oauth2-proxy:4180
-  }
-  handle / {
-    respond "ElevatedIQ Cluster Gateway" 200
-  }
+{
+    log {
+        format json
+        output stdout
+    }
+    storage file_system /data
+}
+
+kushnir.cloud {
+    tls /etc/caddy/kushnir.cloud.crt /etc/caddy/kushnir.cloud.key
+    
+    # Security headers for HTTPS
+    header / {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self' *"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    
+    reverse_proxy http://appsmith:80 {
+        header_up X-Forwarded-For {http.request.remote}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host kushnir.cloud
+        header_up X-Forwarded-Port 443
+    }
 }

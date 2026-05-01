@@ -18,6 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import DEBUG, ENVIRONMENT, validate_config
 from log import get_logger, log_event
+from hermes_registration import hermes_client
+from hermes_tracing import setup_tracing, instrument_app
 
 log = get_logger(__name__)
 
@@ -30,7 +32,10 @@ def create_app() -> FastAPI:
     """
     # ── Validate configuration ────────────────────────────────────────────────
     validate_config()
-    
+
+    # ── Initialise distributed tracing (Hermes + Tempo) ──────────────────────
+    setup_tracing(service_name="agent-runtime")
+
     # ── Create app ────────────────────────────────────────────────────────────
     app = FastAPI(
         title="Agent Runtime",
@@ -58,20 +63,26 @@ def create_app() -> FastAPI:
             environment=ENVIRONMENT,
             debug=DEBUG,
         )
-    
+        # Register with Hermes orchestrator (non-blocking — failure is tolerated)
+        await hermes_client.register()
+
     # ── Shutdown event ───────────────────────────────────────────────────────
     @app.on_event("shutdown")
     async def shutdown_event():
+        await hermes_client.deregister()
         log_event(log, "agent_runtime_shutdown")
     
     # ── Register blueprints / routers ────────────────────────────────────────
     # Health checks
     from health import router as health_router
     app.include_router(health_router, prefix="/health", tags=["health"])
-    
+
     # Agent execution (to be imported once refactored)
     # from execution import router as execution_router
     # app.include_router(execution_router, prefix="/api/agents", tags=["execution"])
-    
+
+    # ── Apply OTEL FastAPI instrumentation after routers are mounted ──────────
+    instrument_app(app)
+
     log_event(log, "agent_runtime_app_created")
     return app

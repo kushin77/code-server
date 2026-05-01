@@ -38,6 +38,11 @@ REPUTATION_ENGINE_URL: str = os.getenv("REPUTATION_ENGINE_URL", "http://reputati
 PAPERCLIP_URL: str = os.getenv("PAPERCLIP_URL", "http://paperclip:8010")
 SCHEDULER_URL: str = os.getenv("SCHEDULER_URL", "http://execution-scheduler:8030")
 
+# ── Hermes Orchestrator ───────────────────────────────────────────────────────
+HERMES_URL: str = os.getenv("HERMES_URL", "")                   # empty = disabled
+HERMES_HEARTBEAT_INTERVAL: int = int(os.getenv("HERMES_HEARTBEAT_INTERVAL", "30"))
+HERMES_REGISTRATION_RETRIES: int = int(os.getenv("HERMES_REGISTRATION_RETRIES", "3"))
+
 # ── Timeouts ──────────────────────────────────────────────────────────────────
 REQUEST_TIMEOUT_SECONDS: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "30"))
 APPROVAL_TIMEOUT_ESCALATE_SECONDS: int = int(os.getenv("APPROVAL_TIMEOUT_ESCALATE", "300"))

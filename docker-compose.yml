@@ -785,6 +785,11 @@ services:
       - LOG_LEVEL=INFO
       - OPA_URL=${OPA_URL}
       - REPUTATION_ENGINE_URL=${REPUTATION_ENGINE_URL}
+      - HERMES_URL=${HERMES_URL:-}
+      - HERMES_HEARTBEAT_INTERVAL=${HERMES_HEARTBEAT_INTERVAL:-30}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_SERVICE_NAME=agent-runtime
     depends_on:
       opa:
         condition: service_healthy

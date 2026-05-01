@@ -14,6 +14,7 @@ from datetime import datetime
 from log import get_logger
 import config as _svc_config
 from apps.shared.monitoring import ApplicationMetrics, MonitoringConfig, track_metrics
+from apps.shared.tracing import TracingConfig, setup_tracing, instrument_app, trace_operation
 
 logger = get_logger(__name__)
 
@@ -26,6 +27,18 @@ memory_engine_config = MonitoringConfig(
     environment=os.getenv("ENVIRONMENT", "development")
 )
 metrics = ApplicationMetrics(memory_engine_config)
+
+# Initialize distributed tracing
+memory_engine_tracing = setup_tracing(
+    TracingConfig(
+        service_name="memory-engine",
+        app_version=os.getenv("APP_VERSION", "1.0"),
+        environment=os.getenv("ENVIRONMENT", "development"),
+        enabled=os.getenv("TRACING_ENABLED", "true").lower() == "true",
+    )
+)
+
+instrument_app(app, memory_engine_tracing)
 
 class SearchResult(BaseModel):
     """Search result with metadata"""
@@ -105,17 +118,20 @@ def _perform_semantic_search(
 
 @app.get("/health")
 @track_metrics(metrics, method="GET", endpoint="/health")
+@trace_operation(memory_engine_tracing, "memory-engine.health_check")
 async def health():
     """Health check endpoint with structured response"""
     return await metrics.perform_health_check()
 
 @app.get("/metrics")
+@trace_operation(memory_engine_tracing, "memory-engine.metrics")
 async def prometheus_metrics():
     """Prometheus metrics exposition endpoint"""
     return metrics.get_metrics()
 
 @app.get("/memory/search", response_model=SearchResponse)
 @track_metrics(metrics, method="GET", endpoint="/memory/search")
+@trace_operation(memory_engine_tracing, "memory-engine.semantic_search")
 async def semantic_search(
     q: str = Query(..., description="Natural language search query"),
     collection: str = Query("incidents", description="Collection to search"),

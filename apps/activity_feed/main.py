@@ -15,6 +15,7 @@ import asyncio
 from consumer import ActivityFeedConsumer, ActivityEvent
 from log import get_logger
 from apps.shared.monitoring import ApplicationMetrics, MonitoringConfig, track_metrics
+from apps.shared.tracing import TracingConfig, setup_tracing, instrument_app, trace_operation
 
 logger = get_logger(__name__)
 
@@ -26,7 +27,18 @@ activity_feed_config = MonitoringConfig(
 )
 metrics = ApplicationMetrics(activity_feed_config)
 
+# Initialize distributed tracing
+activity_feed_tracing = setup_tracing(
+    TracingConfig(
+        service_name="activity-feed",
+        app_version=os.getenv("APP_VERSION", "1.0"),
+        environment=os.getenv("ENVIRONMENT", "development"),
+        enabled=os.getenv("TRACING_ENABLED", "true").lower() == "true",
+    )
+)
+
 app = FastAPI(title="Activity Feed", version="1.0")
+instrument_app(app, activity_feed_tracing)
 consumer = ActivityFeedConsumer()
 
 class ActivityResponse(BaseModel):
@@ -61,17 +73,20 @@ class FilterRequest(BaseModel):
 
 @app.get("/health")
 @track_metrics(metrics, method="GET", endpoint="/health")
+@trace_operation(activity_feed_tracing, "activity-feed.health_check")
 async def health():
     """Health check with structured response"""
     return await metrics.perform_health_check()
 
 @app.get("/metrics")
+@trace_operation(activity_feed_tracing, "activity-feed.metrics")
 async def prometheus_metrics():
     """Prometheus metrics exposition endpoint"""
     return metrics.get_metrics()
 
 @app.get("/api/activity", response_model=ActivityFeedResponse)
 @track_metrics(metrics, method="GET", endpoint="/api/activity")
+@trace_operation(activity_feed_tracing, "activity-feed.get_activity")
 async def get_activity(
     actor_id: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),

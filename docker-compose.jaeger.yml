@@ -1,0 +1,143 @@
+# Jaeger distributed tracing stack for Phase 10c integration
+# Part of observability infrastructure with Prometheus, Loki, AlertManager
+#
+# Services:
+# - jaeger-agent: Receives traces via UDP/gRPC (port 6831/6832)
+# - jaeger-collector: Aggregates traces, writes to backend
+# - jaeger-query: UI for trace visualization (port 16686)
+# - jaeger-elasticsearch: Trace storage backend
+#
+# Usage: docker-compose -f docker-compose.jaeger.yml -f docker-compose.yml up -d
+#
+# Environment configuration:
+#   JAEGER_AGENT_HOST: jaeger-agent (for app tracing exports)
+#   JAEGER_AGENT_PORT: 6831 (UDP, compact thrift) or 6832 (UDP, binary thrift)
+#   JAEGER_COLLECTOR_HOST: jaeger-collector (for direct collector exports)
+#   JAEGER_COLLECTOR_PORT: 14268 (gRPC)
+#
+# Reference: https://www.jaegertracing.io/docs/
+
+version: "3.8"
+
+services:
+  jaeger-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: code-server-jaeger-elasticsearch
+    environment:
+      - cluster.name=jaeger-cluster
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - jaeger-elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - code-server-observability
+    healthcheck:
+      test: curl -f http://localhost:9200/_cluster/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      com.example.service: "observability"
+      com.example.component: "trace-storage"
+
+  jaeger-agent:
+    image: jaegertracing/jaeger-agent:1.35
+    container_name: code-server-jaeger-agent
+    ports:
+      - "5775:5775/udp"     # Zipkin compact thrift
+      - "6831:6831/udp"     # Jaeger compact thrift
+      - "6832:6832/udp"     # Jaeger binary thrift
+      - "5778:5778"         # HTTP json compact
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=jaeger-collector:14268
+      - REPORTER_LOG_SPANS=true
+    command:
+      - "--reporter.logspans=true"
+      - "--reporter.grpc.host-port=jaeger-collector:14250"
+    networks:
+      - code-server-observability
+    depends_on:
+      - jaeger-collector
+    healthcheck:
+      test: curl -f http://localhost:5778/_/healthz || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      com.example.service: "observability"
+      com.example.component: "trace-collector-agent"
+
+  jaeger-collector:
+    image: jaegertracing/jaeger-collector:1.35
+    container_name: code-server-jaeger-collector
+    ports:
+      - "14268:14268"       # Jaeger collector HTTP
+      - "14250:14250"       # Jaeger collector gRPC
+      - "9411:9411"         # Zipkin compatible endpoint
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: http://jaeger-elasticsearch:9200
+      COLLECTOR_OTLP_ENABLED: "true"
+    command:
+      - "--span-storage.type=elasticsearch"
+      - "--es.server-urls=http://jaeger-elasticsearch:9200"
+      - "--es.max-span-age=72h"
+      - "--collector.otlp.enabled=true"
+    networks:
+      - code-server-observability
+    depends_on:
+      jaeger-elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:14268/api/traces || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      com.example.service: "observability"
+      com.example.component: "trace-aggregator"
+
+  jaeger-query:
+    image: jaegertracing/jaeger-query:1.35
+    container_name: code-server-jaeger-query
+    ports:
+      - "16686:16686"       # Jaeger UI
+      - "16687:16687"       # Admin port
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: http://jaeger-elasticsearch:9200
+    command:
+      - "--span-storage.type=elasticsearch"
+      - "--es.server-urls=http://jaeger-elasticsearch:9200"
+      - "--query.ui-config=/etc/jaeger/ui-config.json"
+    volumes:
+      - ./config/jaeger/ui-config.json:/etc/jaeger/ui-config.json:ro
+    networks:
+      - code-server-observability
+    depends_on:
+      jaeger-elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:16687/status || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      com.example.service: "observability"
+      com.example.component: "trace-visualization"
+
+networks:
+  code-server-observability:
+    external: true
+    name: code-server-observability
+
+volumes:
+  jaeger-elasticsearch-data:
+    driver: local
+    labels:
+      com.example.service: "observability"
+      com.example.component: "trace-storage-volume"

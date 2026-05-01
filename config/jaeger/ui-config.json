@@ -1,0 +1,45 @@
+{
+  "menu": [
+    {
+      "label": "About Jaeger",
+      "items": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/jaegertracing/jaeger"
+        },
+        {
+          "label": "Documentation",
+          "url": "https://www.jaegertracing.io/docs/"
+        }
+      ]
+    }
+  ],
+  "maxLookback": "72h",
+  "refreshInterval": 10000,
+  "defaultLookback": "1h",
+  "showArchiveButton": true,
+  "archiveEnabled": false,
+  "logLevel": "info",
+  "tracking": {
+    "gaID": "",
+    "trackErrors": true,
+    "customWebAnalytics": ""
+  },
+  "dependencies": {
+    "dagMaxNumServices": 200,
+    "polling": {
+      "interval": 5000
+    },
+    "menuEnabled": true
+  },
+  "search": {
+    "maxLookback": "72h",
+    "maxResults": 20,
+    "defaultMinDuration": "",
+    "defaultMaxDuration": "",
+    "maxDuration": "0s"
+  },
+  "servicePerformance": {
+    "menuEnabled": true
+  }
+}

@@ -159,6 +159,7 @@ module "primary" {
 
   host_role        = "primary"
   remote_repo_path = var.primary_repo_path
+  deployment_mode  = var.deployment_mode
 
   # Domain
   apex_domain = var.apex_domain
@@ -208,6 +209,7 @@ module "replica" {
 
   host_role        = "replica"
   remote_repo_path = var.replica_repo_path
+  deployment_mode  = var.deployment_mode
 
   # Domain
   apex_domain = var.apex_domain

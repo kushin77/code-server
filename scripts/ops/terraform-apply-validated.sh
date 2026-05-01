@@ -21,12 +21,16 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/_common/init.sh"
 
+# Load the canonical deployment SSOT so validation has the required vars and helper.
+source "${SCRIPT_DIR}/_common/_base-config.env"
+
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
 
 readonly TERRAFORM_DIR="${REPO_ROOT}/terraform/environments/private"
 readonly MODE="${1:-plan}"  # plan or apply
+readonly TERRAFORM_PARALLELISM="${TERRAFORM_PARALLELISM:-1}"
 
 # ==============================================================================
 # TERRAFORM CONFIGURATION
@@ -88,6 +92,7 @@ terraform_plan() {
   # Use consolidated variables from _common SSOT + environment-specific overrides
   terraform plan \
     -no-color \
+    -parallelism="${TERRAFORM_PARALLELISM}" \
     -var-file=../_common/terraform.tfvars \
     -var-file=terraform.tfvars \
     -out=tfplan
@@ -133,7 +138,7 @@ terraform_apply() {
     return 1
   fi
   
-  if ! terraform apply -no-color -auto-approve tfplan; then
+  if ! terraform apply -no-color -parallelism="${TERRAFORM_PARALLELISM}" -auto-approve tfplan; then
     log_error "Terraform apply failed"
     return 1
   fi

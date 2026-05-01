@@ -19,6 +19,17 @@ variable "remote_repo_path" {
   default     = "/home/akushnir/code-server"
 }
 
+variable "deployment_mode" {
+  type        = string
+  description = "Deployment mode used for resource tagging"
+  default     = "private"
+
+  validation {
+    condition     = contains(["private", "air-gapped", "federated"], var.deployment_mode)
+    error_message = "deployment_mode must be private, air-gapped, or federated"
+  }
+}
+
 variable "registry_url" {
   type        = string
   description = "Internal container registry for custom-built app images"

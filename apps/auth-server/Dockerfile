@@ -31,8 +31,8 @@ ENV PATH="${VENV}/bin:$PATH"
 # Copy requirements and install
 WORKDIR /build
 COPY requirements.txt ./
-RUN pip install --upgrade pip setuptools wheel \
-    && pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy application source
 COPY src/ ./src/

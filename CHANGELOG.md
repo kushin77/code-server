@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2026-05-01 (PHASE 35 — EVENT CORRELATION & FORENSICS)
+
+### Added — Phase 35: Event Correlation & Forensics Engine
+- **apps/security_ai/forensics_engine.py** (390+ lines): Correlate Phase 32 security incidents, Phase 34 resilience degradations, infrastructure anomalies, and audit logs for root cause analysis.
+- **Event correlation**: Multi-dimensional correlation engine using temporal proximity, shared resources, and pattern matching. Confidence scoring (0.0-1.0) per correlation dimension.
+- **Root cause analysis**: Topological sorting of causality graph to identify root events. Forensic timeline reconstruction: chronological event sequence, impact count, confidence score.
+- **Forensic traces**: Generate forensic reports per incident cluster (root cause → event chain → timeline → affected resources). Persistent storage in `artifacts/phase35/forensic_traces.json`.
+- **Forensic scoring**: Returns 0-15 pts bonus to Phase 31 compliance gate based on traces generated and correlation confidence.
+- **Ops orchestrator** (`scripts/ops/phase-35-forensics.sh`): 3 modes — analyze|summary|demo.
+- **Integration tests** (`scripts/ci/phase-35-integration-tests.sh`): 21/21 PASS across 6 groups (import, correlation, root cause, scoring, ops, regression).
+
+### Updated — `.gitlab-ci.yml`
+- `test:phase-security-suites` now runs 6 phase suites: Phase 30-35.
+- **Total security suite**: **144/144 integration tests PASSING** per pipeline.
+
+### Verified
+- Full deployment gate: `PASS/PASS/PASS/PASS/PASS/PASS` ✅
+- Phase 30: 24/24 tests ✅
+- Phase 31: 22/22 tests ✅
+- Phase 32: 27/27 tests ✅
+- Phase 33: 25/25 tests ✅
+- Phase 34: 22/22 tests ✅
+- Phase 35: 21/21 tests ✅
+- GitHub mirror synced: `0d4a2040` pushed to `github/release/v1.0.0-production` ✅
+
 ## [1.16.0] - 2026-05-01 (PHASE 34 — INFRASTRUCTURE RESILIENCE & AUTO-HEALING)
 
 ### Added — Phase 34: Infrastructure Resilience Engine

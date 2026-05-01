@@ -21,8 +21,14 @@ COPY scripts/edge-agent/monitor-edge-agent-health.sh ./scripts/
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
 
+# Non-root user
+RUN useradd -u 1007 -m -s /sbin/nologin edge-agent \
+    && chown -R edge-agent:edge-agent /app
+
 # Create logging directory
-RUN mkdir -p /var/log/edge-agent
+RUN mkdir -p /var/log/edge-agent && chown edge-agent:edge-agent /var/log/edge-agent
+
+USER edge-agent
 
 # Expose port for health checks
 EXPOSE 8081

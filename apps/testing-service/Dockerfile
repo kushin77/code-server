@@ -9,6 +9,12 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY apps/testing-service/ /app/
 
+# Non-root user
+RUN useradd -u 1009 -m -s /sbin/nologin testrunner \
+    && chown -R testrunner:testrunner /app
+
+USER testrunner
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:8888/health || exit 1
 

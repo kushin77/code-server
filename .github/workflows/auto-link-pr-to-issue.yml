@@ -1,0 +1,68 @@
+name: Auto-Link PR to Issue
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to process
+        required: true
+
+concurrency:
+  group: link-pr-issue-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_REPO: ${{ github.repository }}
+  PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+
+jobs:
+  auto-link:
+    name: Link PR to Related Issues
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
+        with:
+          fetch-depth: 0
+
+      - name: Set Up Environment
+        run: |
+          mkdir -p artifacts
+          echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
+
+      - name: Run Auto-Link Script
+        run: |
+          chmod +x scripts/automation/auto-link-pr-to-issue.sh
+          bash scripts/automation/auto-link-pr-to-issue.sh "${PR_NUMBER}"
+
+      - name: Report Status
+        if: always()
+        run: |
+          echo "## Auto-Link Execution" >> $GITHUB_STEP_SUMMARY
+          echo "PR: #${{ env.PR_NUMBER }}" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          if [ -d "artifacts/automation-logs" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Logs:" >> $GITHUB_STEP_SUMMARY
+            tail -20 artifacts/automation-logs/*.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          fi
+
+      - name: Upload Automation Logs
+        if: always()
+        uses: actions/upload-artifact@0b2256b2c1aaaf07d41658773d8e91fb221abb04
+        with:
+          name: auto-link-logs
+          path: artifacts/automation-logs/
+          retention-days: 7

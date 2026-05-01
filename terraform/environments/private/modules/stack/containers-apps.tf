@@ -1,6 +1,6 @@
 /**
  * @file modules/stack/containers-apps.tf
- * @description App-tier containers: IDE, GitLab, MinIO, Appsmith, Vault, Nexus,
+ * @description App-tier containers: IDE, GitLab, MinIO, Appsmith, Vault,
  *              and custom-built testing + control-plane services.
  *              All derived from docker-compose.enterprise.yml service definitions.
  */
@@ -36,7 +36,6 @@ resource "docker_container" "code_server_ide" {
     timeout      = "10s"
     retries      = 3
     start_period = "10s"
-  }
   }
 
   log_driver = "json-file"

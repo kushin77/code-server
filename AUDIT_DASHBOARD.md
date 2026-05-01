@@ -15,12 +15,12 @@ This dashboard summarizes the current infrastructure gap-analysis posture backed
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | **Overall Alignment** | 95% | 98%+ | ⏳ On Track |
-| **Total Resources** | 201 | 201 | ✅ Verified |
+| **Total Resources** | 195 | 195 | ✅ Verified |
 | **Service Containers** | 76/76 | 76/76 | ✅ Complete |
 | **Init Containers** | 26/26 | 26/26 | ✅ Complete |
 | **HA Status** | Active/Standby | Active/Standby | ✅ Verified |
 | **Resource Drift** | 0% | <1% | ✅ Healthy |
-| **Open Gaps** | 4 | 0 | ⏳ In Progress |
+| **Open Gaps** | 3 | 0 | ⏳ In Progress |
 | **Critical Issues** | 1 (Jaeger) | 0 | ⏳ May 8 target |
 
 ### Snapshot
@@ -28,14 +28,14 @@ This dashboard summarizes the current infrastructure gap-analysis posture backed
 | Metric | Value | Evidence |
 |--------|-------|----------|
 | Terraform-managed services | 76 | `terraform state list \| grep docker_container` |
-| Terraform-managed images | 26 | Full list in state |
-| Terraform-managed volumes | 18 | All persistent data stores |
+| Terraform-managed images | 46 | Full list in state |
+| Terraform-managed volumes | 40 | All persistent data stores |
 | Terraform-managed networks | 3 | ingress, services, database |
 | Open gap issues | 4 | #3142-3145 |
 | Enhancement issues | 2 | #3146 (Redpanda-Console, Minio) |
 | Task issues | 1 | #3147 (Tracking & Audit) |
 | Terraform-managed MinIO | ✅ Present | docker_container.minio (both hosts) |
-| Terraform-managed Nexus | ⚠️ Image only | docker_image.nexus (not deployed) [#3145] |
+| Terraform-managed Nexus | ✅ Removed | Cleanup completed in code and state [#3145] |
 | Terraform-managed Jaeger UI | ❌ Not found | Missing from 76 services [#3142] |
 | Terraform-managed Edge-Agent | ❌ Not found | Missing from AI/ML (5/8) [#3143] |
 
@@ -46,18 +46,16 @@ This dashboard summarizes the current infrastructure gap-analysis posture backed
 | [#3142](https://github.com/kushin77/code-server/issues/3142) | Deploy Jaeger UI | 🔴 High | ⏳ Not Started | TBD | May 8 | Low (2h) |
 | [#3143](https://github.com/kushin77/code-server/issues/3143) | Clarify Edge-Agent | 🟡 Medium | ⏳ Pending Decision | Product | May 15 | TBD |
 | [#3144](https://github.com/kushin77/code-server/issues/3144) | Document Utilities | 🟢 Low | ⏳ Design Phase | Arch | May 15 | Low (2h) |
-| [#3145](https://github.com/kushin77/code-server/issues/3145) | Cleanup Nexus | 🟢 Low | ⏳ Decision Needed | DevOps | May 8 | Low (30m) |
+| [#3145](https://github.com/kushin77/code-server/issues/3145) | Cleanup Nexus | 🟢 Low | ✅ Closed | DevOps | Done | Completed |
 | [#3146](https://github.com/kushin77/code-server/issues/3146) | Document Enhancements | 🔴 High | ⏳ Not Started | Docs | May 5 | Low (3h) |
 | [#3147](https://github.com/kushin77/code-server/issues/3147) | Audit Dashboard | 🔴 High | ✅ In Progress | Engineer | May 8 | Medium (5h) |
 
 ## 🚀 Implementation Roadmap
 
 ### Priority 1: This Week (May 1-7)
-- [ ] **May 3**: Decide on Nexus cleanup vs deployment [#3145]
 - [ ] **May 5**: Document Redpanda-Console & Minio [#3146]
 - [ ] **May 5**: Create drift detection script [#3147]
 - [ ] **May 8**: Deploy Jaeger UI if approved [#3142]
-- [ ] **May 8**: Execute Nexus cleanup if decided [#3145]
 
 ### Priority 2: Next Week (May 8-14)
 - [ ] **May 12**: Complete Jaeger UI deployment & testing [#3142]
@@ -153,14 +151,14 @@ This dashboard summarizes the current infrastructure gap-analysis posture backed
 ---
 
 ### [GAP-004] Nexus Cleanup
-- [ ] Nexus dependency verification (negative result expected)
-- [ ] Decision: Remove (recommended) or Deploy
-- [ ] If Remove: terraform state rm commands executed
-- [ ] If Remove: docker-compose files cleaned
-- [ ] If Remove: Terraform files cleaned
-- [ ] If Remove: terraform apply verified (201→199 resources)
-- [ ] If Remove: State is clean and stable
-- [ ] Verification complete
+- [x] Nexus dependency verification (negative result expected)
+- [x] Decision: Remove (recommended) or Deploy
+- [x] If Remove: terraform state rm commands executed
+- [x] If Remove: docker-compose files cleaned
+- [x] If Remove: Terraform files cleaned
+- [x] If Remove: terraform apply verified (201→195 resources)
+- [x] If Remove: State is clean and stable
+- [x] Verification complete
 
 **Timeline**: May 3-8, 2026  
 **Success Criteria**: Clean state with 199 resources

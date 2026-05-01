@@ -15,6 +15,20 @@
 | AlertManager | http://192.168.168.31:9093 | Web browser |
 | Loki Logs | http://192.168.168.31:3100 | Web browser |
 
+## GAP AUDIT
+
+| Resource | Status |
+|----------|--------|
+| Tracking register | [GAP_TRACKING.md](GAP_TRACKING.md) |
+| Audit dashboard | [AUDIT_DASHBOARD.md](AUDIT_DASHBOARD.md) |
+| Audit script | [scripts/ops/gap-analysis-audit.sh](scripts/ops/gap-analysis-audit.sh) |
+
+Run the audit script after deployment reviews:
+
+```bash
+bash scripts/ops/gap-analysis-audit.sh
+```
+
 ---
 
 ## HEALTH CHECK (30 SECONDS)

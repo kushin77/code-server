@@ -1,0 +1,51 @@
+name: Storage Hygiene
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ops/storage-hygiene-audit.sh'
+      - 'docs/operations/storage-hygiene-runbook.md'
+      - '.github/workflows/storage-hygiene.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ops/storage-hygiene-audit.sh'
+      - 'docs/operations/storage-hygiene-runbook.md'
+      - '.github/workflows/storage-hygiene.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Inventory or dry-run cleanup
+        required: true
+        default: inventory
+        type: choice
+        options:
+          - inventory
+          - dry-run
+
+jobs:
+  storage-hygiene:
+    name: Inventory and safe cleanup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
+
+      - name: Run storage hygiene audit
+        run: |
+          chmod +x scripts/ops/storage-hygiene-audit.sh
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            bash scripts/ops/storage-hygiene-audit.sh "${{ inputs.mode }}"
+          else
+            bash scripts/ops/storage-hygiene-audit.sh inventory
+          fi
+
+      - name: Summarize hygiene report
+        if: always()
+        run: |
+          echo "## Storage Hygiene" >> $GITHUB_STEP_SUMMARY
+          echo "Runbook: docs/operations/storage-hygiene-runbook.md" >> $GITHUB_STEP_SUMMARY
+          echo "Audit script: scripts/ops/storage-hygiene-audit.sh" >> $GITHUB_STEP_SUMMARY

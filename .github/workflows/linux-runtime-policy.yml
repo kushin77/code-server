@@ -1,0 +1,48 @@
+name: Linux Runtime Policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/**'
+      - 'terraform/**'
+      - 'apps/**'
+      - 'config/**'
+      - 'docker-compose.yml'
+      - 'docker-compose.*.yml'
+      - 'docs/security/linux-runtime-policy.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/**'
+      - 'terraform/**'
+      - 'apps/**'
+      - 'config/**'
+      - 'docker-compose.yml'
+      - 'docker-compose.*.yml'
+      - 'docs/security/linux-runtime-policy.md'
+  workflow_dispatch:
+
+jobs:
+  validate-linux-runtime-policy:
+    name: Validate Linux-only runtime surface
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
+
+      - name: Run Linux runtime policy validator
+        run: |
+          chmod +x scripts/security/linux-runtime-policy-validator.sh
+          bash scripts/security/linux-runtime-policy-validator.sh
+
+      - name: Summarize validation
+        if: always()
+        run: |
+          echo "## Linux Runtime Policy" >> $GITHUB_STEP_SUMMARY
+          echo "Validator: scripts/security/linux-runtime-policy-validator.sh" >> $GITHUB_STEP_SUMMARY
+          echo "Policy: docs/security/linux-runtime-policy.md" >> $GITHUB_STEP_SUMMARY

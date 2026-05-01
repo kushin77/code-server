@@ -1,0 +1,45 @@
+name: Policy-as-Code Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'policies/**'
+      - 'docs/governance/policy-as-code-catalog.md'
+      - '.github/workflows/policy-as-code.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'policies/**'
+      - 'docs/governance/policy-as-code-catalog.md'
+      - '.github/workflows/policy-as-code.yml'
+  workflow_dispatch:
+
+jobs:
+  opa-check:
+    name: Validate OPA policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@a5ac7e51b41094c153705408e0e3a0dd2b15a8fd
+
+      - name: Install OPA
+        run: |
+          curl -L -o /usr/local/bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
+          chmod +x /usr/local/bin/opa
+          opa version
+
+      - name: Validate policy syntax
+        run: |
+          opa check policies
+
+      - name: Run policy tests
+        run: |
+          opa test policies
+
+      - name: Summarize policy catalog
+        if: always()
+        run: |
+          echo "## Policy-as-Code Validation" >> $GITHUB_STEP_SUMMARY
+          echo "Catalog: docs/governance/policy-as-code-catalog.md" >> $GITHUB_STEP_SUMMARY
+          echo "Policy packages: core, infrastructure, identity, ai, reputation" >> $GITHUB_STEP_SUMMARY

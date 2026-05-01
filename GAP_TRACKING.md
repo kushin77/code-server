@@ -11,7 +11,7 @@ This register tracks the remaining blueprint-to-actual deltas surfaced by [GAP_A
 | GAP-001 | [#3142](https://github.com/kushin77/code-server/issues/3142) | Open | Jaeger UI is defined in [docker-compose.jaeger.yml](docker-compose.jaeger.yml) and documented in [README.md](README.md), but it is not yet present in Terraform state. |
 | GAP-002 | [#3143](https://github.com/kushin77/code-server/issues/3143) | Open | Edge-Agent is present in compose and workspace manifests, but no Terraform-managed deployment was found in the private state. |
 | GAP-003 | [#3144](https://github.com/kushin77/code-server/issues/3144) | Open | AI utility isolation remains a design/documentation question; the runtime is embedded in the current AI services. |
-| GAP-004 | [#3145](https://github.com/kushin77/code-server/issues/3145) | Open | Nexus image and volume exist in Terraform state, but no Nexus container is running. Decision remains deploy vs remove. |
+| GAP-004 | [#3145](https://github.com/kushin77/code-server/issues/3145) | Closed | Nexus cleanup completed: the Nexus image, container, and volume were removed from Terraform code and state. |
 
 ## Completed Enhancements
 

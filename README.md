@@ -154,6 +154,12 @@ See [GitHub Issues](https://github.com/kushin77/code-server/issues).
 - Repository structure and clean-tree policy: [docs/governance/elite-best-practices/structure/ELITE-FOLDER-STRUCTURE.md](docs/governance/elite-best-practices/structure/ELITE-FOLDER-STRUCTURE.md)
 - Redeploy preflight automation: [scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh](scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh)
 
+## Gap Analysis
+
+- Tracking register: [GAP_TRACKING.md](GAP_TRACKING.md)
+- Audit dashboard: [AUDIT_DASHBOARD.md](AUDIT_DASHBOARD.md)
+- Weekly audit command: [scripts/ops/gap-analysis-audit.sh](scripts/ops/gap-analysis-audit.sh)
+
 ## Monorepo Workspace
 
 - staged pnpm workspace plan: [docs/governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md](docs/governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md)

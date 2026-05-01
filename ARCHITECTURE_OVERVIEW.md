@@ -458,6 +458,10 @@ The platform includes a **6-phase automated validation** (scripts/ops/full-deplo
 | **Integration** | Service connectivity | ✅ 100% | All inter-service APIs |
 | **Performance** | Load simulation | ⏳ Planned | Capacity planning |
 
+### Gap Analysis
+
+For the current blueprint-to-actual delta register, see [GAP_TRACKING.md](GAP_TRACKING.md) and [AUDIT_DASHBOARD.md](AUDIT_DASHBOARD.md). The audit command lives at [scripts/ops/gap-analysis-audit.sh](scripts/ops/gap-analysis-audit.sh).
+
 ---
 
 ## Disaster Recovery

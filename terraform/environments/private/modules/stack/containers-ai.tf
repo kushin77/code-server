@@ -214,19 +214,24 @@ resource "docker_container" "agent_runtime" {
   depends_on = [
     docker_container.opa,
     docker_container.reputation_engine,
+    docker_container.paperclip,
+    docker_container.execution_scheduler,
   ]
 
   ports {
-    internal = 9005
-    external = 9005
+    internal = 8020
+    external = 8020
   }
 
   env = [
-    "AGENT_RUNTIME_PORT=9005",
+    "AGENT_RUNTIME_PORT=8020",
     "AGENT_RUNTIME_HOST=0.0.0.0",
+    "ENVIRONMENT=production",
     "LOG_LEVEL=INFO",
     "OPA_URL=${local.svc.opa_url}",
     "REPUTATION_ENGINE_URL=${local.svc.reputation_url}",
+    "PAPERCLIP_URL=${local.svc.paperclip_url}",
+    "SCHEDULER_URL=${local.svc.scheduler_url}",
   ]
 
   mounts {

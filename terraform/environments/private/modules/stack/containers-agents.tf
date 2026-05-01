@@ -25,8 +25,11 @@ resource "docker_container" "agent_code_reviewer" {
 
   env = [
     "AGENT_TYPE=code-reviewer",
+    "AGENT_RUNTIME_PORT=9000",
+    "AGENT_RUNTIME_HOST=0.0.0.0",
+    "ENVIRONMENT=production",
     "PAPERCLIP_URL=${local.svc.paperclip_url}",
-    "REPUTATION_URL=${local.svc.reputation_url}",
+    "REPUTATION_ENGINE_URL=${local.svc.reputation_url}",
     "SCHEDULER_URL=${local.svc.scheduler_url}",
     "OIDC_ISSUER=https://${var.auth_domain}",
     "LOG_LEVEL=INFO",
@@ -39,7 +42,7 @@ resource "docker_container" "agent_code_reviewer" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:9000/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -87,8 +90,11 @@ resource "docker_container" "agent_incident_responder" {
 
   env = [
     "AGENT_TYPE=incident-responder",
+    "AGENT_RUNTIME_PORT=9000",
+    "AGENT_RUNTIME_HOST=0.0.0.0",
+    "ENVIRONMENT=production",
     "PAPERCLIP_URL=${local.svc.paperclip_url}",
-    "REPUTATION_URL=${local.svc.reputation_url}",
+    "REPUTATION_ENGINE_URL=${local.svc.reputation_url}",
     "SCHEDULER_URL=${local.svc.scheduler_url}",
     "OIDC_ISSUER=https://${var.auth_domain}",
     "LOG_LEVEL=INFO",
@@ -101,7 +107,7 @@ resource "docker_container" "agent_incident_responder" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:9000/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -149,8 +155,11 @@ resource "docker_container" "agent_doc_writer" {
 
   env = [
     "AGENT_TYPE=doc-writer",
+    "AGENT_RUNTIME_PORT=9000",
+    "AGENT_RUNTIME_HOST=0.0.0.0",
+    "ENVIRONMENT=production",
     "PAPERCLIP_URL=${local.svc.paperclip_url}",
-    "REPUTATION_URL=${local.svc.reputation_url}",
+    "REPUTATION_ENGINE_URL=${local.svc.reputation_url}",
     "SCHEDULER_URL=${local.svc.scheduler_url}",
     "OIDC_ISSUER=https://${var.auth_domain}",
     "LOG_LEVEL=INFO",
@@ -163,7 +172,7 @@ resource "docker_container" "agent_doc_writer" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:9000/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3
@@ -211,8 +220,11 @@ resource "docker_container" "agent_test_generator" {
 
   env = [
     "AGENT_TYPE=test-generator",
+    "AGENT_RUNTIME_PORT=9000",
+    "AGENT_RUNTIME_HOST=0.0.0.0",
+    "ENVIRONMENT=production",
     "PAPERCLIP_URL=${local.svc.paperclip_url}",
-    "REPUTATION_URL=${local.svc.reputation_url}",
+    "REPUTATION_ENGINE_URL=${local.svc.reputation_url}",
     "SCHEDULER_URL=${local.svc.scheduler_url}",
     "OIDC_ISSUER=https://${var.auth_domain}",
     "LOG_LEVEL=INFO",
@@ -225,7 +237,7 @@ resource "docker_container" "agent_test_generator" {
   }
 
   healthcheck {
-    test         = ["CMD", "curl", "-f", "http://localhost:8020/health"]
+    test         = ["CMD", "curl", "-f", "http://localhost:9000/health"]
     interval     = "30s"
     timeout      = "10s"
     retries      = 3

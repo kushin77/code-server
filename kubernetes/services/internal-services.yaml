@@ -10,3 +10,23 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
+---
+# Hermes Integration — agent orchestration service
+apiVersion: v1
+kind: Service
+metadata:
+  name: hermes-integration
+  namespace: code-server
+  labels:
+    app: hermes-integration
+    tier: orchestration
+spec:
+  selector:
+    app: hermes-integration
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+

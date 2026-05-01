@@ -1,0 +1,117 @@
+---
+# @file kubernetes/deployments/hermes-integration.yaml
+# @description Hermes Integration Service — agent orchestration layer for code-server
+# @governance GOV-002: Deterministic, audited agent lifecycle management
+#
+# Deployment strategy: RollingUpdate, 2 replicas (HA, no single-point)
+# Depends on: agent-runtime, all 4 agent containers
+# Health: /health (liveness), /health/ready (readiness)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes-integration
+  namespace: code-server
+  labels:
+    app: hermes-integration
+    tier: orchestration
+    managed-by: terraform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hermes-integration
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: hermes-integration
+        tier: orchestration
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1002
+        runAsGroup: 1002
+        fsGroup: 1002
+      containers:
+      - name: hermes-integration
+        image: kushin77/code-server-hermes-integration:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: HERMES_PORT
+          value: "8000"
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: AGENT_RUNTIME_URL
+          value: "http://agent-runtime:8020"
+        - name: AGENT_CODE_REVIEWER_HOST
+          value: "agent-code-reviewer"
+        - name: AGENT_CODE_REVIEWER_PORT
+          value: "9000"
+        - name: AGENT_INCIDENT_RESPONDER_HOST
+          value: "agent-incident-responder"
+        - name: AGENT_INCIDENT_RESPONDER_PORT
+          value: "9000"
+        - name: AGENT_DOC_WRITER_HOST
+          value: "agent-doc-writer"
+        - name: AGENT_DOC_WRITER_PORT
+          value: "9000"
+        - name: AGENT_TEST_GENERATOR_HOST
+          value: "agent-test-generator"
+        - name: AGENT_TEST_GENERATOR_PORT
+          value: "9000"
+        - name: KAFKA_BROKER
+          value: "redpanda:9092"
+        - name: OPA_URL
+          value: "http://opa:8181"
+        - name: OTEL_ENABLED
+          value: "true"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector:4317"
+        - name: OTEL_SERVICE_NAME
+          value: "hermes-integration"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 2
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

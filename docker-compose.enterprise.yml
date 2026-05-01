@@ -137,7 +137,8 @@ services:
     build:
       context: .
       dockerfile: apps/testing-service/Dockerfile
-    image: code-server-enterprise-testing:latest
+    # Internal image: enterprise-testing v1.0.0 (built locally)
+    image: code-server-enterprise-testing:${TESTING_IMAGE_VERSION:-v1.0.0}
     container_name: code-server-testing
     environment:
     - SERVICE_NAME=testing-service
@@ -328,7 +329,8 @@ services:
     build:
       context: .
       dockerfile: apps/control-plane/Dockerfile
-    image: code-server-control-plane:latest
+    # Internal image: control-plane v1.0.0 (built locally)
+    image: code-server-control-plane:${CONTROL_PLANE_VERSION:-v1.0.0}
     container_name: code-server-control-plane
     ports:
     - 8086:8082

@@ -3,7 +3,8 @@ version: '3.8'
 services:
   # MinIO S3 Backend - Centralized Terraform State Storage
   minio:
-    image: minio/minio:latest
+    # MinIO stable release: 2024-01-29
+    image: minio/minio:RELEASE.2024-01-29T03-56-32Z
     container_name: minio
     hostname: minio
     environment:
@@ -28,7 +29,8 @@ services:
 
   # MinIO Client Helper - Initialize buckets and policies
   minio-init:
-    image: minio/mc:latest
+    # MinIO MC stable release: 2024-01-16
+    image: minio/mc:RELEASE.2024-01-16T16-07-38Z
     container_name: minio-init
     depends_on:
       - minio

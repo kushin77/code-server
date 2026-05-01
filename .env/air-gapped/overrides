@@ -36,6 +36,7 @@ export API_PORT=8443
 # Cluster Configuration (internal network)
 export PRIMARY_HOST=10.0.0.10
 export REPLICA_HOST=10.0.0.11
+export NAS_HOST=10.0.0.20
 export CLUSTER_VIP=10.0.0.250
 
 # Deployment mode

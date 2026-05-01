@@ -3,7 +3,8 @@ version: '3.8'
 services:
   # HashiCorp Vault - Centralized Secrets Management
   vault:
-    image: vault:latest
+    # Vault LTS: 1.15.0
+    image: vault:1.15.0
     container_name: vault
     hostname: vault
     environment:
@@ -28,7 +29,8 @@ services:
 
   # Vault UI - Web interface for secrets management
   vault-ui:
-    image: vault:latest
+    # Vault LTS: 1.15.0
+    image: vault:1.15.0
     container_name: vault-ui
     hostname: vault-ui
     ports:
@@ -44,7 +46,8 @@ services:
 
   # Vault Agent - Auto-authentication and secret injection
   vault-agent:
-    image: vault:latest
+    # Vault LTS: 1.15.0
+    image: vault:1.15.0
     container_name: vault-agent
     hostname: vault-agent
     volumes:

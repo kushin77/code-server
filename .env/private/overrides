@@ -42,14 +42,14 @@ export REPLICA_ENABLED=true
 # DATABASE CREDENTIALS (PRIVATE ENVIRONMENT)
 # ============================================================================
 export DB_USER=postgres
-export DB_PASSWORD=9ouxRSxNW8x^A(h0XTdFoQNZ
-export POSTGRES_PASSWORD=9ouxRSxNW8x^A(h0XTdFoQNZ
-export DATABASE_URL=postgresql://postgres:9ouxRSxNW8x^A(h0XTdFoQNZ@code-server-postgres:5432/code_server
+export DB_PASSWORD='9ouxRSxNW8x^A(h0XTdFoQNZ'
+export POSTGRES_PASSWORD='9ouxRSxNW8x^A(h0XTdFoQNZ'
+export DATABASE_URL='postgresql://postgres:9ouxRSxNW8x^A(h0XTdFoQNZ@code-server-postgres:5432/code_server'
 
 # ============================================================================
 # REDIS CREDENTIALS (PRIVATE ENVIRONMENT)
 # ============================================================================
-export REDIS_PASSWORD=y7h$7DAWtmqo*X$JER!p2ya%
+export REDIS_PASSWORD='y7h$7DAWtmqo*X$JER!p2ya%'
 
 # ============================================================================
 # OAUTH & AUTHENTICATION (PRIVATE ENVIRONMENT)

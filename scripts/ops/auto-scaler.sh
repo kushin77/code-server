@@ -15,7 +15,7 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 
 DRY_RUN=false
 RUN_ONCE=false
-TARGET_SERVICE="${1:-code-server-worker}"
+TARGET_SERVICE="code-server-worker"
 CADVISOR_URL="${CADVISOR_URL:-http://localhost:8081}"
 PROM_URL="${PROMETHEUS_URL:-http://localhost:9090}"
 

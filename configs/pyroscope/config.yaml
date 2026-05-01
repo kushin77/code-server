@@ -1,0 +1,75 @@
+# Pyroscope continuous profiling configuration for code-server platform
+# Profiles: CPU, memory allocations, goroutines (Go services), Python heap
+
+server:
+  http_listen_port: 4040
+  grpc_listen_port: 4041
+
+log_level: info
+
+# Storage backend — local disk with S3-compatible remote
+storage:
+  backend: filesystem
+  filesystem:
+    dir: /var/lib/pyroscope
+
+  # Uncomment for production S3/MinIO remote storage:
+  # backend: s3
+  # s3:
+  #   bucket_name: code-server-profiles
+  #   endpoint: minio:9000
+  #   access_key_id: ${MINIO_ACCESS_KEY}
+  #   secret_access_key: ${MINIO_SECRET_KEY}
+  #   insecure: true
+
+# Retention
+retention:
+  period: 720h  # 30 days
+
+# Pull-mode scraping (Pyroscope scrape configs)
+scrape_configs:
+  # ── code-server API (Go) ───────────────────────────────────────────────
+  - job_name: code_server_api
+    enabled_profiles:
+      - profile.cpu.enabled: true
+        profile.mem.enabled: true
+        profile.goroutines.enabled: true
+        profile.mutex.enabled: false
+        profile.block.enabled: false
+    static_configs:
+      - application: code-server-api
+        spy_name: gospy
+        targets:
+          - code-server-api:6060
+        labels:
+          service: api
+          environment: production
+
+  # ── code-server worker (Python) ───────────────────────────────────────
+  - job_name: code_server_worker
+    enabled_profiles:
+      - profile.cpu.enabled: true
+        profile.mem.enabled: true
+    static_configs:
+      - application: code-server-worker
+        spy_name: pyspy
+        targets:
+          - code-server-worker:6061
+        labels:
+          service: worker
+          environment: production
+
+# Push-mode receiver (for apps that push profiles via SDK)
+receiver:
+  grpc:
+    enabled: true
+    use_insecure_channel: true
+  http:
+    enabled: true
+    cors:
+      allowed_origins:
+        - "*"
+
+# Integration with Grafana (datasource discovery)
+analytics:
+  reporting_enabled: false

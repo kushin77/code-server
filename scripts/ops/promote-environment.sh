@@ -92,10 +92,10 @@ rolling_restart() {
     log_info "  Restarting ${SERVICE} on ${host}"
     if [[ "${DRY_RUN}" != "true" ]]; then
       ssh -o BatchMode=yes "${REMOTE_USER:-akushnir}@${host}" \
-        "docker pull ${SERVICE}:${IMAGE_TAG} && docker restart code-server-${SERVICE}" \
+        "docker pull ${SERVICE}:${IMAGE_TAG} && docker restart ${SERVICE}" \
         2>&1 || log_error "  Failed to restart on ${host}"
     else
-      log_info "[DRY-RUN] would restart code-server-${SERVICE} on ${host}"
+      log_info "[DRY-RUN] would restart ${SERVICE} on ${host}"
     fi
     sleep 5
   done

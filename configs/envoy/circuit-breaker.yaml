@@ -1,0 +1,116 @@
+static_resources:
+  listeners:
+    - name: code_server_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 10000
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: code_server_backend
+                      domains: ["*"]
+                      routes:
+                        - match:
+                            prefix: "/api/"
+                          route:
+                            cluster: code_server_api
+                            timeout: 30s
+                            retry_policy:
+                              retry_on: "5xx,gateway-error,connect-failure,retriable-4xx"
+                              num_retries: 3
+                              per_try_timeout: 10s
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: code_server_app
+                            timeout: 60s
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    # ── API cluster with circuit breaker ────────────────────────────────────
+    - name: code_server_api
+      connect_timeout: 5s
+      type: STRICT_DNS
+      lb_policy: LEAST_REQUEST
+      health_checks:
+        - timeout: 3s
+          interval: 10s
+          unhealthy_threshold: 3
+          healthy_threshold: 2
+          http_health_check:
+            path: "/api/v1/status"
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 100
+            max_pending_requests: 50
+            max_requests: 200
+            max_retries: 5
+            track_remaining: true
+          - priority: HIGH
+            max_connections: 200
+            max_pending_requests: 100
+            max_requests: 400
+            max_retries: 10
+      outlier_detection:
+        consecutive_5xx: 5
+        interval: 30s
+        base_ejection_time: 30s
+        max_ejection_percent: 50
+        consecutive_gateway_failure: 3
+        enforcing_consecutive_5xx: 100
+        enforcing_consecutive_gateway_failure: 100
+      load_assignment:
+        cluster_name: code_server_api
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: code-server-api
+                      port_value: 3000
+
+    # ── App cluster (code-server IDE) ────────────────────────────────────────
+    - name: code_server_app
+      connect_timeout: 5s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      health_checks:
+        - timeout: 3s
+          interval: 15s
+          unhealthy_threshold: 3
+          healthy_threshold: 1
+          http_health_check:
+            path: "/health"
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 500
+            max_pending_requests: 200
+            max_requests: 1000
+            max_retries: 5
+      load_assignment:
+        cluster_name: code_server_app
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: code-server-app
+                      port_value: 8080
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901

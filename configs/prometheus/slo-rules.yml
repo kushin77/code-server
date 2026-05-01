@@ -1,0 +1,123 @@
+groups:
+  # ── Availability SLOs ─────────────────────────────────────────────────────
+  - name: code_server_slo_availability
+    rules:
+      # 99.9% uptime SLO (43.8 min/month error budget)
+      - alert: SLO_AvailabilityBurnRateFast
+        expr: |
+          (
+            sum(rate(http_requests_total{job="code-server",status=~"5.."}[1h]))
+            /
+            sum(rate(http_requests_total{job="code-server"}[1h]))
+          ) > 14.4 * (1 - 0.999)
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: "Fast burn rate: availability SLO at risk"
+          description: "Error rate is burning through the availability error budget 14.4x faster than allowed."
+
+      - alert: SLO_AvailabilityBurnRateSlow
+        expr: |
+          (
+            sum(rate(http_requests_total{job="code-server",status=~"5.."}[6h]))
+            /
+            sum(rate(http_requests_total{job="code-server"}[6h]))
+          ) > 6 * (1 - 0.999)
+        for: 15m
+        labels:
+          severity: warning
+          slo: availability
+        annotations:
+          summary: "Slow burn rate: availability error budget eroding"
+
+  # ── Latency SLOs ──────────────────────────────────────────────────────────
+  - name: code_server_slo_latency
+    rules:
+      # 95% of requests must complete under 500ms
+      - alert: SLO_LatencyP95Exceeded
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="code-server"}[5m]))
+            by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          slo: latency
+        annotations:
+          summary: "p95 latency SLO breached (>500ms)"
+          description: "p95={{ $value | humanizeDuration }} — exceeds 500ms SLO target."
+
+      - alert: SLO_LatencyP99Exceeded
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="code-server"}[5m]))
+            by (le)
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: critical
+          slo: latency
+        annotations:
+          summary: "p99 latency SLO breached (>2s)"
+
+  # ── Throughput SLOs ───────────────────────────────────────────────────────
+  - name: code_server_slo_throughput
+    rules:
+      - alert: SLO_ThroughputDrop
+        expr: |
+          sum(rate(http_requests_total{job="code-server"}[5m]))
+          < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          slo: throughput
+        annotations:
+          summary: "Throughput near zero — possible service outage"
+
+  # ── Error budget recording rules ──────────────────────────────────────────
+  - name: code_server_error_budget
+    rules:
+      - record: code_server:error_rate_1h
+        expr: |
+          sum(rate(http_requests_total{job="code-server",status=~"5.."}[1h]))
+          /
+          sum(rate(http_requests_total{job="code-server"}[1h]))
+
+      - record: code_server:error_budget_remaining_pct
+        expr: |
+          1 - (code_server:error_rate_1h / (1 - 0.999))
+
+      - record: code_server:availability_30d
+        expr: |
+          1 - (
+            sum(increase(http_requests_total{job="code-server",status=~"5.."}[30d]))
+            /
+            sum(increase(http_requests_total{job="code-server"}[30d]))
+          )
+
+  # ── Infrastructure SLOs ───────────────────────────────────────────────────
+  - name: code_server_slo_infrastructure
+    rules:
+      - alert: SLO_ContainerRestartBudget
+        expr: |
+          increase(container_restart_count{name=~"code-server-.*"}[1h]) > 3
+        labels:
+          severity: warning
+          slo: reliability
+        annotations:
+          summary: "Container {{ $labels.name }} restarted >3 times in 1h"
+
+      - alert: SLO_DiskFillForecast
+        expr: |
+          predict_linear(
+            node_filesystem_avail_bytes{mountpoint="/"}[6h], 24 * 3600
+          ) < 0
+        for: 5m
+        labels:
+          severity: critical
+          slo: capacity
+        annotations:
+          summary: "Disk will fill within 24h at current rate"

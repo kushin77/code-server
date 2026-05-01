@@ -363,7 +363,7 @@ jobs:
         if: needs.build.result == 'success' && github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: 'phase-7-ext-${{ github.run_number }}'
+          tag_name: 'ide-ext-${{ github.run_number }}'
           body: 'Phase 7 Team Hub Extension - Built from commit ${{ github.sha }}'
           files: artifacts/team-hub.vsix
           draft: true

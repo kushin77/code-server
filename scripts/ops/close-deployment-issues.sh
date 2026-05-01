@@ -120,7 +120,7 @@ evidence_3103="## ✅ IMPLEMENTATION COMPLETE
   - mTLS enabled between services
 - **Validation**: 6/6 infrastructure validation PASS
 - **Scripts**: 
-  - \`scripts/phase5/deploy-vault-secrets.sh\`: Operational
+  - \`scripts/ops/deploy-vault-secrets.sh\`: Operational
   - All security validators deployed
 
 ### Implementation Details

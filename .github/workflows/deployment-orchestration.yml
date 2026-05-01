@@ -1,4 +1,4 @@
-name: Phase 4-7 Complete Deployment Orchestration
+name: Production Deployment Orchestration
 
 on:
   workflow_dispatch:
@@ -9,9 +9,9 @@ on:
         default: 'all'
         type: choice
         options:
-          - phase4-only
-          - phase5-only
-          - phase6-7-only
+          - kubernetes-only
+          - security-only
+          - intelligence-only
           - all
       environment:
         description: 'Target environment'
@@ -105,10 +105,10 @@ jobs:
             fi
           done
 
-  phase-4-k8s:
-    name: Phase 4 - Kubernetes Migration
-    needs: pre-deployment
-    if: contains(github.event.inputs.deployment_phase, 'phase4') || github.event.inputs.deployment_phase == 'all'
+  kubernetes-migration:
+      name: Kubernetes Migration
+      needs: pre-deployment
+      if: contains(github.event.inputs.deployment_phase, 'kubernetes') || github.event.inputs.deployment_phase == 'all'
     uses: ./.github/workflows/kubernetes-deployment.yml
     with:
       environment: ${{ github.event.inputs.environment }}
@@ -116,11 +116,11 @@ jobs:
       node_count: '3'
     secrets: inherit
 
-  phase-5-security:
-    name: Phase 5 - Security Hardening
-    runs-on: ubuntu-latest
-    needs: pre-deployment
-    if: contains(github.event.inputs.deployment_phase, 'phase5') || github.event.inputs.deployment_phase == 'all'
+  security-hardening:
+      name: Security Hardening
+      runs-on: ubuntu-latest
+      needs: pre-deployment
+      if: contains(github.event.inputs.deployment_phase, 'security') || github.event.inputs.deployment_phase == 'all'
     environment:
       name: ${{ github.event.inputs.environment }}-security
     steps:
@@ -132,7 +132,7 @@ jobs:
       - name: Deploy Vault
         run: |
           echo "Deploying Vault secrets management..."
-          bash scripts/phase5/deploy-vault-secrets.sh || true
+          bash scripts/ops/deploy-vault-secrets.sh || true
 
       - name: Enable Encryption at Rest
         run: |
@@ -145,10 +145,10 @@ jobs:
           bash scripts/ci/validate-tls-hardening.sh || true
           bash scripts/ci/validate-secrets.sh || true
 
-  phase-6-7-intelligence:
-    name: Phase 6-7 - Collaboration & Intelligence
-    needs: pre-deployment
-    if: contains(github.event.inputs.deployment_phase, 'phase6-7') || github.event.inputs.deployment_phase == 'all'
+  intelligence-deployment:
+      name: Collaboration & Intelligence Deployment
+      needs: pre-deployment
+      if: contains(github.event.inputs.deployment_phase, 'intelligence') || github.event.inputs.deployment_phase == 'all'
     uses: ./.github/workflows/ide-extension-delivery.yml
     with:
       publish_marketplace: ${{ github.event.inputs.publish_marketplace || 'false' }}
@@ -157,8 +157,8 @@ jobs:
   traffic-migration:
     name: Configure Traffic Migration
     runs-on: ubuntu-latest
-    needs: phase-4-k8s
-    if: needs.phase-4-k8s.result == 'success'
+    needs: kubernetes-migration
+    if: needs.kubernetes-migration.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
@@ -224,7 +224,7 @@ jobs:
   post-deployment:
     name: Post-Deployment Validation
     runs-on: ubuntu-latest
-    needs: [phase-4-k8s, phase-5-security, phase-6-7-intelligence]
+      needs: [kubernetes-migration, security-hardening, intelligence-deployment]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -242,9 +242,9 @@ jobs:
           
           | Phase | Status | Details |
           |-------|--------|---------|
-          | Phase 4 (K8s) | ${{ needs.phase-4-k8s.result }} | Kubernetes migration |
-          | Phase 5 (Security) | ${{ needs.phase-5-security.result }} | Security hardening |
-          | Phase 6-7 (Intelligence) | ${{ needs.phase-6-7-intelligence.result }} | Collaboration & ML |
+            | Kubernetes Migration | ${{ needs.kubernetes-migration.result }} | Kubernetes migration |
+            | Security Hardening | ${{ needs.security-hardening.result }} | Security hardening |
+            | Intelligence Deployment | ${{ needs.intelligence-deployment.result }} | Collaboration & ML |
           
           ## Infrastructure Summary
           

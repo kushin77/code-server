@@ -17,3 +17,9 @@ def health() -> dict[str, str]:
 def run_tests(request: TestRequest) -> dict[str, str]:
     # Placeholder runner endpoint until full test orchestration is wired.
     return {"status": "accepted", "suite": request.suite}
+
+
+if __name__ == "__main__":
+    import config as _cfg
+    import uvicorn
+    uvicorn.run(app, host=_cfg.HOST, port=_cfg.PORT)

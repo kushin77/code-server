@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-# @file        scripts/phase5/deploy-vault-secrets.sh
+# @file        scripts/ops/deploy-vault-secrets.sh
 # @module      security/vault
 # @description Phase 5 Security & Compliance: Deploy and configure Vault secrets
 # @governance  GOV-002: Zero-trust, encrypted, audited secrets management

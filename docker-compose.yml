@@ -785,7 +785,7 @@ services:
       - LOG_LEVEL=INFO
       - OPA_URL=${OPA_URL}
       - REPUTATION_ENGINE_URL=${REPUTATION_ENGINE_URL}
-      - HERMES_URL=${HERMES_URL:-}
+      - HERMES_URL=${HERMES_URL:-http://hermes-integration:8000}
       - HERMES_HEARTBEAT_INTERVAL=${HERMES_HEARTBEAT_INTERVAL:-30}
       - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
@@ -823,6 +823,67 @@ services:
         reservations:
           cpus: "0.5"
           memory: 256m
+    profiles:
+      - "ai"
+      - "governance"
+      - "all"
+
+  hermes-integration:
+    build:
+      context: apps/hermes-integration
+      dockerfile: Dockerfile
+    container_name: code-server-hermes-integration
+    ports:
+      - "8000:8000"
+    environment:
+      - HERMES_PORT=8000
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+      - AGENT_RUNTIME_URL=http://agent-runtime:8020
+      - AGENT_CODE_REVIEWER_HOST=agent-code-reviewer
+      - AGENT_CODE_REVIEWER_PORT=9000
+      - AGENT_INCIDENT_RESPONDER_HOST=agent-incident-responder
+      - AGENT_INCIDENT_RESPONDER_PORT=9000
+      - AGENT_DOC_WRITER_HOST=agent-doc-writer
+      - AGENT_DOC_WRITER_PORT=9000
+      - AGENT_TEST_GENERATOR_HOST=agent-test-generator
+      - AGENT_TEST_GENERATOR_PORT=9000
+      - KAFKA_BROKER=${KAFKA_BROKER:-redpanda:9092}
+      - OPA_URL=${OPA_URL}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_SERVICE_NAME=hermes-integration
+    depends_on:
+      agent-runtime:
+        condition: service_healthy
+    volumes:
+      - ./apps/hermes-integration:/app
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://hermes-integration:8000/health"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+        reservations:
+          cpus: "0.25"
+          memory: 128m
     profiles:
       - "ai"
       - "governance"

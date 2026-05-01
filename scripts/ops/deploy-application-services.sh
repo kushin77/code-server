@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # @file        scripts/deploy-p3-services.sh
-# @module      deploy-p3-services
+# @module      ops/deploy-application-services
 # @description Infrastructure automation script
 # @governance  GOV-002: Deterministic, audited, immutable infrastructure
 # @author      Autonomous Infrastructure
@@ -13,6 +13,9 @@
 # Status: Production deployment for multi-region infrastructure
 
 set -euo pipefail
+
+trap 'echo "[ERROR] Script failed at line $LINENO"; exit 1' ERR
+trap 'rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"

@@ -15,7 +15,7 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # This script orchestrates E2E and load testing against real Docker Compose stack
 #
 # Usage:
-#   ./scripts/test-e2e-load.sh [command]
+#   ./scripts/perf/e2e-load-test.sh [command]
 #
 # Commands:
 #   setup      - Start Docker Compose stack for testing

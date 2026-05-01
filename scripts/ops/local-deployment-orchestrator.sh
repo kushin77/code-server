@@ -6,7 +6,7 @@
 # Orchestrates: validation → K8s provisioning → service deployment → 
 #                data migration → validation
 #
-# Usage: bash scripts/ops/local-phase-4-7-deploy.sh [OPTIONS]
+# Usage: bash scripts/ops/local-deployment-orchestrator.sh [OPTIONS]
 #
 # OPTIONS:
 #   --environment STAGE     Deployment environment (staging|production, default: staging)
@@ -26,9 +26,9 @@
 #   - jq (for JSON parsing)
 #
 # Examples:
-#   bash scripts/ops/local-phase-4-7-deploy.sh --environment staging --phase all
-#   bash scripts/ops/local-phase-4-7-deploy.sh --dry-run
-#   bash scripts/ops/local-phase-4-7-deploy.sh --environment production --skip-validation
+#   bash scripts/ops/local-deployment-orchestrator.sh --environment staging --phase all
+#   bash scripts/ops/local-deployment-orchestrator.sh --dry-run
+#   bash scripts/ops/local-deployment-orchestrator.sh --environment production --skip-validation
 #
 ################################################################################
 
@@ -173,8 +173,8 @@ check_prerequisites() {
     log_step "Checking documentation..."
     
     local required_docs=(
-        "GITHUB_SECRETS_SETUP_GUIDE.md"
-        "DEPLOYMENT_EXECUTION_RUNBOOK.md"
+        "docs/security/github-secrets-setup-guide.md"
+        "docs/operations/runbooks/deployment-execution-runbook.md"
         "TRAFFIC_MIGRATION_STRATEGY.md"
     )
     

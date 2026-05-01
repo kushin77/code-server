@@ -1,7 +1,7 @@
 #!/bin/bash
 # Final Infrastructure Validation - May 1 Deployment Day
 # Run this 24 hours before and 1 hour before deployment
-# Usage: bash final-infrastructure-validation.sh [verbose]
+# Usage: bash scripts/ops/verify/infrastructure-validation.sh [verbose]
 
 set -euo pipefail
 

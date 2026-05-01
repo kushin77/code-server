@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 # 
 # Prerequisites: GitHub CLI must be authenticated via `gh auth login`
 # 
-# Usage: bash deploy-final.sh
+# Usage: bash scripts/ops/production-deployment.sh
 
 set -e
 trap 'echo "[ERROR] Script failed at line $LINENO"; exit 1' ERR

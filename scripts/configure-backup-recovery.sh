@@ -755,7 +755,7 @@ This document defines procedures for recovering from various disaster scenarios.
    
    # Power on primary
    # Bring up services in correct order
-   ./scripts/deploy-enterprise-idempotent.sh
+   ./scripts/ops/enterprise-deploy.sh
    
    # Resync data from replica
    # Wait for replication to catch up

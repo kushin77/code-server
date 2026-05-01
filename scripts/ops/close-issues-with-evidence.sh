@@ -5,8 +5,8 @@
 # Closes phase issues (158-277, #2657-#2756) with implementation evidence
 # Implements secondary rate limit compliance: 1 comment per 3 seconds max
 #
-# Usage: bash scripts/ops/close-phase-issues-with-evidence.sh [start] [end]
-# Example: bash scripts/ops/close-phase-issues-with-evidence.sh 2657 2756
+# Usage: bash scripts/ops/close-issues-with-evidence.sh [start] [end]
+# Example: bash scripts/ops/close-issues-with-evidence.sh 2657 2756
 #
 
 set -euo pipefail

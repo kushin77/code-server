@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # @file        scripts/test-p3-integration.sh
-# @module      test-p3-integration
+# @module      ci/integration-test-extended
 # @description Infrastructure automation script
 # @governance  GOV-002: Deterministic, audited, immutable infrastructure
 # @author      Autonomous Infrastructure

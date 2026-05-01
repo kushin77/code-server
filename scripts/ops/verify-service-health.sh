@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # @file        scripts/verify-q3-services.sh
-# @module      verify-q3-services
+# @module      ops/verify-service-health
 # @description Infrastructure automation script
 # @governance  GOV-002: Deterministic, audited, immutable infrastructure
 # @author      Autonomous Infrastructure

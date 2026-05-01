@@ -1,7 +1,7 @@
 #!/bin/bash
-# pre-deployment-verification-final.sh
+# pre-deployment-verification.sh
 # Run this on May 1 morning at 06:00 UTC to verify all systems ready
-# Usage: ./pre-deployment-verification-final.sh
+# Usage: ./pre-deployment-verification.sh
 
 set -e
 trap 'echo "[ERROR] Script failed at line $LINENO"; exit 1' ERR

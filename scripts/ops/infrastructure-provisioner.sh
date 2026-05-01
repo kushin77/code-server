@@ -206,7 +206,7 @@ log_success "✓ Health checks verified"
 log_info ""
 log_info "PHASE 6: Committing changes to git"
 
-git add docker-compose.enterprise.yml scripts/p1-execution-phase-2.sh
+git add docker-compose.enterprise.yml scripts/ops/deployment-executor.sh
 git commit -m "P1 Implementation: Add resource limits + health checks
 
 RESOURCE LIMITS:

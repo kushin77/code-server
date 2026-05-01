@@ -797,7 +797,7 @@ EOF
 create_multiregion_testing() {
     log_info "Creating multi-region testing framework..."
     
-    cat > scripts/multiregion-chaos-test.sh << 'EOF'
+    cat > scripts/chaos/multiregion-chaos-test.sh << 'EOF'
 #!/bin/bash
 # Multi-Region Chaos Engineering Tests
 # Simulates various failure scenarios
@@ -914,8 +914,8 @@ case "${1:-all}" in
 esac
 EOF
     
-    chmod +x scripts/multiregion-chaos-test.sh
-    log_success "Multi-region testing framework created: scripts/multiregion-chaos-test.sh"
+    chmod +x scripts/chaos/multiregion-chaos-test.sh
+    log_success "Multi-region testing framework created: scripts/chaos/multiregion-chaos-test.sh"
 }
 
 # ============================================================================

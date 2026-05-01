@@ -17,7 +17,7 @@
 #   - NAS mounted at /mnt/nas or Z: drive
 #
 # Usage:
-#   bash scripts/benchmark-nas.sh [--nas-host ${NAS_HOST}] [--output report.json]
+#   bash scripts/perf/benchmark-nas.sh [--nas-host ${NAS_HOST}] [--output report.json]
 #
 # Expected Metrics:
 #   - Network: >100 Mbps on 1GbE, >1000 Mbps on 10GbE
@@ -41,7 +41,7 @@ BENCHMARK_DIR="/tmp/nas-benchmark-$$"
 MOUNT_POINT="/mnt/nas"
 
 usage() {
-  echo "Usage: bash scripts/benchmark-nas.sh [--nas-host HOST] [--primary-host HOST] [--output FILE]"
+  echo "Usage: bash scripts/perf/benchmark-nas.sh [--nas-host HOST] [--primary-host HOST] [--output FILE]"
 }
 
 while [[ $# -gt 0 ]]; do

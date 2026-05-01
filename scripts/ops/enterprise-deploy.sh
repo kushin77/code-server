@@ -3,9 +3,9 @@
 # Safe, reproducible multi-host deployment with built-in consistency checks
 #
 # Usage:
-#   ./scripts/deploy-enterprise-idempotent.sh --target=primary --mode=dry-run
-#   ./scripts/deploy-enterprise-idempotent.sh --target=both --mode=apply
-#   ./scripts/deploy-enterprise-idempotent.sh --target=replica --mode=apply --force
+#   ./scripts/ops/enterprise-deploy.sh --target=primary --mode=dry-run
+#   ./scripts/ops/enterprise-deploy.sh --target=both --mode=apply
+#   ./scripts/ops/enterprise-deploy.sh --target=replica --mode=apply --force
 #
 # Modes:
 #   dry-run  Show exactly what will happen without executing

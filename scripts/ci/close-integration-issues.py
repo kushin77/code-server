@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-@file scripts/ci/close-hermes-issues.py
+@file scripts/ci/close-integration-issues.py
 @description Closes all completed Hermes Integration GitHub issues with evidence comments.
              Run once a real GITHUB_TOKEN (PAT with repo scope) is available.
 
 Usage:
-    GITHUB_TOKEN=<pat> python3 scripts/ci/close-hermes-issues.py
-    GITHUB_TOKEN=<pat> python3 scripts/ci/close-hermes-issues.py --dry-run
+    GITHUB_TOKEN=<pat> python3 scripts/ci/close-integration-issues.py
+    GITHUB_TOKEN=<pat> python3 scripts/ci/close-integration-issues.py --dry-run
 """
 
 import json

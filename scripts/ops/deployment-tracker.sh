@@ -6,7 +6,7 @@
 # @module ops/tracking
 # @description Real-time tracking dashboard for all 16 phase executions
 # @governance GOV-001: All phase execution must be tracked and auditable
-# @usage ./phase-execution-tracker.sh [--collect|--report|--timeline]
+# @usage ./deployment-tracker.sh [--collect|--report|--timeline]
 #
 # Aggregates:
 #   - Phase entry-point script execution times

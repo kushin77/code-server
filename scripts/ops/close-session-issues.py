@@ -10,7 +10,7 @@ Issues covered (May 1 2026 session):
 Usage:
   TOKEN=$(printf 'protocol=https\nhost=github.com\n' | git credential fill 2>/dev/null \
     | grep '^password=' | cut -d= -f2-)
-  python3 scripts/ops/close-hermes-session-issues.py "$TOKEN"
+  python3 scripts/ops/close-session-issues.py "$TOKEN"
 """
 
 import sys, json, time, urllib.request, urllib.error
@@ -264,7 +264,7 @@ def close_issue(token, num):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 close-hermes-session-issues.py <github-token>")
+        print("Usage: python3 close-session-issues.py <github-token>")
         sys.exit(1)
 
     token = sys.argv[1].strip()

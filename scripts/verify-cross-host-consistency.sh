@@ -264,7 +264,7 @@ compare_inventories() {
     warning "Recommended actions:"
     if [[ "$primary_count" != "$replica_count" ]]; then
       echo "  1. Re-run deployment script on host with fewer services"
-      echo "     ./scripts/deploy-enterprise-idempotent.sh --target=replica --mode=apply"
+      echo "     ./scripts/ops/enterprise-deploy.sh --target=replica --mode=apply"
     fi
     if [[ "$primary_names" != "$replica_names" ]]; then
       echo "  2. Check logs on both hosts: docker logs <service_name>"

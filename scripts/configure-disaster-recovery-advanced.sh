@@ -525,7 +525,7 @@ EOF
 create_dr_testing() {
     log_info "Creating disaster recovery testing framework..."
     
-    cat > scripts/dr-test-executor.py << 'EOF'
+    cat > scripts/ops/dr-test-executor.py << 'EOF'
 #!/usr/bin/env python3
 """
 Disaster Recovery Testing Executor
@@ -809,8 +809,8 @@ if __name__ == "__main__":
     print(json.dumps(report, indent=2))
 EOF
     
-    chmod +x scripts/dr-test-executor.py
-    log_success "DR testing framework created: scripts/dr-test-executor.py"
+    chmod +x scripts/ops/dr-test-executor.py
+    log_success "DR testing framework created: scripts/ops/dr-test-executor.py"
 }
 
 # ============================================================================
@@ -820,7 +820,7 @@ EOF
 create_runbook_automation() {
     log_info "Creating disaster recovery runbook automation..."
     
-    cat > scripts/dr-runbook-executor.sh << 'EOF'
+    cat > scripts/ops/dr-runbook-executor.sh << 'EOF'
 #!/bin/bash
 # Disaster Recovery Runbook Executor
 # Automated execution of DR procedures with validation
@@ -946,8 +946,8 @@ case "$RUNBOOK_TYPE" in
 esac
 EOF
     
-    chmod +x scripts/dr-runbook-executor.sh
-    log_success "Runbook automation created: scripts/dr-runbook-executor.sh"
+    chmod +x scripts/ops/dr-runbook-executor.sh
+    log_success "Runbook automation created: scripts/ops/dr-runbook-executor.sh"
 }
 
 # ============================================================================

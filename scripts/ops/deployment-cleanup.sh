@@ -817,7 +817,7 @@ Code-Server Enterprise platform successfully transformed from high-risk (single 
 ### Automation Scripts
 
 #### Strategic Phase Scripts (scripts/)
-- **strategic-phase-1a-db-ha.sh**: PostgreSQL HA configuration
+- **setup-database-ha.sh**: PostgreSQL HA configuration
 - **audit-opa-policies.sh**: OPA audit logging setup
 - **setup-distributed-tracing.sh**: Distributed tracing configuration
 - **setup-redis-ha.sh**: Redis Sentinel setup

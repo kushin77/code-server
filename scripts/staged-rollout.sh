@@ -30,7 +30,7 @@
 #   --help               Show this help message
 #
 # Environment:
-#   DEPLOYMENT_SCRIPT    Path to deployment script (default: scripts/deploy-enterprise-idempotent.sh)
+#   DEPLOYMENT_SCRIPT    Path to deployment script (default: scripts/ops/enterprise-deploy.sh)
 #   CONSISTENCY_SCRIPT   Path to consistency check (default: scripts/verify-cross-host-consistency.sh)
 #
 # Examples:
@@ -61,7 +61,7 @@ SKIP_HEALTH_GATE="${SKIP_HEALTH_GATE:-false}"
 ROLLBACK_ON_FAIL="${ROLLBACK_ON_FAIL:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 
-DEPLOYMENT_SCRIPT="${DEPLOYMENT_SCRIPT:-./scripts/deploy-enterprise-idempotent.sh}"
+DEPLOYMENT_SCRIPT="${DEPLOYMENT_SCRIPT:-./scripts/ops/enterprise-deploy.sh}"
 CONSISTENCY_SCRIPT="${CONSISTENCY_SCRIPT:-./scripts/verify-cross-host-consistency.sh}"
 
 ROLLOUT_STATE_FILE="/tmp/staged-rollout-state.json"

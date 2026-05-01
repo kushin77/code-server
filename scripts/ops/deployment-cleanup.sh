@@ -1,5 +1,10 @@
 #!/bin/bash
 # ============================================================================
+# DEPRECATED: This script uses imperative SSH+docker-compose commands.
+# CORRECT APPROACH: Use `terraform apply` in terraform/environments/private/
+# See: terraform/environments/private/deployment.tf for full IaC declaration.
+# Issue #3176 — retained for reference only; do NOT use for production deploys.
+# ============================================================================
 # CLEANUP PHASE 2: CONSOLIDATION & OPERATIONAL READINESS
 # April 30, 2026 - Code Consolidation & Runbook Creation
 # ============================================================================

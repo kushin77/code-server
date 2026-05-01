@@ -13,6 +13,8 @@ Usage:
     #   gunicorn -w 4 -k uvicorn.workers.UvicornWorker app:create_app
 """
 
+import asyncio
+
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -63,6 +65,9 @@ def create_app() -> FastAPI:
             environment=ENVIRONMENT,
             debug=DEBUG,
         )
+        # Initial dependency probe (non-blocking)
+        from health import check_dependencies
+        asyncio.create_task(check_dependencies())
         # Register with Hermes orchestrator (non-blocking — failure is tolerated)
         await hermes_client.register()
 

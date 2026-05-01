@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Source centralized logging library (Phase 2.4: Logging standardization)
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 ################################################################################
 # Phase 5 May 1 Final Infrastructure Validation
 # Purpose: Capture baseline and confirm all systems ready before execution

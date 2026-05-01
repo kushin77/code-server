@@ -151,7 +151,7 @@ EOF
 generate_documentation() {
   log_info "Generating memory engine documentation..."
   
-  cat > "${REPO_ROOT}/docs/MEMORY-ENGINE-OBSERVABILITY.md" <<'EOF'
+  cat > "${REPO_ROOT}/docs/architecture/memory-engine-observability.md" <<'EOF'
 # Organizational Memory Engine - Observability Guide
 
 ## Metrics

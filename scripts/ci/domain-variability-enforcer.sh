@@ -35,7 +35,7 @@ TARGET_FILES=(
   "${REPO_ROOT}/Caddyfile"
   "${REPO_ROOT}/docker-compose.yml"
   "${REPO_ROOT}/terraform/on-prem.tfvars"
-  "${REPO_ROOT}/docs/RUNBOOK-INFRASTRUCTURE-LIFECYCLE.md"
+  "${REPO_ROOT}/docs/runbooks/infrastructure-lifecycle-runbook.md"
   "${REPO_ROOT}/scripts/_common/rollback-manager.sh"
 )
 

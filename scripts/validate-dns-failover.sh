@@ -259,8 +259,8 @@ phase_6_failover_readiness() {
   log_info "Check 1: Service dependency documentation"
   TESTS_RUN=$((TESTS_RUN + 1))
   
-  if [ -f "${REPO_ROOT}/docs/architecture/DNS-SERVICE-DISCOVERY.md" ]; then
-    if grep -q "failover\|fallback\|recovery" "${REPO_ROOT}/docs/architecture/DNS-SERVICE-DISCOVERY.md"; then
+  if [ -f "${REPO_ROOT}/docs/architecture/dns-service-discovery.md" ]; then
+    if grep -q "failover\|fallback\|recovery" "${REPO_ROOT}/docs/architecture/dns-service-discovery.md"; then
       log_pass "Failover documentation present"
       TESTS_PASSED=$((TESTS_PASSED + 1))
     else

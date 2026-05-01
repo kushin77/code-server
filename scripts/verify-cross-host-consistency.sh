@@ -270,7 +270,7 @@ compare_inventories() {
       echo "  2. Check logs on both hosts: docker logs <service_name>"
       echo "  3. Verify docker-compose file synced correctly"
     fi
-    echo "  4. See docs/operations/TROUBLESHOOTING.md for detailed guidance"
+    echo "  4. See docs/operations/troubleshooting.md for detailed guidance"
     echo ""
     if [[ "$FAIL_ON_MISMATCH" == "true" ]]; then
       return 1

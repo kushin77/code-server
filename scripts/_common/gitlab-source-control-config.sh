@@ -35,7 +35,7 @@ readonly SOURCE_CONTROL_MODULES=(
 # ============================================================================
 
 gitlab_write_repo_strategy() {
-  cat > "$SCRIPT_DIR/../docs/REPO-STRATEGY.md" <<'EOF'
+  cat > "$SCRIPT_DIR/../docs/governance/repository-standards.md" <<'EOF'
 # Repository Strategy Map
 
 ## Current State (April 2026)
@@ -133,7 +133,7 @@ vcs-adapters/
 **Status**: Active (in use)
 EOF
 
-  log_info "✓ Repository strategy documented in docs/REPO-STRATEGY.md"
+  log_info "✓ Repository strategy documented in docs/governance/repository-standards.md"
 }
 
 #

@@ -210,8 +210,8 @@ check_documentation() {
     
     docs=0
     [ -f "CHANGELOG.md" ] && ((++docs))
-    [ -f "docs/architecture/OVERVIEW.md" ] && ((++docs))
-    [ -f "docs/handover/SESSION-COMPLETION-SUMMARY-2026-05-01.md" ] && ((++docs))
+    [ -f "docs/architecture/overview.md" ] && ((++docs))
+    [ -f "docs/handover/session-completion-summary-2026-05-01.md" ] && ((++docs))
     [ -f "GITHUB_ISSUES_HANDOFF_REPORT.md" ] && ((++docs))
     
     if [ "$docs" -ge 3 ]; then

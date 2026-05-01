@@ -183,7 +183,7 @@ else
 fi
 
 # Architecture documentation
-if [[ -f "${PROJECT_ROOT}/docs/ARCHITECTURE.md" ]] || [[ -f "${PROJECT_ROOT}/docs/README.md" ]]; then
+if [[ -f "${PROJECT_ROOT}/docs/architecture/overview.md" ]] || [[ -f "${PROJECT_ROOT}/README.md" ]]; then
     check_pass "Architecture documentation: exists"
 else
     check_warn "Architecture documentation: not found"

@@ -303,7 +303,7 @@ test_documentation() {
   
   log_info "Validating documentation..."
   
-  local runbook_file="${REPO_ROOT}/docs/RUNBOOK-ROLLBACK.md"
+  local runbook_file="${REPO_ROOT}/docs/runbooks/contingency-rollback-runbook.md"
   
   if [ ! -f "$runbook_file" ]; then
     log_error "Runbook not found: $runbook_file"

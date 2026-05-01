@@ -432,8 +432,8 @@ scripts/compliance/
 
 - OPERATIONS_RUNBOOK.md
 - DEPLOYMENT_EXECUTION_PLAN.md
-- docs/VALIDATION_LIBRARIES.md
-- docs/DOCKER_COMPOSE_ARCHITECTURE.md
+- docs/testing/validation-libraries.md
+- docs/architecture/docker-compose-architecture.md
 
 ---
 

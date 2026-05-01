@@ -88,7 +88,7 @@ ELAPSED=$(( $(date +%s) - START_TS ))
     printf -- '- Pass: %d\n- Warn: %d\n- Fail: %d\n\n' "${PASS}" "${WARN}" "${FAIL}"
     if [ "${FAIL}" -eq 0 ]; then
         printf '✅ Onboarding ready. Next steps:\n\n'
-        printf '1. Read `docs/planning/MASTER-EXECUTION-ROADMAP.md`.\n'
+        printf '1. Read `docs/planning/master-execution-roadmap.md`.\n'
         printf '2. Pick an open issue tagged `good-first-issue` or your team area.\n'
         printf '3. Run `bash scripts/ops/full-deployment-test.sh --dry-run` after each change.\n'
     else

@@ -422,7 +422,7 @@ RESOURCE_LIMITS
 create_monitoring_dashboard() {
     log_info "Creating auto-scaling monitoring dashboard configuration..."
 
-    cat > "${PROJECT_ROOT}/docs/operations/AUTOSCALING_MONITORING.md" << 'DASHBOARD'
+    cat > "${PROJECT_ROOT}/docs/operations/autoscaling-monitoring.md" << 'DASHBOARD'
 # Auto-Scaling Monitoring Dashboard
 
 ## Real-Time Metrics
@@ -649,7 +649,7 @@ EOF
         log_info "Configurations created at:"
         log_info "  - ${PROJECT_ROOT}/autoscaling-policies.yaml"
         log_info "  - ${PROJECT_ROOT}/resource-limits.yaml"
-        log_info "  - ${PROJECT_ROOT}/docs/operations/AUTOSCALING_MONITORING.md"
+        log_info "  - ${PROJECT_ROOT}/docs/operations/autoscaling-monitoring.md"
         log_info "  - ${PROJECT_ROOT}/scripts/autoscaling-controller.sh"
     fi
 }

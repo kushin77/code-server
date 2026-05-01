@@ -183,7 +183,7 @@ log_info "⚠️  IMPORTANT: Backup new credentials in secure location (GSM, Vau
 log_info ""
 log_info "Next steps:"
 log_info "  1. Verify replication: ssh user@192.168.168.31 docker exec code-server-postgres psql -U postgres -c 'SELECT * FROM pg_stat_replication;'"
-log_info "  2. Test failover: See docs/operations/FAILOVER_TEST.md"
+log_info "  2. Test failover: See docs/operations/failover-test.md"
 log_info "  3. Update Terraform variables with new secrets"
 log_info "  4. Proceed to P1 fixes (resource limits, health checks)"
 

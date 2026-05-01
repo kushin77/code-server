@@ -59,7 +59,7 @@ groups:
         annotations:
           summary: "API service is down"
           description: "API service {{ $labels.instance }} is not responding to health checks"
-          runbook: "docs/RUNBOOK-API-RECOVERY.md"
+          runbook: "docs/runbooks/runbook-api-recovery.md"
 
       - alert: APIHighErrorRate
         expr: rate(http_requests_total{job="api",status=~"5.."}[5m]) > 0.05
@@ -70,7 +70,7 @@ groups:
         annotations:
           summary: "API error rate is high (>5%)"
           description: "API error rate for {{ $labels.instance }} is {{ $value | humanizePercentage }}"
-          runbook: "docs/RUNBOOK-API-ERROR-RATE.md"
+          runbook: "docs/runbooks/runbook-api-error-rate.md"
 
       - alert: APIResponseTimeHigh
         expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="api"}[5m])) > 1.0
@@ -81,7 +81,7 @@ groups:
         annotations:
           summary: "API response time is high (>1s p95)"
           description: "API p95 response time is {{ $value | humanizeDuration }}"
-          runbook: "docs/RUNBOOK-API-PERFORMANCE.md"
+          runbook: "docs/runbooks/runbook-api-performance.md"
 
   - name: infrastructure_health
     interval: 30s
@@ -96,7 +96,7 @@ groups:
         annotations:
           summary: "Database connection pool exhausted"
           description: "Database has {{ $value }} connections (>90% of max)"
-          runbook: "docs/RUNBOOK-DB-CONNECTION-POOL.md"
+          runbook: "docs/runbooks/runbook-db-connection-pool.md"
 
       - alert: DatabaseHighCPUUsage
         expr: node_cpu_seconds_total{instance=~"db-.*"} > 0.8
@@ -107,7 +107,7 @@ groups:
         annotations:
           summary: "Database CPU usage is high (>80%)"
           description: "Database CPU usage is {{ $value | humanizePercentage }}"
-          runbook: "docs/RUNBOOK-DB-CPU-TUNING.md"
+          runbook: "docs/runbooks/runbook-db-cpu-tuning.md"
 
       - alert: DatabaseReplicationLag
         expr: pg_wal_lsn_age > 300
@@ -118,7 +118,7 @@ groups:
         annotations:
           summary: "Database replication lag exceeds 5 minutes"
           description: "Replication lag is {{ $value | humanizeDuration }}"
-          runbook: "docs/RUNBOOK-DB-REPLICATION.md"
+          runbook: "docs/runbooks/runbook-db-replication.md"
 
       # Docker & Container Health
       - alert: ContainerCrashLooping
@@ -130,7 +130,7 @@ groups:
         annotations:
           summary: "Container is crash looping"
           description: "Container {{ $labels.container_name }} is not running"
-          runbook: "docs/RUNBOOK-CONTAINER-RESTART.md"
+          runbook: "docs/runbooks/runbook-container-restart.md"
 
       - alert: HighMemoryUsage
         expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
@@ -141,7 +141,7 @@ groups:
         annotations:
           summary: "Container memory usage is high (>90%)"
           description: "Container {{ $labels.container_name }} memory: {{ $value | humanizePercentage }}"
-          runbook: "docs/RUNBOOK-MEMORY-PRESSURE.md"
+          runbook: "docs/runbooks/runbook-memory-pressure.md"
 
   - name: deployment_health
     interval: 30s
@@ -156,7 +156,7 @@ groups:
         annotations:
           summary: "Deployment replicas not ready"
           description: "Deployment {{ $labels.deployment }} has {{ $value }} unavailable replicas"
-          runbook: "docs/RUNBOOK-DEPLOYMENT-FAILED.md"
+          runbook: "docs/runbooks/runbook-deployment-failed.md"
 
       - alert: PodOOMKilled
         expr: rate(container_oom_kills_total[5m]) > 0
@@ -167,7 +167,7 @@ groups:
         annotations:
           summary: "Pod OOM killed"
           description: "Pod {{ $labels.pod_name }} exceeded memory limit"
-          runbook: "docs/RUNBOOK-POD-OOM.md"
+          runbook: "docs/runbooks/runbook-pod-oom.md"
 
   - name: infrastructure_capacity
     interval: 60s
@@ -182,7 +182,7 @@ groups:
         annotations:
           summary: "Disk space running out (<10% free)"
           description: "Filesystem {{ $labels.device }} on {{ $labels.instance }} has {{ $value | humanizePercentage }} free"
-          runbook: "docs/RUNBOOK-DISK-SPACE.md"
+          runbook: "docs/runbooks/runbook-disk-space.md"
 
       - alert: InodeLimitApproaching
         expr: (node_filesystem_files_free / node_filesystem_files) < 0.1
@@ -193,7 +193,7 @@ groups:
         annotations:
           summary: "Inode limit approaching"
           description: "Filesystem {{ $labels.device }} has {{ $value | humanizePercentage }} inodes free"
-          runbook: "docs/RUNBOOK-INODE-CLEANUP.md"
+          runbook: "docs/runbooks/runbook-inode-cleanup.md"
 
       # Network
       - alert: HighNetworkLatency
@@ -205,7 +205,7 @@ groups:
         annotations:
           summary: "Network latency is high (>100ms p95)"
           description: "Network p95 latency: {{ $value | humanizeDuration }}"
-          runbook: "docs/RUNBOOK-NETWORK-LATENCY.md"
+          runbook: "docs/runbooks/runbook-network-latency.md"
 
   - name: security_alerts
     interval: 30s
@@ -220,7 +220,7 @@ groups:
         annotations:
           summary: "High authentication failure rate"
           description: "Auth failure rate is {{ $value | humanize }} per second"
-          runbook: "docs/RUNBOOK-AUTH-FAILURES.md"
+          runbook: "docs/runbooks/runbook-auth-failures.md"
 
       # Policy Violations
       - alert: OPAPolicyViolation
@@ -232,7 +232,7 @@ groups:
         annotations:
           summary: "OPA policy violation detected"
           description: "Policy {{ $labels.policy }} violated {{ $value }} times"
-          runbook: "docs/RUNBOOK-POLICY-VIOLATION.md"
+          runbook: "docs/runbooks/runbook-policy-violation.md"
 
   - name: business_metrics
     interval: 60s
@@ -247,7 +247,7 @@ groups:
         annotations:
           summary: "API SLA breach detected"
           description: "API availability is below SLA threshold"
-          runbook: "docs/RUNBOOK-SLA-BREACH.md"
+          runbook: "docs/runbooks/runbook-sla-breach.md"
 
       - alert: HighLatencyReachingThreshold
         expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.5
@@ -258,7 +258,7 @@ groups:
         annotations:
           summary: "API latency reaching SLA threshold"
           description: "API p99 latency: {{ $value | humanizeDuration }}"
-          runbook: "docs/RUNBOOK-LATENCY-THRESHOLD.md"
+          runbook: "docs/runbooks/runbook-latency-threshold.md"
 
 EOF
 
@@ -428,7 +428,7 @@ This document describes the comprehensive alerting rules for production infrastr
 Each alert includes a runbook reference for quick remediation:
 
 ```
-docs/RUNBOOK-<ALERT-CATEGORY>.md
+docs/runbooks/runbook-<alert-category>.md
 ```
 
 Follow the runbook for step-by-step recovery procedures.

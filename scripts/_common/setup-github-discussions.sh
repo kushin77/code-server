@@ -29,7 +29,7 @@ create_discussion_categories() {
   
   mkdir -p docs/discussions
   
-  cat > docs/discussions/CATEGORIES.md <<'EOF'
+  cat > docs/discussions/categories.md <<'EOF'
 # GitHub Discussions Categories
 
 ## 🏗️ Architecture

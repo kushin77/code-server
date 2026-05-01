@@ -146,7 +146,7 @@ All 12 sub-tasks complete (except #3126 IDE extension, deferred). Evidence:
 | IaC | #3132 | `containers-hermes.tf` | `17c2b036` |
 | K8s | #3133 | `kubernetes/deployments/hermes-integration.yaml` | `306bccfd` |
 | E2E Tests | #3134 | `test_agent_orchestration.py` (55 cases) | `e66d4c91` |
-| Docs | #3135 | `docs/HERMES_INTEGRATION_GUIDE.md` | `306bccfd` |
+| Docs | #3135 | `docs/integration/hermes-integration-guide.md` | `306bccfd` |
 
 Full deployment test: **PASS/PASS/PASS/PASS/PASS/PASS** (6 phases, commit `306bccfd`)
 """),
@@ -261,7 +261,7 @@ Full deployment test: **PASS/PASS/PASS/PASS/PASS/PASS** (6 phases, commit `306bc
     (3135, """\
 ## ✅ Closed — Documentation & Handoff
 
-**Deliverable:** `docs/HERMES_INTEGRATION_GUIDE.md` (commit `306bccfd`, ~7 KB)
+**Deliverable:** `docs/integration/hermes-integration-guide.md` (commit `306bccfd`, ~7 KB)
 
 Sections:
 1. Architecture Overview (ASCII diagram, design decisions)

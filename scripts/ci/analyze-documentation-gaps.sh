@@ -28,11 +28,11 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 
 # Required documentation checklist
 declare -A REQUIRED_DOCS=(
-    ["docs/architecture/OVERVIEW.md"]="Architecture Overview — system design, component relationships, deployment topology"
-    ["docs/operations/DEPLOYMENT-RUNBOOK.md"]="Deployment Runbook — step-by-step deployment procedures, rollback, health checks"
-    ["docs/security/SECURITY-GUIDE.md"]="Security Guide — authentication, authorization, secrets management, compliance"
-    ["docs/testing/TEST-PLAN.md"]="Test Plan — unit tests, integration tests, E2E tests, performance baselines"
-    ["docs/api/API-REFERENCE.md"]="API Reference — OpenAPI/Swagger, all endpoints, error codes, rate limits"
+    ["docs/architecture/overview.md"]="Architecture Overview — system design, component relationships, deployment topology"
+    ["docs/runbooks/comprehensive-deployment-runbook.md"]="Deployment Runbook — step-by-step deployment procedures, rollback, health checks"
+    ["docs/security/security-guide.md"]="Security Guide — authentication, authorization, secrets management, compliance"
+    ["docs/testing/test-plan.md"]="Test Plan — unit tests, integration tests, E2E tests, performance baselines"
+    ["docs/api/api-reference.md"]="API Reference — OpenAPI/Swagger, all endpoints, error codes, rate limits"
     ["CHANGELOG.md"]="Changelog — version history, breaking changes, release notes"
 )
 

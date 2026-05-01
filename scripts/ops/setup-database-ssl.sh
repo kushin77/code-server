@@ -221,7 +221,7 @@ update_postgres_docker_config() {
 # ============================================================================
 
 generate_connection_examples() {
-  local output_file="${REPO_DIR}/docs/DATABASE-SSL-CONNECTION-EXAMPLES.md"
+  local output_file="${REPO_DIR}/docs/security/database-ssl-connection-examples.md"
   
   log_info "Generating connection string examples..."
   
@@ -488,7 +488,7 @@ main() {
     log_info "✓ PostgreSQL SSL Setup Complete"
     log_info "=========================================="
     log_info "Certificate Directory: ${POSTGRES_CERT_DIR}"
-    log_info "Connection Examples: ${REPO_DIR}/docs/DATABASE-SSL-CONNECTION-EXAMPLES.md"
+    log_info "Connection Examples: ${REPO_DIR}/docs/security/database-ssl-connection-examples.md"
     log_info ""
     log_info "Next Steps:"
     log_info "1. Update docker-compose.yml to mount certificates"

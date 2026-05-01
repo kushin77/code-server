@@ -204,8 +204,8 @@ log_info ""
 log_info "=== 6. Documentation Quality ==="
 
 RUNBOOKS=(
-    "docs/RUNBOOK-INFRASTRUCTURE-LIFECYCLE.md"
-    "docs/README.md"
+    "docs/runbooks/infrastructure-lifecycle-runbook.md"
+    "README.md"
 )
 
 for runbook in "${RUNBOOKS[@]}"; do

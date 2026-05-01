@@ -160,7 +160,7 @@ Commit: `63871d37`, `e66d4c91`
     3135: """\
 ## ✅ Closed — Hermes Integration Documentation
 
-`docs/HERMES_INTEGRATION_GUIDE.md` and `HERMES_INTEGRATION_PLAN.md` (living spec) maintained.
+`docs/integration/hermes-integration-guide.md` and `HERMES_INTEGRATION_PLAN.md` (living spec) maintained.
 Plan updated to mark Phases 1–4 complete, Phase 5 (IDE extension) deferred.
 Commit: `306bccfd`
 """,

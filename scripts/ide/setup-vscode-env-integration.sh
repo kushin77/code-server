@@ -105,7 +105,7 @@ EOF
 generate_command_docs() {
   log_info "Generating command documentation..."
   
-  cat > "${REPO_ROOT}/docs/IDE-ENVIRONMENT-COMMANDS.md" <<'EOF'
+  cat > "${REPO_ROOT}/docs/ide/environment-commands.md" <<'EOF'
 # VS Code Environment Commands
 
 ## Environment Validation

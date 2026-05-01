@@ -405,7 +405,7 @@ EOF
 generate_harbor_guide() {
     log_info "Generating Harbor deployment and configuration guide..."
     
-    cat > "${REPO_ROOT}/docs/operations/DOCKER_REGISTRY_SETUP.md" << 'EOF'
+    cat > "${REPO_ROOT}/docs/operations/docker-registry-setup.md" << 'EOF'
 # Docker Registry Setup: Harbor, GitLab Container Registry, or AWS ECR
 **Image Repository Configuration & CI/CD Integration — April 29, 2026**
 
@@ -804,7 +804,7 @@ docker pull --disable-content-trust=false registry.kushnir.cloud/code-server/SER
 
 EOF
     
-    log_success "Harbor guide created: docs/operations/DOCKER_REGISTRY_SETUP.md"
+    log_success "Harbor guide created: docs/operations/docker-registry-setup.md"
 }
 
 # Main execution

@@ -181,7 +181,7 @@ EOF
 generate_documentation() {
   log_info "Generating observability documentation..."
   
-  cat > "${REPO_ROOT}/docs/ACTIVITY-FEED-OBSERVABILITY.md" <<'EOF'
+  cat > "${REPO_ROOT}/docs/architecture/activity-feed-observability.md" <<'EOF'
 # Activity Feed & Kafka Event Bus Observability
 
 ## Metrics

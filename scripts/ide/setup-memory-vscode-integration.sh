@@ -61,7 +61,7 @@ EOF
 generate_memory_docs() {
   log_info "Generating memory search documentation..."
   
-  cat > "${REPO_ROOT}/docs/IDE-MEMORY-COMMANDS.md" <<'EOF'
+  cat > "${REPO_ROOT}/docs/ide/memory-commands.md" <<'EOF'
 # VS Code Organizational Memory Commands
 
 ## Search Memory

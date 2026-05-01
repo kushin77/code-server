@@ -1,17 +1,44 @@
 """Tests for trace insights service."""
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime
-from apps.shared.trace_analysis import LatencyStats
-from apps.shared.trace_insights import (
-    HealthScore,
-    SLOMetrics,
-    PerformanceRecommendation,
-    ServiceDependency,
-    ServiceHealthScore,
-    TraceInsightsEngine,
-    DependencyAnalyzer,
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+TRACE_ANALYSIS = _load_module("apps.shared.trace_analysis", "trace_analysis.py")
+shared_pkg.trace_analysis = TRACE_ANALYSIS
+TRACE_INSIGHTS = _load_module("apps.shared.trace_insights", "trace_insights.py")
+
+LatencyStats = TRACE_ANALYSIS.LatencyStats
+HealthScore = TRACE_INSIGHTS.HealthScore
+SLOMetrics = TRACE_INSIGHTS.SLOMetrics
+PerformanceRecommendation = TRACE_INSIGHTS.PerformanceRecommendation
+ServiceDependency = TRACE_INSIGHTS.ServiceDependency
+ServiceHealthScore = TRACE_INSIGHTS.ServiceHealthScore
+TraceInsightsEngine = TRACE_INSIGHTS.TraceInsightsEngine
+DependencyAnalyzer = TRACE_INSIGHTS.DependencyAnalyzer
 
 
 class TestSLOMetrics:

@@ -1,20 +1,45 @@
 """Tests for metrics collection, aggregation and reporting."""
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-from apps.shared.metrics_reporting import (
-    MetricType,
-    AggregationPeriod,
-    Metric,
-    TimeSeries,
-    MetricsCollector,
-    MetricsAggregator,
-    ReportSection,
-    Report,
-    ReportGenerator,
-    AlertingRule,
-    AlertingEngine,
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+METRICS_REPORTING = _load_module("apps.shared.metrics_reporting", "metrics_reporting.py")
+
+MetricType = METRICS_REPORTING.MetricType
+AggregationPeriod = METRICS_REPORTING.AggregationPeriod
+Metric = METRICS_REPORTING.Metric
+TimeSeries = METRICS_REPORTING.TimeSeries
+MetricsCollector = METRICS_REPORTING.MetricsCollector
+MetricsAggregator = METRICS_REPORTING.MetricsAggregator
+ReportSection = METRICS_REPORTING.ReportSection
+Report = METRICS_REPORTING.Report
+ReportGenerator = METRICS_REPORTING.ReportGenerator
+AlertingRule = METRICS_REPORTING.AlertingRule
+AlertingEngine = METRICS_REPORTING.AlertingEngine
 
 
 class TestMetric:
@@ -218,12 +243,17 @@ class TestMetricsAggregator:
         now = datetime.now()
         series.add_value(now, 100.0)
 
-        with pytest.raises(ValueError):
+        caught = False
+        try:
             MetricsAggregator.percentile_by_period(
                 series,
                 AggregationPeriod.HOUR,
                 1.5,  # Invalid
             )
+        except ValueError:
+            caught = True
+
+        assert caught
 
 
 class TestReportSection:

@@ -1,17 +1,42 @@
 """Tests for OpenTelemetry integration."""
 
-import pytest
-from apps.shared.otel_integration import (
-    TraceContextFormat,
-    TraceContext,
-    JaegerTraceContext,
-    ContextPropagator,
-    ResourceBuilder,
-    InstrumentationScope,
-    SpanEventBuilder,
-    LinkBuilder,
-    OpenTelemetryBridge,
-)
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+OTEL = _load_module("apps.shared.otel_integration", "otel_integration.py")
+
+TraceContextFormat = OTEL.TraceContextFormat
+TraceContext = OTEL.TraceContext
+JaegerTraceContext = OTEL.JaegerTraceContext
+ContextPropagator = OTEL.ContextPropagator
+ResourceBuilder = OTEL.ResourceBuilder
+InstrumentationScope = OTEL.InstrumentationScope
+SpanEventBuilder = OTEL.SpanEventBuilder
+LinkBuilder = OTEL.LinkBuilder
+OpenTelemetryBridge = OTEL.OpenTelemetryBridge
 
 
 class TestTraceContext:

@@ -1,18 +1,43 @@
 """Tests for trace analysis and insights."""
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-from apps.shared.trace_analysis import (
-    AnomalyType,
-    LatencyStats,
-    Anomaly,
-    CriticalPath,
-    TraceCorrelation,
-    AnomalyDetector,
-    LatencyProfiler,
-    CriticalPathFinder,
-    TraceCorrelationEngine,
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+TRACE_ANALYSIS = _load_module("apps.shared.trace_analysis", "trace_analysis.py")
+
+AnomalyType = TRACE_ANALYSIS.AnomalyType
+LatencyStats = TRACE_ANALYSIS.LatencyStats
+Anomaly = TRACE_ANALYSIS.Anomaly
+CriticalPath = TRACE_ANALYSIS.CriticalPath
+TraceCorrelation = TRACE_ANALYSIS.TraceCorrelation
+AnomalyDetector = TRACE_ANALYSIS.AnomalyDetector
+LatencyProfiler = TRACE_ANALYSIS.LatencyProfiler
+CriticalPathFinder = TRACE_ANALYSIS.CriticalPathFinder
+TraceCorrelationEngine = TRACE_ANALYSIS.TraceCorrelationEngine
 
 
 class TestLatencyStats:

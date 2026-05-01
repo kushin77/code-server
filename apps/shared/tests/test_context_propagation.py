@@ -2,14 +2,48 @@
 Tests for distributed context propagation system.
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime
-from apps.shared.context_propagation import (
-    ContextFormat, TraceIdentifiers, BaggageItem, RequestBaggage,
-    DistributedContext, W3CTracePropagator, JaegerPropagator,
-    B3Propagator, ContextManager, ContextPropagationMiddleware,
-    require_context, with_child_span, set_baggage
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+CONTEXT_PROPAGATION = _load_module("apps.shared.context_propagation", "context_propagation.py")
+
+ContextFormat = CONTEXT_PROPAGATION.ContextFormat
+TraceIdentifiers = CONTEXT_PROPAGATION.TraceIdentifiers
+BaggageItem = CONTEXT_PROPAGATION.BaggageItem
+RequestBaggage = CONTEXT_PROPAGATION.RequestBaggage
+DistributedContext = CONTEXT_PROPAGATION.DistributedContext
+W3CTracePropagator = CONTEXT_PROPAGATION.W3CTracePropagator
+JaegerPropagator = CONTEXT_PROPAGATION.JaegerPropagator
+B3Propagator = CONTEXT_PROPAGATION.B3Propagator
+ContextManager = CONTEXT_PROPAGATION.ContextManager
+ContextPropagationMiddleware = CONTEXT_PROPAGATION.ContextPropagationMiddleware
+require_context = CONTEXT_PROPAGATION.require_context
+with_child_span = CONTEXT_PROPAGATION.with_child_span
+set_baggage = CONTEXT_PROPAGATION.set_baggage
 
 
 class TestTraceIdentifiers:

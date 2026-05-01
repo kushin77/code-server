@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-05-01 (PHASE 31 — GITOPS COMPLIANCE GATE)
+
+### Added — GitLab Primary Migration
+- **.gitlab-ci.yml** (8 stages, 20+ jobs): Full GitLab CI/CD pipeline translating all 33 GitHub Actions workflows. Stages: validate → quality → test → security → plan → deploy → sync. Automatic GitHub mirror push after every successful main pipeline.
+- **scripts/ops/gitlab-primary-setup.sh**: One-time activation script to push the repo to GitLab primary and verify CI triggers.
+- **Git remote change**: `origin` now points to `gitlab.com/kushin77/code-server` (primary); `github` remote is read-only mirror.
+
+### Fixed — Phase 30 Security Engine
+- **Violation accumulation bug** (`scripts/ops/phase-30-security-enforcement.sh`): `_init_state()` was using `[[ -f file ]] || echo` (only creates violations.json if missing). Across dozens of audit runs this accumulated 558 violations causing compliance score to collapse to 0/100. Fixed to always reset violations.json on each audit run.
+- **Result**: Score recovered from 0/100 to **86/100** (SOC2=91, NIST=86, ISO=89), 7 violations, 0 critical.
+- All 24/24 phase-30 integration tests continue to pass.
+
+### Added — Phase 31: GitOps Compliance Gate
+- **scripts/ops/phase-31-gitops-compliance-gate.sh**: Compliance enforcement gate designed to block deployments when security posture degrades. Four modes:
+  - `check`: run audit, fail CI if score < threshold (default 80) or critical violations > 0
+  - `enforce`: audit + auto-remediate safe violations + gate check
+  - `baseline`: snapshot current compliance score for drift reference
+  - `drift`: compare current score to baseline, warn at -5 pts, fail at -15 pts
+- **scripts/ci/phase-31-integration-tests.sh**: 22-test suite across 7 groups (script validation, check mode, baseline, drift, enforce, GitLab CI integration, Phase 30 regression). **22/22 PASS**.
+- **.gitlab-ci.yml `plan:compliance-gate` job**: Runs gate in every MR and main branch push. Publishes `artifacts/phase31/gate-report.json`. Threshold configurable via `$COMPLIANCE_MIN_SCORE` CI variable.
+
+### Verified
+- Full deployment gate: `bash scripts/ops/full-deployment-test.sh --dry-run` → **PASS/PASS/PASS/PASS/PASS/PASS** ✅
+- Phase 30: 24/24 integration tests ✅
+- Phase 31: 22/22 integration tests ✅
+- GitHub mirror synced: `63ea17f4` pushed to `github/release/v1.0.0-production` ✅
+
 ## [1.13.0] - 2026-05-01 (EVENING SESSION - MAY 2-3 AUTONOMOUS OPS ACTIVATION)
 
 ### Added - May 2-3 Autonomous Operations Package

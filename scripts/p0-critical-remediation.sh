@@ -10,6 +10,7 @@ trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Cleanup complete"; true' EXIT
 
 source scripts/_common/init.sh 2>/dev/null || { echo "ERROR: Cannot source init.sh"; exit 1; }
+source scripts/_common/update-env-overrides.sh 2>/dev/null || { echo "ERROR: Cannot source update-env-overrides.sh"; exit 1; }
 
 # New credentials (securely generated)
 NEW_DB_PASSWORD='9ouxRSxNW8x^A(h0XTdFoQNZ'
@@ -27,30 +28,24 @@ log_info "P0 CRITICAL REMEDIATION - Starting"
 log_info "========================================================="
 
 # =========================================================================
-# STEP 1: Update Local Environment Files
+# STEP 1: Update Local Environment Files using Consolidated Structure
 # =========================================================================
-log_info "STEP 1: Updating local environment files with new credentials"
+log_info "STEP 1: Updating environment overrides with new credentials"
 
-# Update .env.production
-log_info "  → Updating .env.production"
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD='${NEW_DB_PASSWORD}'/g" .env.production
-sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD='${NEW_REDIS_PASSWORD}'/g" .env.production
-sed -i "s/GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD='${NEW_GRAFANA_PASSWORD}'/g" .env.production
-sed -i "s/QDRANT_API_KEY=.*/QDRANT_API_KEY='${NEW_QDRANT_KEY}'/g" .env.production
-sed -i "s/SCHEDULER_API_KEY=.*/SCHEDULER_API_KEY='${NEW_SCHEDULER_KEY}'/g" .env.production
-sed -i "s/OAUTH2_COOKIE_SECRET=.*/OAUTH2_COOKIE_SECRET='${NEW_OAUTH_SECRET}'/g" .env.production
+# Export environment variable for the helper script
+export OVERRIDE_ENVIRONMENT="${ENVIRONMENT:-private}"
 
-# Update .env.cluster
-log_info "  → Updating .env.cluster"
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD='${NEW_DB_PASSWORD}'/g" .env.cluster
-sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD='${NEW_REDIS_PASSWORD}'/g" .env.cluster
-sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD='${NEW_DB_PASSWORD}'/g" .env.cluster
-sed -i "s/GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD='${NEW_GRAFANA_PASSWORD}'/g" .env.cluster
-sed -i "s/QDRANT_API_KEY=.*/QDRANT_API_KEY='${NEW_QDRANT_KEY}'/g" .env.cluster
-sed -i "s/SCHEDULER_API_KEY=.*/SCHEDULER_API_KEY='${NEW_SCHEDULER_KEY}'/g" .env.cluster
-sed -i "s/OAUTH2_COOKIE_SECRET=.*/OAUTH2_COOKIE_SECRET='${NEW_OAUTH_SECRET}'/g" .env.cluster
+# Update environment variables in the overrides file
+log_info "  → Updating .env/${OVERRIDE_ENVIRONMENT}/overrides"
+update_env_var "DB_PASSWORD" "$NEW_DB_PASSWORD"
+update_env_var "POSTGRES_PASSWORD" "$NEW_DB_PASSWORD"
+update_env_var "REDIS_PASSWORD" "$NEW_REDIS_PASSWORD"
+update_env_var "GRAFANA_ADMIN_PASSWORD" "$NEW_GRAFANA_PASSWORD"
+update_env_var "QDRANT_API_KEY" "$NEW_QDRANT_KEY"
+update_env_var "SCHEDULER_API_KEY" "$NEW_SCHEDULER_KEY"
+update_env_var "OAUTH2_COOKIE_SECRET" "$NEW_OAUTH_SECRET"
 
-log_success "✓ Environment files updated"
+log_success "✓ Environment overrides updated"
 
 # =========================================================================
 # STEP 2: Configure PostgreSQL Replication on Primary
@@ -142,8 +137,8 @@ log_success() { echo "[✓] $1"; }
 
 log_info "  → Sourcing new environment variables"
 set -a
-source /home/akushnir/code-server/.env.production
-source /home/akushnir/code-server/.env.cluster
+source /home/akushnir/code-server/.env/_common/defaults
+source /home/akushnir/code-server/.env/${ENVIRONMENT:-private}/overrides
 set +a
 
 log_info "  → Restarting critical services with new credentials"
@@ -176,8 +171,7 @@ log_info "========================================================="
 log_success "P0 CRITICAL REMEDIATION - COMPLETE"
 log_info "========================================================="
 log_info "New credentials have been applied to:"
-log_info "  ✓ .env.production"
-log_info "  ✓ .env.cluster"
+log_info "  ✓ .env/${ENVIRONMENT:-private}/overrides"
 log_info "  ✓ PostgreSQL primary"
 log_info "  ✓ PostgreSQL replica (replication enabled)"
 log_info "  ✓ Redis"

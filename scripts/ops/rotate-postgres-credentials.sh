@@ -1,9 +1,16 @@
 #!/bin/bash
 # PostgreSQL credential rotation with automated failover handling
 # Rotates database credentials and updates all services
+# Updated to use Phase 3 consolidated .env structure
 
 set -e
 trap 'echo "❌ Rotation failed at line $LINENO"; exit 1' ERR
+
+# Source environment utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$REPO_ROOT/scripts/_common/init.sh" 2>/dev/null || { echo "ERROR: Cannot source init.sh"; exit 1; }
+source "$REPO_ROOT/scripts/_common/update-env-overrides.sh" 2>/dev/null || { echo "ERROR: Cannot source update-env-overrides.sh"; exit 1; }
 
 PRIMARY="192.168.168.31"
 REPLICA="192.168.168.42"
@@ -35,12 +42,21 @@ ssh -o BatchMode=yes akushnir@$PRIMARY << PSQL_EOF
 PSQL_EOF
 
 echo "Step 3: Update environment variables..."
+# Update locally first
+export OVERRIDE_ENVIRONMENT="${ENVIRONMENT:-private}"
+update_env_var "DB_PASSWORD" "$NEW_PASSWORD"
+update_env_var "POSTGRES_PASSWORD" "$NEW_PASSWORD"
+echo "✓ Local environment updated"
+
+# Then sync to primary host
 ssh -o BatchMode=yes akushnir@$PRIMARY << ENV_EOF
   cd ~/code-server-enterprise
-  # Update environment files
-  sed -i 's/^DATABASE_PASSWORD=.*/DATABASE_PASSWORD=$NEW_PASSWORD/' .env 2>/dev/null || true
-  sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=$NEW_PASSWORD/' .env.production 2>/dev/null || true
-  echo "✓ Environment files updated"
+  # Update environment using helper
+  export OVERRIDE_ENVIRONMENT="${ENVIRONMENT:-private}"
+  source scripts/_common/update-env-overrides.sh
+  update_env_var "DB_PASSWORD" "$NEW_PASSWORD"
+  update_env_var "POSTGRES_PASSWORD" "$NEW_PASSWORD"
+  echo "✓ Primary environment updated"
 ENV_EOF
 
 echo "Step 4: Restart services with new credentials..."

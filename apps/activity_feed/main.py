@@ -5,6 +5,7 @@
 # @governance GOV-002: All activity streamed with audit logging
 
 import json
+import os
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -13,8 +14,17 @@ from datetime import datetime
 import asyncio
 from consumer import ActivityFeedConsumer, ActivityEvent
 from log import get_logger
+from apps.shared.monitoring import ApplicationMetrics, MonitoringConfig, track_metrics
 
 logger = get_logger(__name__)
+
+# Initialize shared monitoring
+activity_feed_config = MonitoringConfig(
+    app_name="activity-feed",
+    app_version=os.getenv("APP_VERSION", "1.0"),
+    environment=os.getenv("ENVIRONMENT", "development")
+)
+metrics = ApplicationMetrics(activity_feed_config)
 
 app = FastAPI(title="Activity Feed", version="1.0")
 consumer = ActivityFeedConsumer()
@@ -50,15 +60,18 @@ class FilterRequest(BaseModel):
     limit: int = 50
 
 @app.get("/health")
+@track_metrics(metrics, method="GET", endpoint="/health")
 async def health():
-    """Health check"""
-    return {
-        "status": "healthy",
-        "service": "activity-feed",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
-    }
+    """Health check with structured response"""
+    return await metrics.perform_health_check()
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics exposition endpoint"""
+    return metrics.get_metrics()
 
 @app.get("/api/activity", response_model=ActivityFeedResponse)
+@track_metrics(metrics, method="GET", endpoint="/api/activity")
 async def get_activity(
     actor_id: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),

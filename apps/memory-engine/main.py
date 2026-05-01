@@ -5,20 +5,27 @@
 # @governance GOV-002: All memory queries logged and audited
 
 import json
+import os
 from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from prometheus_fastapi_instrumentator import Instrumentator
 
 from log import get_logger
 import config as _svc_config
+from apps.shared.monitoring import ApplicationMetrics, MonitoringConfig, track_metrics
 
 logger = get_logger(__name__)
 
 app = FastAPI(title="Organizational Memory Engine", version="1.0")
 
-Instrumentator().instrument(app).expose(app)
+# Initialize shared monitoring (replaces Instrumentator)
+memory_engine_config = MonitoringConfig(
+    app_name="memory-engine",
+    app_version=os.getenv("APP_VERSION", "1.0"),
+    environment=os.getenv("ENVIRONMENT", "development")
+)
+metrics = ApplicationMetrics(memory_engine_config)
 
 class SearchResult(BaseModel):
     """Search result with metadata"""
@@ -97,11 +104,18 @@ def _perform_semantic_search(
     )
 
 @app.get("/health")
+@track_metrics(metrics, method="GET", endpoint="/health")
 async def health():
-    """Health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"}
+    """Health check endpoint with structured response"""
+    return await metrics.perform_health_check()
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics exposition endpoint"""
+    return metrics.get_metrics()
 
 @app.get("/memory/search", response_model=SearchResponse)
+@track_metrics(metrics, method="GET", endpoint="/memory/search")
 async def semantic_search(
     q: str = Query(..., description="Natural language search query"),
     collection: str = Query("incidents", description="Collection to search"),
@@ -117,6 +131,7 @@ async def semantic_search(
 
 
 @app.post("/memory/search", response_model=SearchResponse)
+@track_metrics(metrics, method="POST", endpoint="/memory/search")
 async def semantic_search_legacy(request: SearchRequest) -> SearchResponse:
     """Compatibility wrapper for existing POST-based callers."""
     return _perform_semantic_search(request.query, request.collection, request.limit, request.min_relevance)

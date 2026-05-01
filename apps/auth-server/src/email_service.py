@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, List
 from abc import ABC, abstractmethod
 
 from log import get_logger
-from apps._shared.python.exceptions import (
+from exceptions import (
     EmailServiceError, ServiceException
 )
 

@@ -22,6 +22,9 @@ provider "docker" {
     "-o", "ConnectTimeout=30",
     "-o", "ServerAliveInterval=15",
     "-o", "ServerAliveCountMax=4",
+    "-o", "ControlMaster=auto",
+    "-o", "ControlPath=/tmp/ssh-tf-primary-%r@%h:%p",
+    "-o", "ControlPersist=600",
   ]
 }
 
@@ -34,6 +37,9 @@ provider "docker" {
     "-o", "ConnectTimeout=30",
     "-o", "ServerAliveInterval=15",
     "-o", "ServerAliveCountMax=4",
+    "-o", "ControlMaster=auto",
+    "-o", "ControlPath=/tmp/ssh-tf-replica-%r@%h:%p",
+    "-o", "ControlPersist=600",
   ]
 }
 

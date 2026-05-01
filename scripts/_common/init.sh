@@ -50,7 +50,35 @@ source_env_file() {
     set +a
 }
 
-# Auto-source environment variables if available
+# Auto-source environment variables with SSOT consolidation pattern
+# Phase 3: .env consolidation - Load common defaults, then environment overrides
+export ENVIRONMENT=${ENVIRONMENT:-private}
+
+# Always load shared defaults
+if [[ -f "${REPO_ROOT}/.env/_common/defaults" ]]; then
+    source_env_file "${REPO_ROOT}/.env/_common/defaults"
+else
+    log_warning "Shared .env defaults not found at ${REPO_ROOT}/.env/_common/defaults"
+fi
+
+# Load environment-specific overrides
+case "${ENVIRONMENT}" in
+    private)
+        if [[ -f "${REPO_ROOT}/.env/private/overrides" ]]; then
+            source_env_file "${REPO_ROOT}/.env/private/overrides"
+        fi
+        ;;
+    air-gapped)
+        if [[ -f "${REPO_ROOT}/.env/air-gapped/overrides" ]]; then
+            source_env_file "${REPO_ROOT}/.env/air-gapped/overrides"
+        fi
+        ;;
+    *)
+        log_warning "Unknown environment: ${ENVIRONMENT}. Defaults will be used."
+        ;;
+esac
+
+# Legacy compatibility: Still source .env.deployment if it exists
 if [[ -f "${REPO_ROOT}/.env.deployment" ]]; then
     source_env_file "${REPO_ROOT}/.env.deployment"
 fi

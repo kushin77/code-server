@@ -1,0 +1,131 @@
+# ============================================================================
+# .env/air-gapped/overrides - AIR-GAPPED ENVIRONMENT CONFIGURATION
+# Environment-specific overrides for air-gapped (isolated) deployment
+# 
+# Inherits all 41 shared variables from .env/_common/defaults
+# These values override the defaults specifically for air-gapped infrastructure
+#
+# Air-Gapped Infrastructure Topology:
+# - Primary Host: 10.0.0.10
+# - Replica Host: 10.0.0.11
+# - NAS Host: 10.0.0.20
+# - Internal Registry: registry.internal:5000
+#
+# Date: April 30, 2026
+# ============================================================================
+
+# ============================================================================
+# AIR-GAPPED DOMAIN & NETWORKING CONFIGURATION
+# ============================================================================
+
+# Internal domain configuration (no external DNS)
+export APEX_DOMAIN=internal.local
+export AUTH_DOMAIN=auth.internal.local
+export TLS_EMAIL=ops@internal.local
+export APPSMITH_DOMAIN=internal.local
+export CODE_SERVER_DOMAIN=internal.local
+export IDE_DOMAIN=ide.internal.local
+export API_DOMAIN=api.internal.local
+export REGISTRY_DOMAIN=registry.internal
+
+# API Configuration (primary host, internal network)
+export API_HOST=10.0.0.10
+export API_PROTOCOL=https
+export API_PORT=8443
+
+# Cluster Configuration (internal network)
+export PRIMARY_HOST=10.0.0.10
+export REPLICA_HOST=10.0.0.11
+export CLUSTER_VIP=10.0.0.250
+
+# Deployment mode
+export DEPLOYMENT_MODE=air-gapped
+export REPLICA_ENABLED=true
+
+# ============================================================================
+# DATABASE CONFIGURATION (AIR-GAPPED ENVIRONMENT)
+# ============================================================================
+export DB_PASSWORD=air-gapped-db-password-change-me
+export POSTGRES_PASSWORD=air-gapped-db-password-change-me
+export DATABASE_URL=postgresql://postgres:air-gapped-db-password-change-me@code-server-postgres:5432/code_server
+
+# ============================================================================
+# REDIS CONFIGURATION (AIR-GAPPED ENVIRONMENT)
+# ============================================================================
+export REDIS_PASSWORD=air-gapped-redis-password-change-me
+
+# ============================================================================
+# CONTAINER REGISTRY (AIR-GAPPED - INTERNAL)
+# ============================================================================
+# All images must be available in internal registry
+export REGISTRY_URL=registry.internal:5000
+export REGISTRY_USERNAME=admin
+export REGISTRY_PASSWORD=air-gapped-registry-password-change-me
+export DOCKER_REGISTRY=registry.internal:5000
+
+# ============================================================================
+# SECURITY & TLS (AIR-GAPPED - INTERNAL CA)
+# ============================================================================
+# Use internal CA certificates for TLS
+export ENABLE_TLS=true
+export TLS_CERT_PATH=/etc/tls/certs/internal-ca.crt
+export TLS_KEY_PATH=/etc/tls/private/internal-ca.key
+export CADDY_AUTO_HTTPS=off
+
+# ============================================================================
+# OAUTH & AUTHENTICATION (AIR-GAPPED)
+# ============================================================================
+# OAuth disabled in air-gapped - use local authentication
+export OAUTH_ENABLED=false
+export CODE_SERVER_PASSWORD=air-gapped-code-server-password-change-me!
+
+# ============================================================================
+# EXTERNAL INTEGRATIONS (AIR-GAPPED - DISABLED)
+# ============================================================================
+# Disable all external integrations for air-gapped
+export ENABLE_EXTERNAL_DNS=false
+export ENABLE_LETS_ENCRYPT=false
+export ENABLE_GCP_INTEGRATION=false
+export ENABLE_AWS_INTEGRATION=false
+export ENABLE_GITHUB_INTEGRATION=false
+export ENABLE_EXTERNAL_MONITORING=false
+
+# ============================================================================
+# APPSMITH CONFIGURATION (AIR-GAPPED)
+# ============================================================================
+export APPSMITH_INSTANCE_NAME=air-gapped-ide
+export APPSMITH_ENCRYPTION_PASSWORD=air-gapped-appsmith-encryption-change-me
+export APPSMITH_ENCRYPTION_SALT=air-gapped-appsmith-salt-change-me
+
+# ============================================================================
+# LOCAL REGISTRY & IMAGE MANAGEMENT (AIR-GAPPED)
+# ============================================================================
+# Local image cache directory for air-gapped deployments
+export LOCAL_REGISTRY_PATH=/opt/code-server/images
+export IMAGE_SYNC_INTERVAL=3600
+export BYPASS_INTERNET_CHECKS=true
+
+# ============================================================================
+# OBSERVABILITY (AIR-GAPPED - SHORT RETENTION)
+# ============================================================================
+# Shorter retention for air-gapped to manage storage
+export PROMETHEUS_RETENTION=7d
+export LOKI_RETENTION_DAYS=3
+export ALERTMANAGER_SMTP_FROM=alerts@internal.local
+
+# ============================================================================
+# NETWORK & DNS (AIR-GAPPED - INTERNAL ONLY)
+# ============================================================================
+# All connectivity internal to air-gapped network
+export DNS_SERVERS=10.0.0.1
+export NTP_SERVERS=10.0.0.1
+export HTTP_PROXY=http://10.0.0.100:3128
+export HTTPS_PROXY=http://10.0.0.100:3128
+export NO_PROXY=internal.local,10.0.0.0/24
+
+# ============================================================================
+# ADMIN CONFIGURATION (AIR-GAPPED)
+# ============================================================================
+export ADMIN_EMAIL=ops@internal.local
+export GRAFANA_SECURITY_ADMIN_USER=admin
+export GRAFANA_SECURITY_ADMIN_PASSWORD=air-gapped-grafana-password-change-me

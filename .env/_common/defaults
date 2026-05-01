@@ -1,0 +1,155 @@
+# ============================================================================
+# .env/_common/defaults - BASE CONFIGURATION DEFAULTS (SSOT Foundation)
+# Single Source of Truth for all shared environment variables
+# 
+# All application and infrastructure configuration variables are defined here.
+# Environment-specific overrides are in .env/private/ and .env/air-gapped/
+#
+# CONSOLIDATION STRATEGY (Phase 3):
+# - .env/_common/defaults = Shared values for all environments (this file - SSOT)
+# - .env/private/ = Private environment-specific overrides
+# - .env/air-gapped/ = Air-gapped environment-specific overrides
+#
+# LOAD ORDER (priority, highest to lowest):
+#   1. .env/_common/defaults (this file - defaults for all environments)
+#   2. .env/private/ OR .env/air-gapped/ (environment-specific overrides)
+#
+# USAGE: Scripts should source variables in this order:
+#   source .env/_common/defaults
+#   [ -f .env/private/overrides ] && source .env/private/overrides
+#   # OR
+#   [ -f .env/air-gapped/overrides ] && source .env/air-gapped/overrides
+#
+# Terraform consolidation: See terraform/environments/_common/README.md
+# Date: April 30, 2026
+# ============================================================================
+
+# ============================================================================
+# SECTION 1: CORE DOMAIN & IDENTITY CONFIGURATION (SSOT)
+# ============================================================================
+# Primary domain for all services (SOURCE OF TRUTH)
+export APEX_DOMAIN=${APEX_DOMAIN:-kushnir.cloud}
+
+# Domain aliases for specific services (derived from APEX_DOMAIN)
+export AUTH_DOMAIN=${AUTH_DOMAIN:-auth.${APEX_DOMAIN}}
+export APPSMITH_DOMAIN=${APPSMITH_DOMAIN:-${APEX_DOMAIN}}
+export CODE_SERVER_DOMAIN=${CODE_SERVER_DOMAIN:-${APEX_DOMAIN}}
+export IDE_DOMAIN=${IDE_DOMAIN:-ide.${APEX_DOMAIN}}
+export API_DOMAIN=${API_DOMAIN:-api.${APEX_DOMAIN}}
+export REGISTRY_DOMAIN=${REGISTRY_DOMAIN:-registry.${APEX_DOMAIN}}
+
+# TLS/Certificate configuration
+export TLS_EMAIL=${TLS_EMAIL:-admin@${APEX_DOMAIN}}
+export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@kushnir.cloud}
+
+# ============================================================================
+# SECTION 2: API & PROTOCOL CONFIGURATION (SSOT)
+# ============================================================================
+export API_PROTOCOL=${API_PROTOCOL:-http}
+export API_HOST=${API_HOST:-192.168.168.31}
+export API_PORT=${API_PORT:-8080}
+export API_ENDPOINT=${API_ENDPOINT:-${API_PROTOCOL}://${API_HOST}:${API_PORT}}
+export API_HEALTH_ENDPOINT=${API_HEALTH_ENDPOINT:-${API_ENDPOINT}/health}
+export API_OAUTH_CALLBACK=${API_OAUTH_CALLBACK:-${API_ENDPOINT}/oauth/callback}
+
+# ============================================================================
+# SECTION 3: CLUSTER & HIGH AVAILABILITY CONFIGURATION (SSOT)
+# ============================================================================
+export CLUSTER_VIP=${CLUSTER_VIP:-192.168.168.250}
+export CLUSTER_HOST_1=${CLUSTER_HOST_1:-192.168.168.31}
+export CLUSTER_HOST_2=${CLUSTER_HOST_2:-192.168.168.42}
+export PRIMARY_HOST=${PRIMARY_HOST:-192.168.168.31}
+export REPLICA_HOST=${REPLICA_HOST:-192.168.168.42}
+
+# Deployment mode: primary, replica, or private
+export DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-private}
+export REPLICA_ENABLED=${REPLICA_ENABLED:-true}
+export REPLICATION_MODE=${REPLICATION_MODE:-primary}
+
+# ============================================================================
+# SECTION 4: DATABASE CONFIGURATION (SSOT)
+# ============================================================================
+# PostgreSQL primary configuration
+export DATABASE_HOST=${DATABASE_HOST:-code-server-postgres}
+export DATABASE_PORT=${DATABASE_PORT:-5432}
+export POSTGRES_PORT=${POSTGRES_PORT:-5432}
+export DB_USER=${DB_USER:-postgres}
+export DB_PASSWORD=${DB_PASSWORD:-postgres-dev-password}
+export DB_NAME=${DB_NAME:-code_server}
+export POSTGRES_DB=${POSTGRES_DB:-kushnir_db}
+export POSTGRES_USER=${POSTGRES_USER:-postgres}
+export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres-dev-password}
+export POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS:--c max_wal_senders=10 -c wal_level=replica}
+
+# Database connection URL (constructed)
+export DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DB_NAME}}
+
+# Connection pooling
+export DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-20}
+export DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-40}
+
+# ============================================================================
+# SECTION 5: REDIS CONFIGURATION (SSOT)
+# ============================================================================
+export REDIS_HOST=${REDIS_HOST:-code-server-redis}
+export REDIS_PORT=${REDIS_PORT:-6379}
+export REDIS_PASSWORD=${REDIS_PASSWORD:-redis-dev-password}
+export REDIS_MAX_MEMORY=${REDIS_MAX_MEMORY:-512mb}
+export REDIS_MAXMEMORY=${REDIS_MAXMEMORY:-6gb}
+export REDIS_EVICTION_POLICY=${REDIS_EVICTION_POLICY:-allkeys-lru}
+export REDIS_MAXMEMORY_POLICY=${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+export REDIS_APPENDONLY=${REDIS_APPENDONLY:-yes}
+
+# ============================================================================
+# SECTION 6: MESSAGE BROKER (REDPANDA/KAFKA) CONFIGURATION (SSOT)
+# ============================================================================
+export KAFKA_BROKER=${KAFKA_BROKER:-code-server-redpanda:9092}
+export KAFKA_TOPIC_PREFIX=${KAFKA_TOPIC_PREFIX:-code-server.}
+export KAFKA_JMX_EXPORTER=${KAFKA_JMX_EXPORTER:-localhost:9308}
+export REDPANDA_PORT=${REDPANDA_PORT:-9092}
+export REDPANDA_REST_PORT=${REDPANDA_REST_PORT:-8082}
+export REDPANDA_SCHEMA_PORT=${REDPANDA_SCHEMA_PORT:-8081}
+export REDPANDA_BROKERS=${REDPANDA_BROKERS:-code-server-redpanda:9092}
+export REDPANDA_PARTITIONS=${REDPANDA_PARTITIONS:-3}
+export REDPANDA_REPLICATION_FACTOR=${REDPANDA_REPLICATION_FACTOR:-2}
+
+# ============================================================================
+# SECTION 7: OBSERVABILITY & MONITORING (SSOT)
+# ============================================================================
+export PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+export PROMETHEUS_SELF_METRICS_PORT=${PROMETHEUS_SELF_METRICS_PORT:-9200}
+export PROMETHEUS_RETENTION=${PROMETHEUS_RETENTION:-30d}
+export PROMETHEUS_SCRAPE_INTERVAL=${PROMETHEUS_SCRAPE_INTERVAL:-15s}
+export PROMETHEUS_ENDPOINT=${PROMETHEUS_ENDPOINT:-http://localhost:9090}
+
+export GRAFANA_PORT=${GRAFANA_PORT:-3000}
+export GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+export GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin-dev-password-12345}
+export GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-dev-grafana-password-12345}
+export GRAFANA_SECURITY_ADMIN_USER=${GRAFANA_SECURITY_ADMIN_USER:-admin}
+export GRAFANA_SECURITY_ADMIN_PASSWORD=${GRAFANA_SECURITY_ADMIN_PASSWORD:-admin-dev-password-12345}
+export GRAFANA_ENDPOINT=${GRAFANA_ENDPOINT:-http://localhost:3000}
+
+export LOKI_PORT=${LOKI_PORT:-3100}
+export LOKI_RETENTION_DAYS=${LOKI_RETENTION_DAYS:-30}
+export LOKI_ENABLED=${LOKI_ENABLED:-true}
+
+export ALERTMANAGER_PORT=${ALERTMANAGER_PORT:-9093}
+export ALERTMANAGER_SMTP_FROM=${ALERTMANAGER_SMTP_FROM:-alerts@kushnir.cloud}
+export ALERTMANAGER_SLACK_URL=${ALERTMANAGER_SLACK_URL:-https://hooks.slack.com/services/dev/dev/dev}
+
+# ============================================================================
+# SECTION 8: OPENTELEMETRY (OTEL) & TRACING (SSOT)
+# ============================================================================
+export OTEL_EXPORTER_OTLP_GRPC_PORT=${OTEL_EXPORTER_OTLP_GRPC_PORT:-4317}
+export OTEL_EXPORTER_OTLP_HTTP_PORT=${OTEL_EXPORTER_OTLP_HTTP_PORT:-4318}
+export OTEL_COLLECTOR_HOST=${OTEL_COLLECTOR_HOST:-code-server-otel-collector}
+export OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://code-server-otel-collector:4317}
+export TEMPO_GRPC_PORT=${TEMPO_GRPC_PORT:-4317}
+export TEMPO_HTTP_PORT=${TEMPO_HTTP_PORT:-3200}
+
+# ============================================================================
+# CONSOLIDATION COMPLETE
+# All 41 shared variables are now defined once, in this file.
+# Environment-specific overrides are in .env/private/ or .env/air-gapped/
+# ============================================================================

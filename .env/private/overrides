@@ -1,0 +1,81 @@
+# ============================================================================
+# .env/private/overrides - PRIVATE ENVIRONMENT CONFIGURATION
+# Environment-specific overrides for private deployment
+# 
+# Inherits all 41 shared variables from .env/_common/defaults
+# These values override the defaults specifically for private infrastructure
+#
+# Private Infrastructure Topology:
+# - Primary Host: 192.168.168.31
+# - Replica Host: 192.168.168.42  
+# - NAS Host: 192.168.168.56
+#
+# Date: April 30, 2026
+# ============================================================================
+
+# ============================================================================
+# PRODUCTION INFRASTRUCTURE SPECIFIC OVERRIDES
+# ============================================================================
+
+# Domain configuration for private environment
+export APEX_DOMAIN=kushnir.cloud
+export AUTH_DOMAIN=auth.kushnir.cloud
+export TLS_EMAIL=ops@kushnir.cloud
+export APPSMITH_DOMAIN=kushnir.cloud
+export CODE_SERVER_DOMAIN=kushnir.cloud
+
+# API Configuration (primary host)
+export API_HOST=192.168.168.31
+export API_PROTOCOL=http
+export API_PORT=8080
+
+# Cluster Configuration
+export PRIMARY_HOST=192.168.168.31
+export REPLICA_HOST=192.168.168.42
+export CLUSTER_VIP=192.168.168.250
+
+# Deployment mode
+export DEPLOYMENT_MODE=private
+export REPLICA_ENABLED=true
+
+# ============================================================================
+# DATABASE CREDENTIALS (PRIVATE ENVIRONMENT)
+# ============================================================================
+export DB_USER=postgres
+export DB_PASSWORD=9ouxRSxNW8x^A(h0XTdFoQNZ
+export POSTGRES_PASSWORD=9ouxRSxNW8x^A(h0XTdFoQNZ
+export DATABASE_URL=postgresql://postgres:9ouxRSxNW8x^A(h0XTdFoQNZ@code-server-postgres:5432/code_server
+
+# ============================================================================
+# REDIS CREDENTIALS (PRIVATE ENVIRONMENT)
+# ============================================================================
+export REDIS_PASSWORD=y7h$7DAWtmqo*X$JER!p2ya%
+
+# ============================================================================
+# OAUTH & AUTHENTICATION (PRIVATE ENVIRONMENT)
+# ============================================================================
+export OAUTH_ENABLED=true
+export CODE_SERVER_PASSWORD=SecureCodeServerPassword2026!
+
+# ============================================================================
+# APPSMITH CONFIGURATION (PRIVATE ENVIRONMENT)
+# ============================================================================
+export APPSMITH_INSTANCE_NAME=kushnir-cloud-ide
+export APPSMITH_ENCRYPTION_PASSWORD=change-me-prod
+export APPSMITH_ENCRYPTION_SALT=change-me-prod
+export APPSMITH_INTERNAL_REDIS_URL=redis://redis-appsmith:6379
+export APPSMITH_MONGODB_URI=mongodb://mongo-appsmith:27017/appsmith
+
+# ============================================================================
+# OBSERVABILITY OVERRIDES (PRIVATE ENVIRONMENT)
+# ============================================================================
+export PROMETHEUS_RETENTION=30d
+export LOKI_RETENTION_DAYS=30
+export ALERTMANAGER_SMTP_FROM=alerts@kushnir.cloud
+
+# ============================================================================
+# ADMIN CONFIGURATION (PRIVATE ENVIRONMENT)
+# ============================================================================
+export ADMIN_EMAIL=admin@kushnir.cloud
+export GRAFANA_SECURITY_ADMIN_USER=admin
+export GRAFANA_SECURITY_ADMIN_PASSWORD=admin-dev-password-12345

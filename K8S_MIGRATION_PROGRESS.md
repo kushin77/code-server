@@ -131,3 +131,20 @@ The kushnir.cloud platform has transitioned from a pure Docker HA stack into a "
 
 ---
 *Ready for Phase 4 Execution Execution Segment*
+
+# Phase 4 Implementation: Data Portability (May 1, 12:30 PM)
+
+## 💾 Data Migration Utility
+- **Script:** [scripts/ops/migrate-to-k8s-data.sh](scripts/ops/migrate-to-k8s-data.sh)
+- **Capabilities:**
+  - Automated  streaming from Docker primary to K8s PostgreSQL StatefulSet.
+  - Redis RDB snapshot transfer and hot-reload via pod restart.
+  - Integrated with  for auditable execution.
+
+## 🏁 Readiness Check
+1. **Cluster:** AKS Provisioning sequence ready.
+2. **Configuration:** Helm templates verified.
+3. **Data:** Migration path secured and scripted.
+4. **Validation:** Post-migration verification steps integrated into .
+
+*Status: Ready for Live Execution (Blocked by Az CLI only)*

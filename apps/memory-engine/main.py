@@ -9,21 +9,12 @@ from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from apps._shared.python.config import get_config
+from apps._shared.python.logging import get_logger
 
-# Configure logging
-# SLOG: structured JSON logging (GOV-002 compliant)
-class _JsonFmt(logging.Formatter):
-    def format(self, r):
-        import json, sys
-        return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
-_h = logging.StreamHandler()
-_h.setFormatter(_JsonFmt())
-logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 app = FastAPI(title="Organizational Memory Engine", version="1.0")
 
@@ -189,6 +180,31 @@ async def memory_stats():
         "last_indexed": datetime.utcnow().isoformat() + "Z",
         "vector_dimension": 768
     }
+
+
+# ── Health checks (liveness + readiness) ─────────────────────────────────────
+
+@app.get("/health", tags=["health"])
+async def liveness():
+    """Liveness probe — returns 200 when the process is alive."""
+    return {"status": "ok", "service": "memory-engine"}
+
+
+@app.get("/health/ready", tags=["health"])
+async def readiness():
+    """Readiness probe — returns 200 when Qdrant connection is available."""
+    from qdrant_client import QdrantClient
+    import os
+    qdrant_host = os.getenv("QDRANT_HOST", "qdrant")
+    qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
+    try:
+        client = QdrantClient(host=qdrant_host, port=qdrant_port, timeout=3)
+        client.get_collections()
+        return {"status": "ready", "qdrant": "connected"}
+    except Exception as exc:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail={"status": "not_ready", "qdrant": str(exc)})
+
 
 if __name__ == "__main__":
     import uvicorn

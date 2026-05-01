@@ -1,16 +1,41 @@
 """Tests for trace visualization."""
 
-import pytest
-from apps.shared.trace_visualization import (
-    TimelineSpan,
-    Timeline,
-    FlameGraphNode,
-    FlameGraph,
-    ServiceNode,
-    ServiceEdge,
-    ServiceMap,
-    SequenceDiagram,
-)
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+TRACE_VISUALIZATION = _load_module("apps.shared.trace_visualization", "trace_visualization.py")
+
+TimelineSpan = TRACE_VISUALIZATION.TimelineSpan
+Timeline = TRACE_VISUALIZATION.Timeline
+FlameGraphNode = TRACE_VISUALIZATION.FlameGraphNode
+FlameGraph = TRACE_VISUALIZATION.FlameGraph
+ServiceNode = TRACE_VISUALIZATION.ServiceNode
+ServiceEdge = TRACE_VISUALIZATION.ServiceEdge
+ServiceMap = TRACE_VISUALIZATION.ServiceMap
+SequenceDiagram = TRACE_VISUALIZATION.SequenceDiagram
 
 
 class TestTimelineSpan:

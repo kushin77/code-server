@@ -17,6 +17,9 @@ monitoring path for Issue #1532.
 - `observability/tracing-guide.md`: shared tracing setup and propagation
 - `observability/ops-training-guide.md`: operations training and handoff for observability
 - `observability/ops-training-checklist.md`: quick readiness checklist for on-call operators
+- `observability/trace-analysis-guide.md`: trace anomaly detection and insights workflow
+- `observability/trace-exporters-guide.md`: trace serialization and OpenTelemetry bridge
+- `observability/trace-query-visualization-guide.md`: trace search and renderable views
 
 ## Run It
 

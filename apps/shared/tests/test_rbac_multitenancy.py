@@ -2,13 +2,47 @@
 Tests for RBAC and multi-tenancy system.
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-from apps.shared.rbac_multitenancy import (
-    Permission, Role, RoleDefinition, Tenant, User, AccessToken,
-    AuditLog, TenantScope, RBACManager, MultiTenancyManager,
-    AccessControl, DataIsolation
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+RBAC_MULTI_TENANCY = _load_module("apps.shared.rbac_multitenancy", "rbac_multitenancy.py")
+
+Permission = RBAC_MULTI_TENANCY.Permission
+Role = RBAC_MULTI_TENANCY.Role
+RoleDefinition = RBAC_MULTI_TENANCY.RoleDefinition
+Tenant = RBAC_MULTI_TENANCY.Tenant
+User = RBAC_MULTI_TENANCY.User
+AccessToken = RBAC_MULTI_TENANCY.AccessToken
+AuditLog = RBAC_MULTI_TENANCY.AuditLog
+TenantScope = RBAC_MULTI_TENANCY.TenantScope
+RBACManager = RBAC_MULTI_TENANCY.RBACManager
+MultiTenancyManager = RBAC_MULTI_TENANCY.MultiTenancyManager
+AccessControl = RBAC_MULTI_TENANCY.AccessControl
+DataIsolation = RBAC_MULTI_TENANCY.DataIsolation
 
 
 class TestPermission:
@@ -274,10 +308,15 @@ class TestMultiTenancyManager:
     
     def test_create_user_invalid_tenant(self):
         """Test creating user in non-existent tenant."""
-        with pytest.raises(ValueError):
+        caught = False
+        try:
             self.tenancy.create_user(
                 "bob", "bob@corp.com", "invalid_tenant"
             )
+        except ValueError:
+            caught = True
+
+        assert caught
     
     def test_list_tenant_users(self):
         """Test listing users in tenant."""
@@ -394,11 +433,16 @@ class TestAccessControl:
         
         token = self.tenancy.generate_token(user.id)
         
-        with pytest.raises(PermissionError):
+        caught = False
+        try:
             self.access_control.authorize_action(
                 token, Permission.DASHBOARD_DELETE,
                 "dashboard", "dash_123"
             )
+        except PermissionError:
+            caught = True
+
+        assert caught
     
     def test_audit_logging(self):
         """Test audit logging."""

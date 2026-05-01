@@ -9,18 +9,65 @@ Tests the entire observability system working together:
 - Dashboard generation and export
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-from typing import List
+from pathlib import Path
 
-# Import all observability modules
-from apps.shared.trace_enhancement import Tracer, Span, SpanKind
-from apps.shared.metrics_reporting import MetricsCollector, MetricsAggregator, Report
-from apps.shared.context_propagation import ContextManager, DistributedContext, TraceIdentifiers
-from apps.shared.observability_storage import (
-    MemoryStorageAdapter, MetricPoint, TracePoint, StorageQuery
-)
-from apps.shared.dashboard_builder import DashboardBuilder, DashboardManager, DashboardTemplate
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+TRACE_PATTERNS = _load_module("apps.shared.trace_patterns", "trace_patterns.py")
+shared_pkg.trace_patterns = TRACE_PATTERNS
+ADVANCED_TRACING = _load_module("apps.shared.advanced_tracing", "advanced_tracing.py")
+METRICS_REPORTING = _load_module("apps.shared.metrics_reporting", "metrics_reporting.py")
+CONTEXT_PROPAGATION = _load_module("apps.shared.context_propagation", "context_propagation.py")
+OBSERVABILITY_STORAGE = _load_module("apps.shared.observability_storage", "observability_storage.py")
+DASHBOARD_BUILDER = _load_module("apps.shared.dashboard_builder", "dashboard_builder.py")
+
+MetricsCollector = METRICS_REPORTING.MetricsCollector
+MetricsAggregator = METRICS_REPORTING.MetricsAggregator
+Report = METRICS_REPORTING.Report
+ContextManager = CONTEXT_PROPAGATION.ContextManager
+DistributedContext = CONTEXT_PROPAGATION.DistributedContext
+TraceIdentifiers = CONTEXT_PROPAGATION.TraceIdentifiers
+MemoryStorageAdapter = OBSERVABILITY_STORAGE.MemoryStorageAdapter
+MetricPoint = OBSERVABILITY_STORAGE.MetricPoint
+TracePoint = OBSERVABILITY_STORAGE.TracePoint
+StorageQuery = OBSERVABILITY_STORAGE.StorageQuery
+DashboardBuilder = DASHBOARD_BUILDER.DashboardBuilder
+DashboardManager = DASHBOARD_BUILDER.DashboardManager
+DashboardTemplate = DASHBOARD_BUILDER.DashboardTemplate
+
+
+def _make_tracer():
+    return ADVANCED_TRACING.AdvancedTracer(
+        ADVANCED_TRACING.AdvancedTracingConfig(
+            sampling_config=TRACE_PATTERNS.TraceSamplingConfig(
+                strategy=TRACE_PATTERNS.SamplingStrategy.ALWAYS,
+                exclude_paths=["/health"],
+            )
+        )
+    )
 
 
 class TestEndToEndTracing:
@@ -28,28 +75,24 @@ class TestEndToEndTracing:
     
     def test_multi_service_trace(self):
         """Test tracing across multiple services."""
-        # Service 1: API
-        api_tracer = Tracer("api-service")
-        
-        with api_tracer.start_span("handle_request", kind=SpanKind.SERVER) as span:
-            span.set_attribute("http.method", "GET")
-            span.set_attribute("http.url", "/api/users")
-            
-            # Create context for downstream
-            context = ContextManager.get_or_create("api-service")
-            context_headers = ContextManager.inject_context(context)
-            
-            # Service 2: Database
-            db_tracer = Tracer("db-service")
-            
-            # Extract context in downstream service
-            extracted_context = ContextManager.extract_context(context_headers)
-            assert extracted_context is not None
-            assert extracted_context.trace_ids.trace_id == context.trace_ids.trace_id
-            
-            with db_tracer.start_span("query_database", kind=SpanKind.CLIENT) as db_span:
-                db_span.set_attribute("db.statement", "SELECT * FROM users")
-                db_span.set_attribute("db.rows_affected", 10)
+        api_tracer = _make_tracer()
+        db_tracer = _make_tracer()
+
+        trace_ids = TraceIdentifiers.generate()
+        api_context = api_tracer.start_trace(trace_ids.trace_id, trace_ids.span_id, user_id="user123", tenant_id="acme")
+        ContextManager.set_context(DistributedContext(trace_ids=trace_ids))
+
+        api_headers = api_tracer.get_propagation_headers(api_context)
+
+        @db_tracer.trace_request(path="/api/users")
+        def query_database(**kwargs):
+            assert kwargs["headers"]["traceparent"].startswith("00-")
+            return db_tracer.extract_trace_context(kwargs["headers"])
+
+        extracted_context = query_database(headers=api_headers)
+        assert extracted_context is not None
+        assert extracted_context.trace_id == api_context.trace_id
+        api_tracer.end_trace()
     
     def test_context_propagation_through_request(self):
         """Test context propagation through request chain."""
@@ -73,17 +116,23 @@ class TestEndToEndTracing:
     
     def test_trace_with_errors(self):
         """Test tracing error handling."""
-        tracer = Tracer("error-service")
+        tracer = _make_tracer()
         storage = MemoryStorageAdapter()
         storage.connect({})
         
+        @tracer.trace_request(path="/error-service")
+        def risky_operation(**kwargs):
+            raise ValueError("Processing failed")
+
+        caught = False
         try:
-            with tracer.start_span("risky_operation") as span:
-                span.set_attribute("operation", "data_processing")
-                raise ValueError("Processing failed")
+            risky_operation(headers={})
         except ValueError:
-            # Verify error was recorded
-            pass
+            caught = True
+
+        assert caught
+        
+        assert tracer.get_current_profile() is not None
 
 
 class TestMetricsCollectionWorkflow:
@@ -176,7 +225,7 @@ class TestTraceStorageAndQuerying:
             trace_id=trace_id,
             span_id="span-2",
             span_name="database_query",
-            timestamp=now + timedelta(ms=10),
+            timestamp=now + timedelta(milliseconds=10),
             duration_ms=200,
             service_name="database",
             parent_span_id="span-1"
@@ -188,7 +237,7 @@ class TestTraceStorageAndQuerying:
             trace_id=trace_id,
             span_id="span-3",
             span_name="cache_lookup",
-            timestamp=now + timedelta(ms=250),
+            timestamp=now + timedelta(milliseconds=250),
             duration_ms=50,
             service_name="cache",
             parent_span_id="span-1"
@@ -278,45 +327,45 @@ class TestFullObservabilityStack:
         storage.connect({})
         
         # 1. Generate trace with context
-        api_tracer = Tracer("api-service")
+        api_tracer = _make_tracer()
         context = DistributedContext(trace_ids=TraceIdentifiers.generate())
         context.user_id = "user123"
         context.tenant_id = "acme"
         ContextManager.set_context(context)
-        
-        with api_tracer.start_span("api_request") as span:
-            span.set_attribute("http.method", "POST")
-            span.set_attribute("http.path", "/api/data")
-            
-            # Collect metrics
-            collector = MetricsCollector("api-service")
-            collector.record_counter("requests", 1, {"method": "POST"})
-            collector.record_histogram("latency", 150, {"endpoint": "/api/data"})
-            
-            # 2. Propagate context downstream
-            headers = ContextManager.inject_context()
-            
-            # 3. Store metrics
-            now = datetime.utcnow()
-            metric_point = MetricPoint(
-                timestamp=now,
-                value=150,
-                metric_name="request_latency",
-                tags={"service": "api", "method": "POST"}
-            )
-            storage.write_metric(metric_point)
-            
-            # Store trace
-            trace_point = TracePoint(
-                trace_id=context.trace_ids.trace_id,
-                span_id=context.trace_ids.span_id,
-                span_name="api_request",
-                timestamp=now,
-                duration_ms=150,
-                service_name="api-service",
-                tags={"user_id": "user123"}
-            )
-            storage.write_trace(trace_point)
+
+        api_trace = api_tracer.start_trace(context.trace_ids.trace_id, context.trace_ids.span_id, user_id="user123", tenant_id="acme")
+
+        # 1. Generate trace and metrics
+        collector = MetricsCollector("api-service")
+        collector.record_counter("requests", 1, {"method": "POST"})
+        collector.record_histogram("latency", 150, {"endpoint": "/api/data"})
+
+        # 2. Propagate context downstream
+        headers = api_tracer.get_propagation_headers(api_trace)
+
+        # 3. Store metrics
+        now = datetime.utcnow()
+        metric_point = MetricPoint(
+            timestamp=now,
+            value=150,
+            metric_name="request_latency",
+            tags={"service": "api", "method": "POST"}
+        )
+        storage.write_metric(metric_point)
+
+        # Store trace
+        trace_point = TracePoint(
+            trace_id=context.trace_ids.trace_id,
+            span_id=context.trace_ids.span_id,
+            span_name="api_request",
+            timestamp=now,
+            duration_ms=150,
+            service_name="api-service",
+            tags={"user_id": "user123"}
+        )
+        storage.write_trace(trace_point)
+
+        api_tracer.end_trace()
         
         # 4. Query stored data
         metric_query = StorageQuery(metric_name="request_latency", limit=100)
@@ -464,9 +513,13 @@ class TestScalability:
     
     def test_many_spans(self):
         """Test handling many spans."""
-        tracer = Tracer("load-service")
+        tracer = _make_tracer()
+
+        @tracer.trace_request(path="/load")
+        def operation(**kwargs):
+            return kwargs.get("headers", {})
         
         # Create 100 spans
         for i in range(100):
-            with tracer.start_span(f"operation_{i}") as span:
-                span.set_attribute("index", i)
+            headers = operation(headers={"traceparent": f"00-{i:032x}-{i:016x}-01"})
+            assert "traceparent" in headers

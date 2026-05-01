@@ -1,10 +1,40 @@
 """Tests for alert receiver module."""
 
+import importlib.util
+import sys
+import types
 from datetime import datetime
+from pathlib import Path
 
-import pytest
 
-from apps.shared.alert_receiver import Alert, AlertGroup, AlertReceiver, AlertSeverity
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+AI_OPERATIONS = _load_module("apps.shared.ai_operations", "ai_operations.py")
+shared_pkg.ai_operations = AI_OPERATIONS
+ALERT_RECEIVER = _load_module("apps.shared.alert_receiver", "alert_receiver.py")
+
+Alert = ALERT_RECEIVER.Alert
+AlertGroup = ALERT_RECEIVER.AlertGroup
+AlertReceiver = ALERT_RECEIVER.AlertReceiver
+AlertSeverity = ALERT_RECEIVER.AlertSeverity
 
 
 def test_alert_parsing() -> None:

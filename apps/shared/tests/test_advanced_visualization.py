@@ -2,15 +2,50 @@
 Tests for advanced visualization and real-time UI system.
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-from apps.shared.advanced_visualization import (
-    VisualizationType, InteractionMode, DataPoint, VisualizationData,
-    VisualizationConfig, InteractionEvent, TimeSeriesVisualization,
-    GaugeVisualization, HeatmapVisualization, StatVisualization,
-    TableVisualization, HistogramVisualization, RealTimeDataStream,
-    DashboardLayout, ReactiveDashboard
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+ADVANCED_VISUALIZATION = _load_module("apps.shared.advanced_visualization", "advanced_visualization.py")
+
+VisualizationType = ADVANCED_VISUALIZATION.VisualizationType
+InteractionMode = ADVANCED_VISUALIZATION.InteractionMode
+DataPoint = ADVANCED_VISUALIZATION.DataPoint
+VisualizationData = ADVANCED_VISUALIZATION.VisualizationData
+VisualizationConfig = ADVANCED_VISUALIZATION.VisualizationConfig
+InteractionEvent = ADVANCED_VISUALIZATION.InteractionEvent
+TimeSeriesVisualization = ADVANCED_VISUALIZATION.TimeSeriesVisualization
+GaugeVisualization = ADVANCED_VISUALIZATION.GaugeVisualization
+HeatmapVisualization = ADVANCED_VISUALIZATION.HeatmapVisualization
+StatVisualization = ADVANCED_VISUALIZATION.StatVisualization
+TableVisualization = ADVANCED_VISUALIZATION.TableVisualization
+HistogramVisualization = ADVANCED_VISUALIZATION.HistogramVisualization
+RealTimeDataStream = ADVANCED_VISUALIZATION.RealTimeDataStream
+DashboardLayout = ADVANCED_VISUALIZATION.DashboardLayout
+ReactiveDashboard = ADVANCED_VISUALIZATION.ReactiveDashboard
 
 
 class TestDataPoint:

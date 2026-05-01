@@ -2,14 +2,46 @@
 Tests for advanced anomaly detection and ML correlation system.
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-import math
-from apps.shared.anomaly_detection import (
-    AnomalyType, SeverityLevel, DataPoint, AnomalyDetected,
-    CorrelationAnalysis, StatisticalAnomalyDetector, TrendAnomalyDetector,
-    CorrelationAnalyzer, RootCauseAnalyzer, AnomalyManager, PredictiveAlert
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+ANOMALY_DETECTION = _load_module("apps.shared.anomaly_detection", "anomaly_detection.py")
+
+AnomalyType = ANOMALY_DETECTION.AnomalyType
+SeverityLevel = ANOMALY_DETECTION.SeverityLevel
+DataPoint = ANOMALY_DETECTION.DataPoint
+AnomalyDetected = ANOMALY_DETECTION.AnomalyDetected
+CorrelationAnalysis = ANOMALY_DETECTION.CorrelationAnalysis
+StatisticalAnomalyDetector = ANOMALY_DETECTION.StatisticalAnomalyDetector
+TrendAnomalyDetector = ANOMALY_DETECTION.TrendAnomalyDetector
+CorrelationAnalyzer = ANOMALY_DETECTION.CorrelationAnalyzer
+RootCauseAnalyzer = ANOMALY_DETECTION.RootCauseAnalyzer
+AnomalyManager = ANOMALY_DETECTION.AnomalyManager
+PredictiveAlert = ANOMALY_DETECTION.PredictiveAlert
 
 
 class TestDataPoint:

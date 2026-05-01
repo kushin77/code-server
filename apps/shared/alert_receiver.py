@@ -17,6 +17,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from .ai_operations import AIOperationsAdvisor
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,15 +100,23 @@ class AlertGroup:
 class AlertReceiver:
     """Receives and processes Prometheus AlertManager webhooks."""
 
-    def __init__(self, slack_enabled: bool = False, pagerduty_enabled: bool = False):
+    def __init__(
+        self,
+        slack_enabled: bool = False,
+        pagerduty_enabled: bool = False,
+        ai_enabled: bool = True,
+    ):
         """Initialize alert receiver.
 
         Args:
             slack_enabled: Whether to send alerts to Slack
             pagerduty_enabled: Whether to send alerts to PagerDuty
+            ai_enabled: Whether to include AI operations guidance
         """
         self.slack_enabled = slack_enabled
         self.pagerduty_enabled = pagerduty_enabled
+        self.ai_enabled = ai_enabled
+        self.ai_advisor = AIOperationsAdvisor()
         self._received_alerts: List[AlertGroup] = []
 
     def receive_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -129,9 +139,14 @@ class AlertReceiver:
 
             routing_result = self._route_alerts(alert_group)
 
+            ai_result = None
+            if self.ai_enabled and alert_group.alerts:
+                ai_result = self.ai_advisor.analyze_alert_group(alert_group).to_dict()
+
             return {
                 "status": "success",
                 "alerts_received": len(alert_group.alerts),
+                "ai": ai_result,
                 "routing": routing_result,
             }
         except Exception as e:

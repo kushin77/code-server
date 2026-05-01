@@ -5,7 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.17.0] - 2026-05-01 (PHASE 35 — EVENT CORRELATION & FORENSICS)
+## [1.18.0] - 2026-05-01 (PHASE 37 — SECURITY RESPONSE AUTOMATION)
+
+### Added — Phase 37: Security Response Automation Engine
+- **apps/security_ai/response_automation.py** (400+ lines): Automates security response workflows triggered by Phase 36 policy violations, Phase 35 forensic traces, and Phase 32 security incidents.
+- **Response workflows**: AUTO_REVOKE (revoke compromised credentials), AUTO_ISOLATE (isolate suspicious containers), AUTO_NOTIFY (alert security team), AUTO_ROTATE (rotate secrets), AUTO_QUARANTINE (forensic snapshot).
+- **Severity-driven execution**: Workflows escalate by severity (CRITICAL: all steps, HIGH: essential steps, MEDIUM: notify-only). DRY_RUN safe in all environments.
+- **Execution ledger**: Persistent audit trail with status tracking, retry logic, and failure handling.
+- **Response scoring**: Returns 0-20 pts bonus to Phase 31 compliance gate based on successful automated responses.
+- **Ops orchestrator** (`scripts/ops/phase-37-response-automation.sh`): Modes — status|trigger|demo|replay.
+- **Integration tests** (`scripts/ci/phase-37-integration-tests.sh`): 20/20 PASS across 6 groups (import, triggers, executors, ledger, ops, regression).
+
+### Updated — `.gitlab-ci.yml`
+- `test:phase-security-suites` now runs 8 phase suites: Phase 30-37.
+- **Total security suite**: **187/187 integration tests PASSING** per pipeline.
+
+### Verified
+- Full deployment gate: `PASS/PASS/PASS/PASS/PASS/PASS` ✅
+- Phase 30: 24/24 tests ✅
+- Phase 31: 22/22 tests ✅
+- Phase 32: 27/27 tests ✅
+- Phase 33: 25/25 tests ✅
+- Phase 34: 22/22 tests ✅
+- Phase 35: 21/21 tests ✅
+- Phase 36: 23/23 tests ✅
+- Phase 37: 20/20 tests ✅
+- GitHub mirror synced: `6080dbbb` pushed to `github/release/v1.0.0-production` ✅
+
+## [1.17.0] - 2026-05-01 (PHASE 36 — ZERO-TRUST POLICY ENFORCEMENT)
+
+### Added — Phase 36: Zero-Trust Policy Enforcement Engine
+- **apps/security_ai/policy_engine.py** (350+ lines): Enforces access control, secrets hygiene, and configuration hardening policies across the platform.
+- **Policy categories**: ACCESS_CONTROL (RBAC), SECRETS (exposure detection), NETWORK (policies), CONFIG_HARDENING (compliance).
+- **Policy evaluation**: Named policies with built-in evaluators; evaluate multiple contexts (pods, containers, configs).
+- **Auto-remediation**: Actions — REVOKE, ROTATE, ISOLATE, NOTIFY. Classification by risk level.
+- **Compliance integration**: Provides `policy_score()` bonus (0-20 pts) to Phase 31 compliance gate.
+- **Ops orchestrator** (`scripts/ops/phase-36-policy-engine.sh`): Modes — score|demo|audit|remediate.
+- **Integration tests** (`scripts/ci/phase-36-integration-tests.sh`): 23/23 PASS across 6 groups (import, policies, violations, remediations, ops, regression).
+
+## [1.16.0] - 2026-05-01 (PHASE 35 — EVENT CORRELATION & FORENSICS)
 
 ### Added — Phase 35: Event Correlation & Forensics Engine
 - **apps/security_ai/forensics_engine.py** (390+ lines): Correlate Phase 32 security incidents, Phase 34 resilience degradations, infrastructure anomalies, and audit logs for root cause analysis.

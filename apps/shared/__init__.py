@@ -9,6 +9,7 @@ from .monitoring import (
     track_operation,
 )
 from .slo import SLI, SLOResult, SLOTarget, SLOTracker, SLOViolation
+from .tracing import TracingConfig, TracingRuntime, current_trace_id, generate_trace_id, instrument_app, setup_tracing, trace_operation
 
 __all__ = [
     "ApplicationMetrics",
@@ -20,6 +21,13 @@ __all__ = [
     "SLOTarget",
     "SLOTracker",
     "SLOViolation",
+    "TracingConfig",
+    "TracingRuntime",
+    "current_trace_id",
+    "generate_trace_id",
+    "instrument_app",
+    "setup_tracing",
+    "trace_operation",
     "track_metrics",
     "track_operation",
 ]

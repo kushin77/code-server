@@ -14,6 +14,7 @@ monitoring path for Issue #1532.
 - `config/prometheus.yml`: scrape jobs for Alertmanager, Promtail, and GPU metrics
 - `monitoring/alerts/alert-rules.yml`: unified alert rules
 - `monitoring/alertmanager.yml`: severity-based routing
+- `docs/observability/tracing-guide.md`: shared tracing setup and propagation
 
 ## Run It
 
@@ -34,6 +35,13 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml --profi
 3. Prometheus scrapes Alertmanager, Promtail, OTel Collector, Tempo, and GPU metrics.
 4. Alertmanager routes alerts by severity.
 5. Grafana correlates logs, metrics, and traces through the shared datasources.
+
+## Tracing
+
+The shared tracing module in `apps/shared/tracing.py` adds optional OpenTelemetry
+instrumentation when the OTEL packages are present and falls back to stable
+`X-Trace-Id` propagation when they are not. The control-plane service is the
+reference integration for Phase 10c.
 
 ## Validation Queries
 

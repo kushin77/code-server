@@ -11,8 +11,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from apps._shared.python.config import get_config
-from apps._shared.python.logging import get_logger
+from log import get_logger
 import config as _svc_config
 
 logger = get_logger(__name__)

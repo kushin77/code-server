@@ -16,7 +16,6 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from provisioner import EnvProvisioner
-from apps._shared.python.config import Config
 import config as _svc_config
 
 from log import get_logger

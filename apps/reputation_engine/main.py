@@ -15,7 +15,6 @@ from models import Base, ReputationScore, ScoreHistory, ActorType, AccessTier
 from opa_sync import OpaReputationSync
 from score_calculator import ScoreCalculator
 from api import setup_api_routes
-from apps._shared.python.config import get_config
 import config as _svc_config
 
 try:
@@ -27,12 +26,10 @@ from log import get_logger
 
 logger = get_logger(__name__)
 
-config = get_config(validate_required=False)
-
-# Configuration from environment
-DATABASE_URL = config.get_required("DATABASE_URL")
-KAFKA_BOOTSTRAP_SERVERS = config.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-OPA_URL = config.get("OPA_URL", "http://localhost:8181")
+# Configuration from app SSOT
+DATABASE_URL = _svc_config.DATABASE_URL
+KAFKA_BOOTSTRAP_SERVERS = _svc_config.KAFKA_BOOTSTRAP_SERVERS
+OPA_URL = _svc_config.OPA_URL
 
 # Database setup
 engine = create_engine(DATABASE_URL, echo=False)

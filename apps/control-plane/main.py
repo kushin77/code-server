@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from apps._shared.python.config import get_config
 import config as _svc_config
 
 import os
@@ -54,7 +53,6 @@ async def health_check():
 @app.get("/services", response_model=Dict[str, Any])
 async def get_services():
     """Get all managed services status"""
-    config = get_config()
     return {
         "services": [
             "code-server-ide",
@@ -65,7 +63,7 @@ async def get_services():
             "vault",
             "artifact-repository"
         ],
-        "cluster_id": config.get("DEPLOYMENT_ID", "primary"),
+        "cluster_id": _svc_config.DEPLOYMENT_ID,
         "timestamp": os.getcwd()
     }
 

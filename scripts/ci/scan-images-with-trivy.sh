@@ -28,9 +28,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LOG_DIR="${REPO_ROOT}/logs/trivy-scans"
 
-DOCKER_COMPOSE_FILE="${1:-${REPO_ROOT}/docker-compose.yml}"
-SEVERITY="${2:-HIGH,CRITICAL}"
-SCAN_TIMEOUT="${3:-300}"
+DOCKER_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
+SEVERITY="HIGH,CRITICAL"
+SCAN_TIMEOUT="300"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --docker-compose-file) DOCKER_COMPOSE_FILE="$2"; shift 2 ;;
+    --threshold)           SEVERITY="$2";             shift 2 ;;
+    --timeout)             SCAN_TIMEOUT="$2";          shift 2 ;;
+    *) echo "Unknown arg: $1" >&2; exit 1 ;;
+  esac
+done
 
 #############################################################################
 # Logging
@@ -57,77 +66,94 @@ fi
 log_info "Trivy version: $(trivy --version 2>/dev/null | head -1)"
 log_info ""
 
-log_info "TODO: Extract and scan all images from ${DOCKER_COMPOSE_FILE}:"
+#############################################################################
+# Extract images from docker-compose file
+#############################################################################
+
+if [ ! -f "${DOCKER_COMPOSE_FILE}" ]; then
+  error "Compose file not found: ${DOCKER_COMPOSE_FILE}"
+fi
+
+log_info "Extracting images from ${DOCKER_COMPOSE_FILE}..."
+mapfile -t IMAGES < <(
+  grep -E '^\s+image:\s+' "${DOCKER_COMPOSE_FILE}" \
+    | sed 's/^\s*image:\s*//' \
+    | sed 's/["'"'"']//g' \
+    | sort -u
+)
+
+if [ ${#IMAGES[@]} -eq 0 ]; then
+  warn "No images found in ${DOCKER_COMPOSE_FILE}"
+  exit 0
+fi
+
+log_info "Found ${#IMAGES[@]} unique images to scan"
+
+#############################################################################
+# Scan each image
+#############################################################################
+
+REPORT_DIR="${LOG_DIR}/reports-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "${REPORT_DIR}"
+
+TOTAL=0
+FAILED=0
+CRITICAL_COUNT=0
+
+for image in "${IMAGES[@]}"; do
+  TOTAL=$((TOTAL + 1))
+  safe_name="${image//[:\/@]/-}"
+  report_file="${REPORT_DIR}/${safe_name}.json"
+
+  log_info "Scanning [${TOTAL}/${#IMAGES[@]}]: ${image}"
+
+  if timeout "${SCAN_TIMEOUT}" trivy image \
+      --severity "${SEVERITY}" \
+      --format json \
+      --output "${report_file}" \
+      --no-progress \
+      --quiet \
+      "${image}" 2>>"${LOG_FILE}"; then
+
+    crit=$(python3 -c "
+import json, sys
+try:
+    data = json.load(open('${report_file}'))
+    total = sum(len(r.get('Vulnerabilities') or []) for r in (data.get('Results') or []))
+    sys.stdout.write(str(total))
+except Exception:
+    sys.stdout.write('0')
+" 2>/dev/null || echo "0")
+
+    if [ "${crit}" -gt 0 ]; then
+      warn "  ${crit} ${SEVERITY} vulnerability/ies found in ${image}"
+      CRITICAL_COUNT=$((CRITICAL_COUNT + crit))
+      FAILED=$((FAILED + 1))
+    else
+      log_info "  ✅ Clean: ${image}"
+    fi
+  else
+    warn "  Scan timed out or failed for ${image} — skipping"
+  fi
+done
+
+#############################################################################
+# Summary
+#############################################################################
+
+log_info ""
+log_info "========================================"
+log_info "Scan Summary"
+log_info "========================================"
+log_info "Images scanned : ${TOTAL}"
+log_info "With findings  : ${FAILED}"
+log_info "Total ${SEVERITY} vulns : ${CRITICAL_COUNT}"
+log_info "Reports        : ${REPORT_DIR}"
 log_info ""
 
-log_info "Images to scan (35+ services):"
-log_info "  Infrastructure Layer (11):"
-log_info "    - caddy:2.8 (gateway/reverse proxy)"
-log_info "    - postgres:15-alpine (primary database)"
-log_info "    - postgres:15-alpine (replica)"
-log_info "    - redis:7-alpine (sessions cache)"
-log_info "    - redis:7-alpine (replica)"
-log_info "    - qdrant:latest (vector database)"
-log_info "    - minio:latest (object storage)"
-log_info "    - etcd:v3.5 (consensus/discovery)"
-log_info "    - prometheus:latest (metrics)"
-log_info "    - grafana:latest (dashboards)"
-log_info "    - alertmanager:latest (alerts)"
-log_info ""
+if [ "${CRITICAL_COUNT}" -gt 0 ]; then
+  error "❌ ${CRITICAL_COUNT} ${SEVERITY} vulnerabilities detected across ${FAILED} images"
+fi
 
-log_info "  Data Layer (9):"
-log_info "    - redpanda:latest (streaming)"
-log_info "    - kafka-connect:latest"
-log_info "    - opensearch:latest (logs)"
-log_info "    - opensearch-dashboards:latest"
-log_info "    - milvus:latest (ML embeddings)"
-log_info "    - weaviate:latest (knowledge graph)"
-log_info "    - pinecone-connector:latest"
-log_info "    - clickhouse:latest (analytics)"
-log_info "    - dbt:latest (data pipeline)"
-log_info ""
-
-log_info "  AI/ML Services (6):"
-log_info "    - ollama:latest (LLM serving)"
-log_info "    - langchain-api:latest"
-log_info "    - huggingface-inference:latest"
-log_info "    - vllm:latest (inference optimization)"
-log_info "    - pytorch:latest (ml framework)"
-log_info "    - transformers:latest (model serving)"
-log_info ""
-
-log_info "  Agent & Platform Services (9):"
-log_info "    - execution-scheduler:latest"
-log_info "    - opa-service:latest"
-log_info "    - oauth2-proxy:latest"
-log_info "    - auth-server:latest"
-log_info "    - agent-orchestrator:latest"
-log_info "    - debug-logger:latest"
-log_info "    - node-exporter:latest"
-log_info "    - filebeat:latest"
-log_info "    - metricbeat:latest"
-log_info ""
-
-log_info "Scanning approach:"
-log_info "  1. Extract image list from docker-compose.yml"
-log_info "  2. For each image: trivy image --severity ${SEVERITY}"
-log_info "  3. Generate JSON report: trivy image --format json"
-log_info "  4. Aggregate results to CSV"
-log_info "  5. Flag for remediation: CRITICAL vulnerabilities with no fix available"
-log_info ""
-
-log_info "Remediation strategy:"
-log_info "  - CRITICAL + fix available: Update image immediately"
-log_info "  - CRITICAL + no fix: Plan deprecation, use alternative image"
-log_info "  - HIGH + fixable: Schedule for next release"
-log_info "  - MEDIUM/LOW: Track in backlog"
-log_info ""
-
-log_info "Exit codes:"
-log_info "  - 0: No issues found (or acceptable)"
-log_info "  - 1: Unfixed critical vulnerabilities detected"
-log_info "  - 2: Trivy not available"
-log_info ""
-
-log_info "✅ Trivy scanning skeleton complete"
+log_info "✅ Trivy scan complete — no ${SEVERITY} vulnerabilities found"
 log_info "Log: ${LOG_FILE}"

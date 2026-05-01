@@ -24,18 +24,6 @@ source "${REPO_ROOT}/scripts/_common/init.sh"
 
 mkdir -p "${REPO_ROOT}/logs" "$(dirname "${DRIFT_REPORT}")"
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*" | tee -a "${DRIFT_LOG}"
-}
-
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" | tee -a "${DRIFT_LOG}" >&2
-}
-
-log_warning() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*" | tee -a "${DRIFT_LOG}"
-}
-
 # Check Docker Compose state vs. code
 check_docker_compose_drift() {
   log_info "Checking Docker Compose drift..."
@@ -344,15 +332,22 @@ main() {
   local terraform_drift=0
   local caddy_drift=0
   local replica_parity=0
-  
-  check_docker_compose_drift && compose_drift=0 || compose_drift=1
-  check_terraform_drift && terraform_drift=0 || terraform_drift=1
-  check_caddy_drift && caddy_drift=0 || caddy_drift=1
-  check_replica_parity && replica_parity=0 || replica_parity=1
+  local checks_executed=0
+
+  check_docker_compose_drift && { compose_drift=0; checks_executed=$((checks_executed+1)); } || { result=$?; [ $result -eq 2 ] && true || { compose_drift=1; checks_executed=$((checks_executed+1)); }; }
+  check_terraform_drift && { terraform_drift=0; checks_executed=$((checks_executed+1)); } || { result=$?; [ $result -eq 2 ] && true || { terraform_drift=1; checks_executed=$((checks_executed+1)); }; }
+  check_caddy_drift && { caddy_drift=0; checks_executed=$((checks_executed+1)); } || { result=$?; [ $result -eq 2 ] && true || { caddy_drift=1; checks_executed=$((checks_executed+1)); }; }
+  check_replica_parity && { replica_parity=0; checks_executed=$((checks_executed+1)); } || { result=$?; [ $result -eq 2 ] && true || { replica_parity=1; checks_executed=$((checks_executed+1)); }; }
   
   local total_drift=$((compose_drift + terraform_drift + caddy_drift + replica_parity))
   
   generate_report "${compose_drift}" "${terraform_drift}" "${caddy_drift}" "${replica_parity}"
+
+  if [[ ${checks_executed} -eq 0 ]]; then
+    log_error "Drift detection: 0 checks executed (all skipped due to missing dependencies). Cannot confirm IN_SYNC."
+    return 1
+  fi
+  log_info "Drift detection: ${checks_executed} check(s) executed"
   
   case "${mode}" in
     --check)

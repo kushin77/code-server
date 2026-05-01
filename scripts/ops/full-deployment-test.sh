@@ -23,22 +23,6 @@ TEST_REPORT="${REPO_ROOT}/artifacts/deployment-test-report.json"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 mkdir -p "${ARTIFACTS_DIR}"
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*" | tee -a "${TEST_LOG}"
-}
-
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" | tee -a "${TEST_LOG}" >&2
-}
-
-log_warning() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*" | tee -a "${TEST_LOG}"
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*" | tee -a "${TEST_LOG}"
-}
-
 # Test Phase 1: Infrastructure validation
 test_infrastructure_validation() {
   log_info "Test Phase 1: Infrastructure Validation"
@@ -85,6 +69,11 @@ test_gitlab_compose_parity() {
 
   if [[ -z "${PRIMARY_HOST:-}" || -z "${REPLICA_HOST:-}" ]]; then
     log_warning "Phase 2b SKIPPED: PRIMARY_HOST/REPLICA_HOST not set"
+    return 0
+  fi
+
+  if [[ "${dry_run:-false}" == "true" ]]; then
+    log_warning "Phase 2b SKIPPED: parity check not valid in dry-run (cross-repo SHA will never match)"
     return 0
   fi
 
@@ -215,7 +204,7 @@ main() {
   done
 
   if [[ "${dry_run}" == "true" ]]; then
-    health_check_timeout=0
+    health_check_timeout=5
   fi
   
   log_info "=" 

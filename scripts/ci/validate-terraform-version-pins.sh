@@ -3,7 +3,7 @@
 # @module infrastructure/validation
 # @description P3-1531: Validate all Terraform provider/module versions are pinned (no floating ranges like ~>)
 # @governance GOV-002: All infrastructure version-pinned in terraform/variables.tf - no ~> ranges in production
-# @usage validate-terraform-version-pins.sh [--check] [--fix] [--report]
+# @usage validate-terraform-version-pins.sh [--check] [--report]
 
 set -euo pipefail
 
@@ -21,18 +21,6 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 TERRAFORM_DIR=${REPO_ROOT}/terraform
 REPORT_FILE=${REPO_ROOT}/artifacts/terraform-version-pins-report.txt
 
-log_info() {
-  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [INFO] $*
-}
-
-log_error() {
-  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [ERROR] $* >&2
-}
-
-log_warning() {
-  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [WARN] $*
-}
-
 check_floating_versions() {
   log_info Scanning for floating version ranges in Terraform
   local violations=0
@@ -48,11 +36,14 @@ check_floating_versions() {
       log_warning "Found $count floating version ranges (~>) in $file"
     fi
 
-    if grep -E 'version[[:space:]]*=[[:space:]]*"[^"]*>=.*"' "$file" | grep -vq '<'; then
-      local count=1
+    local unbounded_lines
+    unbounded_lines=$(grep -E 'version[[:space:]]*=[[:space:]]*"[^"]*>=.*"' "$file" | grep -v '<' || true)
+    if [[ -n "${unbounded_lines}" ]]; then
+      local count
+      count=$(echo "${unbounded_lines}" | wc -l)
       violations=$((violations + count))
       report_lines+=("$file|unbounded-range|$count")
-      log_warning "Found unbounded version range (>= without <) in $file"
+      log_warning "Found $count unbounded version range(s) (>= without <) in $file"
     fi
   done < <(find "$TERRAFORM_DIR" -name "*.tf" -type f)
 
@@ -109,28 +100,6 @@ check_module_versions() {
   done < <(grep -R -h 'source' "$TERRAFORM_DIR" --include='*.tf' 2>/dev/null || true)
 
   [ $unpinned -eq 0 ] && return 0 || return 1
-}
-
-fix_floating_versions() {
-  log_info Fixing floating version ranges
-  local files_fixed=0
-
-  while IFS= read -r file; do
-    [ -z "$file" ] && continue
-    if grep -q '~>' "$file"; then
-      log_info "WARNING: Manual fix required for ~> in $file"
-      log_info 'Example: version = "~> 2.0" should become version = ">= 2.0, < 3.0"'
-      files_fixed=$((files_fixed + 1))
-    fi
-  done < <(find "$TERRAFORM_DIR" -name "*.tf" -type f)
-
-  if [ $files_fixed -gt 0 ]; then
-    log_error "Manual fixes required for $files_fixed files"
-    return 1
-  fi
-
-  log_info No floating versions found
-  return 0
 }
 
 main() {

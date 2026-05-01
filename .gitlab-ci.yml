@@ -361,6 +361,8 @@ test:phase-security-suites:
       bash scripts/ci/phase-33-integration-tests.sh 2>&1 | tail -8
       echo "── Phase 34 resilience & auto-healing tests ──"
       bash scripts/ci/phase-34-integration-tests.sh 2>&1 | tail -8
+      echo "── Phase 35 event correlation & forensics tests ──"
+      bash scripts/ci/phase-35-integration-tests.sh 2>&1 | tail -8
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

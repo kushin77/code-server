@@ -4,11 +4,12 @@ Control Plane Service
 Orchestrates and manages code-server infrastructure services
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 from typing import Dict, Any
 
 import config as _svc_config
+from apps.shared.monitoring import ApplicationMetrics, MonitoringConfig, track_metrics
 
 import os
 
@@ -24,6 +25,14 @@ except ImportError:
 from log import get_logger
 
 logger = get_logger(__name__)
+
+control_plane_metrics = ApplicationMetrics(
+    MonitoringConfig(
+        app_name="control_plane",
+        app_version="1.0",
+        environment=getattr(_svc_config, "ENVIRONMENT", "production"),
+    )
+)
 
 app = FastAPI(
     title="Control Plane",
@@ -42,6 +51,7 @@ class HealthResponse(BaseModel):
     version: str
 
 @app.get("/health", response_model=HealthResponse)
+@track_metrics(control_plane_metrics, method="GET", endpoint="/health")
 async def health_check():
     """Health check endpoint"""
     return HealthResponse(
@@ -51,6 +61,7 @@ async def health_check():
     )
 
 @app.get("/services", response_model=Dict[str, Any])
+@track_metrics(control_plane_metrics, method="GET", endpoint="/services")
 async def get_services():
     """Get all managed services status"""
     return {
@@ -68,19 +79,20 @@ async def get_services():
     }
 
 @app.post("/services/{service}/restart")
+@track_metrics(control_plane_metrics, method="POST", endpoint="/services/{service}/restart")
 async def restart_service(service: str):
     """Request service restart (orchestrated by docker-compose)"""
     logger.info(f"Restart request for service: {service}")
     return {"service": service, "action": "restart_requested"}
 
 @app.get("/metrics")
+@track_metrics(control_plane_metrics, method="GET", endpoint="/metrics")
 async def metrics():
     """Prometheus metrics endpoint"""
-    return {
-        "status": "operational",
-        "services_managed": 7,
-        "cluster_nodes": 2
-    }
+    return Response(
+        content=control_plane_metrics.get_metrics(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 if __name__ == "__main__":
     import uvicorn

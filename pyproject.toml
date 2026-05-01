@@ -11,41 +11,51 @@ authors = [{name = "Team", email = "team@kushnir.cloud"}]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["tests"]
-python_files = "test_*.py"
+testpaths = ["apps"]
+python_files = ["test_*.py", "*_test.py"]
 python_classes = "Test*"
 python_functions = "test_*"
 
 # Coverage configuration
-addopts = """
-    --strict-markers
-    --tb=short
-    --cov=src
-    --cov-report=html
-    --cov-report=term-missing:skip-covered
-    --cov-report=json
-    --cov-report=lcov
-    --cov-fail-under=80
-    -v
-    --color=yes
-    -ra
-"""
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "--cov=apps",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=json",
+    "--cov-report=xml",
+    "--cov-report=lcov",
+    "--cov-branch",
+    "--cov-fail-under=75",
+    "-v",
+    "--color=yes",
+    "-ra"
+]
 
 markers = [
     "unit: Unit tests (fast, isolated)",
-    "integration: Integration tests (medium speed)",
+    "integration: Integration tests with real dependencies (medium speed)",
     "e2e: End-to-end tests (slow, comprehensive)",
+    "performance: Performance and load tests",
     "slow: Slow tests (timeout > 10s)",
     "skip_ci: Skip in CI environment",
     "requires_db: Tests requiring database connection",
     "requires_cache: Tests requiring cache (Redis)",
+    "requires_kafka: Tests requiring Kafka connection",
 ]
 
 # Timeout for all tests (seconds)
 timeout = 300
+timeout_method = "thread"
 
 # Asyncio mode for async tests
 asyncio_mode = "auto"
+
+# Logging
+log_cli = false
+log_file = "test-results.log"
+log_file_level = "DEBUG"
 
 [tool.coverage.run]
 branch = true

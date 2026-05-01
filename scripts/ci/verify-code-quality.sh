@@ -4,6 +4,14 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+if [[ -z "${RED+x}" ]]; then RED='\033[0;31m'; fi
+if [[ -z "${GREEN+x}" ]]; then GREEN='\033[0;32m'; fi
+if [[ -z "${YELLOW+x}" ]]; then YELLOW='\033[1;33m'; fi
+if [[ -z "${NC+x}" ]]; then NC='\033[0m'; fi
+
 # =============================================================================
 # ERROR HANDLING & CLEANUP
 # =============================================================================
@@ -12,12 +20,6 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 
 echo "=== Code Quality Verification ==="
 echo ""
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
 
 failed=0
 

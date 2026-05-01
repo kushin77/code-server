@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/**/*.py'
       - 'scripts/**/*.py'
+      - 'scripts/**/*.sh'
       - 'pyproject.toml'
       - '.github/workflows/code-quality.yml'
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'apps/**/*.py'
       - 'scripts/**/*.py'
+      - 'scripts/**/*.sh'
 
 permissions:
   contents: read
@@ -50,3 +52,12 @@ jobs:
         run: |
           find scripts/ -name "*.sh" -print0 \
             | xargs -0 shellcheck --severity=warning --shell=bash
+
+  verify-code-quality:
+    name: Repository Code Quality Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run code quality verification script
+        run: bash scripts/ci/verify-code-quality.sh

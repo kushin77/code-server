@@ -1,0 +1,68 @@
+# Add to existing pyproject.toml [tool.pytest.ini_options]
+
+[tool.pytest.ini_options]
+# Test discovery
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Test paths
+testpaths = ["apps"]
+
+# Coverage configuration
+addopts = [
+    "--cov=apps",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-report=lcov",
+    "--cov-branch",
+    "--cov-fail-under=75",
+    "-v",
+    "--tb=short",
+    "--strict-markers"
+]
+
+# Markers
+markers = [
+    "integration: integration tests with real dependencies",
+    "e2e: end-to-end tests",
+    "performance: performance and load tests",
+    "unit: unit tests (default)",
+    "slow: tests that take a long time",
+    "skip_ci: skip in CI pipeline"
+]
+
+# Async test configuration
+asyncio_mode = "auto"
+
+# Timeout for tests
+timeout = 300
+timeout_method = "thread"
+
+# Logging
+log_cli = true
+log_cli_level = "INFO"
+log_file = "test-results.log"
+log_file_level = "DEBUG"
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+]
+precision = 2

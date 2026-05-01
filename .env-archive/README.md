@@ -4,9 +4,12 @@ This directory contains legacy environment configuration files that have been su
 
 ## Archived Files
 
-- `.env.base` - Merged into `.env/_common/defaults`
+- `.env.base` - Merged into `.env/_common/defaults` (Phase 3 cleanup)
 - `.env.consolidated` - Redundant merged view (replaced by `.env/_common/defaults`)
 - `.env.merged` - Redundant merged view (replaced by `.env/_common/defaults`)
+- `.env.cluster` - Cluster configuration (replaced by `.env/_common/defaults` + `.env/[env]/overrides`)
+- `.env.production` - Production configuration (replaced by `.env/_common/defaults` + `.env/private/overrides`)
+- `.env.deployment` - Deployment configuration (replaced by `.env/_common/defaults` + `.env/[env]/overrides`)
 
 ## Migration Path
 

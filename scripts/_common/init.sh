@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # @file scripts/_common/init.sh
 # @description Robust initialization for infrastructure scripts
+# @governance: Sources centralized logging library (scripts/common/logging.sh)
 
 set -u
 set -o pipefail
@@ -8,23 +9,33 @@ set -o pipefail
 # Error handling - minimalist to avoid recursion
 trap 'echo "[FATAL] Initialization failure at line $LINENO" >&2; exit 1' ERR
 
-# Logging functions without subshells
-log_info() {
-    printf "\033[0;34m[INFO]\033[0m    | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}"
-}
-log_success() {
-    printf "\033[0;32m[SUCCESS]\033[0m | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}"
-}
-log_warning() {
-    printf "\033[1;33m[WARNING]\033[0m | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}"
-}
-log_error() {
-    printf "\033[0;31m[ERROR]\033[0m   | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}" >&2
-}
+# Path discovery (needed before sourcing logging)
+REPO_ROOT_INIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# Path discovery
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export REPO_ROOT
+# Source centralized logging library
+if [[ -f "${REPO_ROOT_INIT}/scripts/common/logging.sh" ]]; then
+    source "${REPO_ROOT_INIT}/scripts/common/logging.sh"
+else
+    # Fallback inline logging if library not available
+    log_info() {
+        printf "\033[0;34m[INFO]\033[0m    | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}"
+    }
+    log_success() {
+        printf "\033[0;32m[SUCCESS]\033[0m | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}"
+    }
+    log_warning() {
+        printf "\033[1;33m[WARNING]\033[0m | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}"
+    }
+    log_error() {
+        printf "\033[0;31m[ERROR]\033[0m   | $(date +'%Y-%m-%d %H:%M:%S') | %s\n" "${1:-}" >&2
+    }
+fi
+
+# Backward compatibility aliases for scripts using old names
+log_warning() { log_warn "$@"; }
+
+# Export REPO_ROOT for use in scripts
+export REPO_ROOT="${REPO_ROOT_INIT}"
 mkdir -p "${REPO_ROOT}/artifacts"
 
 # Compliance helpers

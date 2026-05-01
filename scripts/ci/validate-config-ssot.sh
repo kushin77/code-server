@@ -26,22 +26,6 @@ REPORT_FILE="${REPO_ROOT}/artifacts/config-ssot-validation-report.json"
 
 mkdir -p "$(dirname "${REPORT_FILE}")"
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
-}
-
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2
-}
-
-log_warning() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*"
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
-}
-
 # Validate all infrastructure files are version-controlled
 validate_version_control() {
   log_info "Validating all infrastructure files are in version control..."

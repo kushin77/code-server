@@ -4,3 +4,5 @@ pydantic==2.5.3
 httpx==0.25.2
 gtts==2.5.0
 python-multipart==0.0.26
+pytest-cov==4.1.0
+coverage[toml]==7.3.2

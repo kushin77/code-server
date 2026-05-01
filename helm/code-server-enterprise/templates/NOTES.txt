@@ -1,0 +1,34 @@
+{{- /*
+  NOTES.txt — displayed after helm install / helm upgrade completes.
+  Shows deployment status and next steps for the operator.
+*/ -}}
+== code-server-enterprise v{{ .Chart.AppVersion }} deployed ==
+
+Namespace:  {{ .Release.Namespace }}
+Release:    {{ .Release.Name }}
+Chart:      {{ .Chart.Name }}-{{ .Chart.Version }}
+
+─── Access ──────────────────────────────────────────────────────────────────
+{{- if .Values.ingress.enabled }}
+  Ingress host:  {{ (index .Values.ingress.hosts 0).host | default "not configured" }}
+{{- else }}
+  Ingress is disabled. Use port-forward to reach services:
+    kubectl -n {{ .Release.Namespace }} port-forward svc/code-server 8443:443
+{{- end }}
+
+─── Key services ────────────────────────────────────────────────────────────
+  Auth server:         auth-server.{{ .Release.Namespace }}.svc.cluster.local:8080
+  Control plane:       control-plane.{{ .Release.Namespace }}.svc.cluster.local:8040
+  Hermes integration:  hermes-integration.{{ .Release.Namespace }}.svc.cluster.local:8000
+
+─── Health checks ───────────────────────────────────────────────────────────
+  kubectl -n {{ .Release.Namespace }} get pods
+  kubectl -n {{ .Release.Namespace }} get deployments
+
+─── Logs ────────────────────────────────────────────────────────────────────
+  kubectl -n {{ .Release.Namespace }} logs -l app=auth-server --tail=50
+  kubectl -n {{ .Release.Namespace }} logs -l app=hermes-integration --tail=50
+
+─── Documentation ───────────────────────────────────────────────────────────
+  Full runbook: https://{{ (.Values.ingress.hosts | default (list (dict "host" "your-domain")) | first).host }}/docs
+  Repo:         https://github.com/kushin77/code-server

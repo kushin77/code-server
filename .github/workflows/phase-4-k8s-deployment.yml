@@ -1,0 +1,304 @@
+name: Phase 4 - Kubernetes Deployment (AKS)
+
+# Trigger manually or on push to main with Phase 4 changes
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      cluster_name:
+        description: 'AKS cluster name'
+        required: true
+        default: 'code-server-enterprise-prod'
+      node_count:
+        description: 'Number of nodes'
+        required: true
+        default: '3'
+  push:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/**'
+      - 'helm/code-server-enterprise/**'
+      - 'scripts/k8s/**'
+      - '.github/workflows/phase-4-k8s-deployment.yml'
+
+env:
+  REGISTRY: ghcr.io
+  CLUSTER_RESOURCE_GROUP: code-server-rg
+  CLUSTER_LOCATION: eastus
+
+jobs:
+  validate:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifests with kubeval
+        run: |
+          mkdir -p /tmp/kubeval
+          cd /tmp/kubeval
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          export PATH=$PATH:/tmp/kubeval
+          
+          echo "Validating Kubernetes manifests..."
+          find $GITHUB_WORKSPACE/kubernetes -name "*.yaml" -type f | while read file; do
+            echo "Validating $file..."
+            kubeval "$file" --strict || exit 1
+          done
+
+      - name: Validate Helm chart
+        uses: helm/chart-testing-action@v2
+        with:
+          chart-testing-version: v3.10.0
+
+      - name: Lint Helm chart
+        run: |
+          helm lint ./helm/code-server-enterprise \
+            --values ./helm/code-server-enterprise/values.phase4-k8s.yaml
+
+  provision-cluster:
+    name: Provision AKS Cluster
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Resource Group
+        run: |
+          az group create \
+            --name "${{ env.CLUSTER_RESOURCE_GROUP }}" \
+            --location "${{ env.CLUSTER_LOCATION }}"
+
+      - name: Provision AKS Cluster
+        run: |
+          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          NODE_COUNT="${{ github.event.inputs.node_count || '3' }}"
+          
+          echo "Provisioning AKS cluster: $CLUSTER_NAME"
+          bash scripts/k8s/provision-aks-cluster.sh \
+            "${{ env.CLUSTER_RESOURCE_GROUP }}" \
+            "$CLUSTER_NAME" \
+            "${{ env.CLUSTER_LOCATION }}" \
+            "$NODE_COUNT" \
+            "Standard_D2s_v3"
+
+      - name: Get Cluster Credentials
+        run: |
+          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          
+          az aks get-credentials \
+            --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
+            --name "$CLUSTER_NAME" \
+            --overwrite-existing
+
+      - name: Verify Cluster Access
+        run: |
+          echo "Cluster nodes:"
+          kubectl get nodes
+          echo ""
+          echo "Cluster info:"
+          kubectl cluster-info
+
+  deploy-services:
+    name: Deploy Services to Kubernetes
+    runs-on: ubuntu-latest
+    needs: provision-cluster
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Cluster Credentials
+        run: |
+          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          
+          az aks get-credentials \
+            --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
+            --name "$CLUSTER_NAME" \
+            --overwrite-existing
+
+      - name: Create Namespace
+        run: |
+          kubectl create namespace code-server-enterprise --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace code-server-enterprise \
+            istio-injection=enabled \
+            --overwrite
+
+      - name: Deploy Helm Chart
+        run: |
+          helm repo add code-server https://charts.code-server.io || true
+          helm repo update
+          
+          helm install code-server-enterprise ./helm/code-server-enterprise \
+            --namespace code-server-enterprise \
+            --values helm/code-server-enterprise/values.phase4-k8s.yaml \
+            --timeout 10m \
+            --wait
+
+      - name: Verify Deployment
+        run: |
+          echo "Waiting for pods to be ready..."
+          kubectl wait --for=condition=ready pod \
+            -l "app.kubernetes.io/instance=code-server-enterprise" \
+            -n code-server-enterprise \
+            --timeout=300s
+          
+          echo ""
+          echo "Pod status:"
+          kubectl get pods -n code-server-enterprise
+          
+          echo ""
+          echo "Service status:"
+          kubectl get services -n code-server-enterprise
+
+  migrate-data:
+    name: Migrate Data from Docker to Kubernetes
+    runs-on: ubuntu-latest
+    needs: deploy-services
+    if: success()
+    environment: 
+      name: ${{ github.event.inputs.environment || 'staging' }}-data-migration
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Cluster Credentials
+        run: |
+          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          
+          az aks get-credentials \
+            --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
+            --name "$CLUSTER_NAME" \
+            --overwrite-existing
+
+      - name: Configure Docker Access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DOCKER_HOST_SSH_KEY }}" > ~/.ssh/docker_host
+          chmod 600 ~/.ssh/docker_host
+          
+          # Add Docker host to known_hosts
+          ssh-keyscan -H ${{ secrets.DOCKER_HOST_IP }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Migrate Data
+        run: |
+          export DOCKER_HOST_IP="${{ secrets.DOCKER_HOST_IP }}"
+          export K8S_NAMESPACE="code-server-enterprise"
+          
+          bash scripts/ops/migrate-to-k8s-data.sh all
+        env:
+          SSH_KEY_PATH: ~/.ssh/docker_host
+
+      - name: Verify Data Migration
+        run: |
+          echo "Verifying PostgreSQL..."
+          kubectl exec -n code-server-enterprise \
+            $(kubectl get pods -n code-server-enterprise -l app=postgres -o jsonpath='{.items[0].metadata.name}') \
+            -- psql -U postgres -c "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema='public';"
+          
+          echo ""
+          echo "Verifying Redis..."
+          kubectl exec -n code-server-enterprise \
+            $(kubectl get pods -n code-server-enterprise -l app=redis -o jsonpath='{.items[0].metadata.name}') \
+            -- redis-cli DBSIZE
+
+  validate-deployment:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-services, migrate-data]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Cluster Credentials
+        run: |
+          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          
+          az aks get-credentials \
+            --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
+            --name "$CLUSTER_NAME" \
+            --overwrite-existing
+
+      - name: Run Deployment Validation
+        run: bash scripts/k8s/validate-deployment.sh code-server-enterprise
+
+      - name: Generate Deployment Report
+        if: always()
+        run: |
+          cat > /tmp/deployment_report.md << 'EOF'
+          # Phase 4 Kubernetes Deployment Report
+          
+          **Deployment Date:** $(date)
+          **Cluster:** ${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}
+          **Environment:** ${{ github.event.inputs.environment || 'staging' }}
+          **Region:** ${{ env.CLUSTER_LOCATION }}
+          
+          ## Cluster Status
+          ```
+          $(kubectl get nodes)
+          ```
+          
+          ## Service Status
+          ```
+          $(kubectl get services -n code-server-enterprise)
+          ```
+          
+          ## Pod Status
+          ```
+          $(kubectl get pods -n code-server-enterprise)
+          ```
+          
+          ## Next Steps
+          1. Configure DNS to point to Kubernetes ingress
+          2. Begin traffic migration (Week 1: 90% Docker → 10% K8s)
+          3. Monitor logs and metrics
+          4. Run integration tests
+          
+          EOF
+          cat /tmp/deployment_report.md
+
+      - name: Upload Deployment Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-report
+          path: /tmp/deployment_report.md
+
+      - name: Notify Deployment Status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Phase 4 Kubernetes Deployment ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author

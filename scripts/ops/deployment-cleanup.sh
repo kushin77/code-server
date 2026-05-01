@@ -43,7 +43,7 @@ sleep 30
 ssh akushnir@192.168.168.42 'cd ~/code-server-enterprise && docker-compose -f docker-compose.enterprise.yml up -d'
 
 # 4. Verify cluster
-./scripts/ci/post-deployment-validation.sh
+./scripts/ops/post-deployment-validation.sh
 ```
 
 ## Health Checks After Startup
@@ -936,7 +936,7 @@ All documents stored in `/home/akushnir/code-server/`:
 - docs/reports/*.md
 - docs/archive/: Old configurations and documents
 - scripts/ops/setup-*.sh
-- scripts/ci/post-deployment-validation.sh
+- scripts/ops/post-deployment-validation.sh
 
 ---
 

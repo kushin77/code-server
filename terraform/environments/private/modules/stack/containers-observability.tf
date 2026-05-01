@@ -60,6 +60,14 @@ resource "docker_container" "prometheus" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }
@@ -124,6 +132,14 @@ resource "docker_container" "grafana" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }
@@ -175,6 +191,14 @@ resource "docker_container" "loki" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }
@@ -231,6 +255,14 @@ resource "docker_container" "alertmanager" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }
@@ -294,6 +326,14 @@ resource "docker_container" "otel_collector" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }
@@ -347,6 +387,14 @@ resource "docker_container" "tempo" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }

@@ -53,6 +53,14 @@ resource "docker_container" "memory_engine" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "memory-engine"
   }
@@ -107,6 +115,14 @@ resource "docker_container" "multimodal_ai" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "multimodal-ai"
@@ -167,6 +183,14 @@ resource "docker_container" "reputation_engine" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "reputation-engine"
   }
@@ -226,6 +250,14 @@ resource "docker_container" "agent_runtime" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "agent-runtime"

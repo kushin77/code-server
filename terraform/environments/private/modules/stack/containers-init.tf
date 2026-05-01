@@ -24,6 +24,14 @@ resource "docker_container" "grafana_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -48,6 +56,14 @@ resource "docker_container" "redis_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -72,6 +88,14 @@ resource "docker_container" "redpanda_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -96,6 +120,14 @@ resource "docker_container" "prometheus_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -120,6 +152,14 @@ resource "docker_container" "loki_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -144,6 +184,14 @@ resource "docker_container" "alertmanager_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -174,6 +222,14 @@ resource "docker_container" "caddy_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -198,6 +254,14 @@ resource "docker_container" "qdrant_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -226,6 +290,14 @@ resource "docker_container" "postgres_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -250,6 +322,14 @@ resource "docker_container" "ollama_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }
@@ -274,6 +354,14 @@ resource "docker_container" "tempo_init" {
     type   = "volume"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [command, image]
   }

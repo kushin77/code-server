@@ -42,6 +42,14 @@ resource "docker_container" "code_server_ide" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "ide"
   }
@@ -108,6 +116,14 @@ resource "docker_container" "gitlab" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "source-control"
   }
@@ -158,6 +174,14 @@ resource "docker_container" "gitlab_runner" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "ci-runner"
@@ -214,6 +238,14 @@ resource "docker_container" "minio" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "object-storage"
   }
@@ -263,6 +295,14 @@ resource "docker_container" "appsmith" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "low-code-platform"
@@ -314,6 +354,14 @@ resource "docker_container" "vault" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "secrets"
   }
@@ -363,6 +411,14 @@ resource "docker_container" "artifact_repo" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "artifact-repo"
@@ -414,6 +470,14 @@ resource "docker_container" "testing" {
   log_opts   = local.log_json_file
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "testing"
   }
@@ -462,6 +526,14 @@ resource "docker_container" "control_plane" {
   log_driver = "json-file"
   log_opts   = local.log_json_file
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "control-plane"

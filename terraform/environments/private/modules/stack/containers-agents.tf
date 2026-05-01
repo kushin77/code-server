@@ -52,6 +52,14 @@ resource "docker_container" "agent_code_reviewer" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, ports]
   }
@@ -106,6 +114,14 @@ resource "docker_container" "agent_incident_responder" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, ports]
   }
@@ -160,6 +176,14 @@ resource "docker_container" "agent_doc_writer" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, ports]
   }
@@ -214,6 +238,14 @@ resource "docker_container" "agent_test_generator" {
 
   log_driver = "json-file"
   log_opts   = local.log_json_file
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   lifecycle {
     ignore_changes = [image, network_mode, ports]
   }

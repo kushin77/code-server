@@ -61,6 +61,14 @@ resource "docker_container" "postgres" {
   }
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "database"
   }
@@ -111,6 +119,14 @@ resource "docker_container" "redis" {
     ignore_changes = [image, network_mode, mounts]
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "cache"
@@ -201,6 +217,14 @@ resource "docker_container" "redpanda" {
   }
 
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "event-bus"
   }
@@ -258,6 +282,14 @@ resource "docker_container" "redpanda_console" {
     ignore_changes = [image, network_mode, mounts]
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "event-bus-ui"
@@ -325,6 +357,14 @@ resource "docker_container" "qdrant" {
     ignore_changes = [image, network_mode, mounts]
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "vector-db"

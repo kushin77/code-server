@@ -68,6 +68,14 @@ resource "docker_container" "opa" {
     value = local.standard_tags.ManagedBy
   }
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "policy-engine"
   }
@@ -127,6 +135,14 @@ resource "docker_container" "oauth2_proxy" {
   labels {
     label = "Name"
     value = "code-server-oauth2-proxy"
+  }
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
   }
   labels {
     label = "Environment"
@@ -212,6 +228,14 @@ resource "docker_container" "caddy" {
     value = local.standard_tags.ManagedBy
   }
   labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "gateway"
   }
@@ -220,6 +244,14 @@ resource "docker_container" "caddy" {
     value = "infrastructure"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "gateway"
@@ -270,6 +302,14 @@ resource "docker_container" "ollama" {
   log_driver = "json-file"
   log_opts   = local.log_json_file_large
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "llm-server"
@@ -442,6 +482,14 @@ resource "docker_container" "keepalived" {
     "max-file" = "3"
   }
 
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
   labels {
     label = "io.elevatediq.component"
     value = "ha-vrrp"

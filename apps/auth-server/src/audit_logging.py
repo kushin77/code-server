@@ -5,7 +5,7 @@ Issue #1545: Enterprise SSO Portal - Audit Log Retention Policy
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 from apps._shared.python.exceptions import (
     DatabaseException, ServiceException
 )

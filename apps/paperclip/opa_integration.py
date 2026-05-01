@@ -8,8 +8,9 @@ import os
 import requests
 import logging
 from typing import Dict, Any, Optional
+import config as _svc_config
 
-from apps._shared.python.config import get_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class OPAPolicyManager:
 
     def __init__(self, opa_url: str = "http://opa:8181"):
         config = get_config()
-        self.opa_url = opa_url or config.get("OPA_URL", "http://opa:8181")
+        self.opa_url = opa_url or _svc_config.OPA_URL
         self.timeout = 10
 
     def check_approval_policy(

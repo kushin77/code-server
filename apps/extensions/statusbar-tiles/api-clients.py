@@ -10,9 +10,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import os
 
-from apps._shared.python.config import get_config
+import os
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 
@@ -97,8 +97,7 @@ class CIAPIClient(APIClientBase):
     def __init__(self, endpoint: str, cache_ttl: int = 60):
         super().__init__(cache_ttl)
         self.endpoint = endpoint
-        config = get_config()
-        self.branch = config.get("GIT_BRANCH", "main")
+        self.branch = os.getenv("GIT_BRANCH", "main")
     
     async def get_branch_status(self) -> Dict[str, Any]:
         """Get CI status for current branch"""

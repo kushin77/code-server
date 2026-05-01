@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

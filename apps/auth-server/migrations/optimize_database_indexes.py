@@ -131,10 +131,8 @@ CONNECTION_POOL_CONFIG = {
 
 if __name__ == "__main__":
     import os
-    from apps._shared.python.config import get_config
     
-    config = get_config(validate_required=False)
-    database_url = config.get(
+    database_url = os.getenv(
         "DATABASE_URL",
         "postgresql+asyncpg://postgres:postgres@localhost:5432/auth_db"
     )

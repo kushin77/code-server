@@ -14,9 +14,10 @@ import hashlib
 from qdrant_client import QdrantMemoryClient, MemoryDocument
 from embedder import OllamaEmbedder
 
-from apps._shared.python.config import get_config
+
 
 from log import get_logger
+import config as _svc_config
 
 logger = get_logger(__name__)
 
@@ -27,16 +28,16 @@ class OrganizationalMemorySeeder:
     def __init__(self, repo_root: str = "."):
         self.repo_root = Path(repo_root)
         config = get_config()
-        self.qdrant_host = config.get("QDRANT_HOST", "localhost")
-        self.qdrant_port = config.get_int("QDRANT_PORT", 6333)
-        self.ollama_host = config.get("OLLAMA_HOST", "http://ollama:11434")
+        self.qdrant_host = _svc_config.QDRANT_HOST
+        self.qdrant_port = _svc_config.QDRANT_PORT
+        self.ollama_host = _svc_config.OLLAMA_HOST
         self.seed_log = self.repo_root / "artifacts/seeding-log.jsonl"
         self.seed_log.parent.mkdir(parents=True, exist_ok=True)
 
         self._qdrant = QdrantMemoryClient(host=self.qdrant_host, port=self.qdrant_port)
         self._embedder = OllamaEmbedder(
             ollama_host=self.ollama_host,
-            model=config.get("EMBED_MODEL", "nomic-embed-text"),
+            model=_svc_config.EMBED_MODEL,
         )
 
     def _log_entry(self, action: str, status: str, details: Dict[str, Any]):
@@ -73,8 +74,8 @@ class OrganizationalMemorySeeder:
         import urllib.request, urllib.error
 
         config = get_config()
-        repo = config.get("GITHUB_REPO", "kushin77/code-server")
-        token = config.get("GITHUB_TOKEN", "")
+        repo = _svc_config.GITHUB_REPO
+        token = _svc_config.GITHUB_TOKEN or ""
         count = 0
         try:
             page = 1
@@ -147,8 +148,8 @@ class OrganizationalMemorySeeder:
         import urllib.request, urllib.error
 
         config = get_config()
-        repo = config.get("GITHUB_REPO", "kushin77/code-server")
-        token = config.get("GITHUB_TOKEN", "")
+        repo = _svc_config.GITHUB_REPO
+        token = _svc_config.GITHUB_TOKEN or ""
         count = 0
         try:
             page = 1

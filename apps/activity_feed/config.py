@@ -13,8 +13,12 @@ HOST: str = os.getenv("ACTIVITY_FEED_HOST", "0.0.0.0")
 ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
 DEBUG: bool = ENVIRONMENT == "development"
 
+# ── Database ─────────────────────────────────────────────────────────────────
+DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/activity_feed")
+
 # ── Kafka / Event Bus ─────────────────────────────────────────────────────────
 KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "redpanda:9092")
+KAFKA_BROKER: str = os.getenv("KAFKA_BROKER", "redpanda:9092")  # alias used by activity_feed_service
 KAFKA_CONSUMER_GROUP: str = os.getenv("KAFKA_CONSUMER_GROUP", "activity-feed-consumer")
 
 # ── Logging ───────────────────────────────────────────────────────────────────

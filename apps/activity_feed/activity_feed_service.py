@@ -23,17 +23,17 @@ import uvicorn
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'event-bus', 'src'))
 
-from apps._shared.python.config import get_config
+
 from consumer import ActivityFeedConsumer
+import config as _svc_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-config = get_config(validate_required=False)
 
 # Database setup
-DATABASE_URL = config.get_required("DATABASE_URL")
+DATABASE_URL = _svc_config.DATABASE_URL
 engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -67,7 +67,7 @@ class ActivityFeedService:
     
     def __init__(self):
         """Initialize service."""
-        self.kafka_broker = config.get("KAFKA_BROKER", "localhost:9092")
+        self.kafka_broker = _svc_config.KAFKA_BROKER
         self.consumer = None
         self.running = False
         self.websocket_connections = set()
@@ -373,7 +373,7 @@ async def websocket_stream(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    port = config.get_int("PORT", 8000)
+    port = _svc_config.PORT
     uvicorn.run(
         app,
         host="0.0.0.0",

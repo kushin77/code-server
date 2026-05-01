@@ -8,14 +8,14 @@ import logging
 from typing import Optional
 from fastapi import HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import config as _svc_config
 
-from apps._shared.python.config import get_config
+
 
 logger = logging.getLogger(__name__)
 
-config = get_config(validate_required=False)
 
-_scheduler_api_key = config.get_required("SCHEDULER_API_KEY")
+_scheduler_api_key = _svc_config.SCHEDULER_API_KEY
 if not _scheduler_api_key:
     raise RuntimeError("SCHEDULER_API_KEY must be set")
 
@@ -25,9 +25,9 @@ VALID_API_KEYS = {
 }
 
 # OAuth2 introspection endpoint (set via env for production)
-_OAUTH2_INTROSPECT_URL = config.get("OAUTH2_INTROSPECT_URL", "")
-_OAUTH2_CLIENT_ID = config.get("OAUTH2_CLIENT_ID", "")
-_OAUTH2_CLIENT_SECRET = config.get("OAUTH2_CLIENT_SECRET", "")
+_OAUTH2_INTROSPECT_URL = _svc_config.OAUTH2_INTROSPECT_URL
+_OAUTH2_CLIENT_ID = _svc_config.OAUTH2_CLIENT_ID
+_OAUTH2_CLIENT_SECRET = _svc_config.OAUTH2_CLIENT_SECRET
 
 
 class SchedulerAuth:

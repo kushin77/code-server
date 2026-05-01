@@ -39,6 +39,8 @@ VISION_TIMEOUT_SEC: int = int(os.getenv("VISION_TIMEOUT_SEC", "60"))
 WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base")
 TTS_BACKEND: str = os.getenv("TTS_BACKEND", "gtts")  # gtts | azure
 AZURE_TTS_KEY: str = os.getenv("AZURE_TTS_KEY", "")
+AZURE_TTS_REGION: str = os.getenv("AZURE_TTS_REGION", "eastus")
+AZURE_TTS_VOICE: str = os.getenv("AZURE_TTS_VOICE", "en-US-JennyNeural")
 
 # ── Health check ──────────────────────────────────────────────────────────────
 HEALTH_CHECK_TIMEOUT: int = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))

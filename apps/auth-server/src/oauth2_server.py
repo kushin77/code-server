@@ -5,7 +5,7 @@ Issue #1545: Enterprise SSO Portal Architecture
 import os
 from datetime import datetime, timedelta
 from apps._shared.python.config import get_config
-from apps._shared.python.logging import get_logger
+from log import get_logger
 from apps._shared.python.exceptions import (
     InvalidToken, TokenExpired, AuthenticationFailure, MissingConfig
 )

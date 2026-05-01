@@ -28,7 +28,7 @@ from src.user_provisioning import UserProvisioningService
 from src.team_service import TeamManagementService
 from src.session_service import SingleSignOutService
 from src.gateway_auth import OAuth2TokenValidator, APIKeyAuthenticator
-from apps._shared.python.config import get_config
+import os
 
 
 # ============================================================================
@@ -36,14 +36,13 @@ from apps._shared.python.config import get_config
 # ============================================================================
 
 # Use in-memory SQLite for tests (or PostgreSQL for more realistic testing)
-_config = get_config(validate_required=False)
-TEST_DATABASE_URL = _config.get(
+TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql://test:test@localhost:5432/paperclip_test"
 )
 
 # Alternative in-memory SQLite for faster tests
-if _config.get("USE_SQLITE_TESTS", "false").lower() == "true":
+if os.getenv("USE_SQLITE_TESTS", "false").lower() == "true":
     TEST_DATABASE_URL = "sqlite:///:memory:"
 
 

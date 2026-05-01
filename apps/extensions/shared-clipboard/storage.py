@@ -12,7 +12,7 @@ from pathlib import Path
 import logging
 import hashlib
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

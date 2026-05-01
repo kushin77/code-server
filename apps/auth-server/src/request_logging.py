@@ -7,7 +7,7 @@ import time
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response

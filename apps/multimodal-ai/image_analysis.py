@@ -12,19 +12,19 @@ import os
 from typing import Dict, List, Optional
 
 import httpx
+import config as _svc_config
 
-from apps._shared.python.config import get_config
+
 
 logger = logging.getLogger(__name__)
 
 # Configuration via environment (never hardcoded)
-config = get_config()
-_VISION_BACKEND = config.get("VISION_BACKEND", "ollama")           # ollama | openai
-_OLLAMA_BASE_URL = config.get("OLLAMA_BASE_URL", "http://ollama:11434")
-_OLLAMA_VISION_MODEL = config.get("OLLAMA_VISION_MODEL", "llava:13b")
-_OPENAI_API_KEY = config.get("OPENAI_API_KEY", "")
-_OPENAI_VISION_MODEL = config.get("OPENAI_VISION_MODEL", "gpt-4-vision-preview")
-_VISION_TIMEOUT_SEC = config.get_int("VISION_TIMEOUT_SEC", 60)
+_VISION_BACKEND = _svc_config.VISION_BACKEND           # ollama | openai
+_OLLAMA_BASE_URL = _svc_config.OLLAMA_BASE_URL
+_OLLAMA_VISION_MODEL = _svc_config.OLLAMA_VISION_MODEL
+_OPENAI_API_KEY = _svc_config.OPENAI_API_KEY
+_OPENAI_VISION_MODEL = _svc_config.OPENAI_VISION_MODEL
+_VISION_TIMEOUT_SEC = _svc_config.VISION_TIMEOUT_SEC
 
 _ERROR_ANALYSIS_PROMPT = """You are a DevOps/SRE assistant analyzing an error screenshot.
 Identify:

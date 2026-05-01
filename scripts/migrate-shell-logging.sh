@@ -5,6 +5,8 @@
 # ============================================================================
 
 set -e
+trap 'echo "[ERROR] Script failed at line $LINENO"; exit 1' ERR
+trap 'echo "[INFO] Cleanup complete"; true' EXIT
 
 REPO_ROOT="${REPO_ROOT:-/home/akushnir/code-server}"
 SCRIPTS_TO_UPDATE=(

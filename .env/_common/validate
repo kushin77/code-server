@@ -1,0 +1,139 @@
+#!/bin/bash
+# ============================================================================
+# Environment Variable Validation Script
+# Validates that all required environment variables are present and valid
+# Usage: bash .env/_common/validate [environment]
+# ============================================================================
+
+set -e
+trap 'log_error "Validation failed at line $LINENO"; exit 1' ERR
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Load logging functions from init.sh if available
+if [[ -f "$REPO_ROOT/scripts/_common/init.sh" ]]; then
+    source "$REPO_ROOT/scripts/_common/init.sh" 2>/dev/null || true
+fi
+
+# Fallback logging functions
+log_info() { echo "[INFO] $1"; }
+log_success() { echo "[✓] $1"; }
+log_error() { echo "[✗] $1" >&2; }
+log_warn() { echo "[!] $1"; }
+
+# Environment to validate (default to all)
+ENVIRONMENT="${1:-all}"
+
+# Define required variables - extracted dynamically from SSOT
+get_required_vars() {
+    grep "^export" "$REPO_ROOT/.env/_common/defaults" 2>/dev/null | awk '{print $2}' | cut -d= -f1 | sort
+}
+
+# Build array of required variables
+REQUIRED_VARS=()
+while IFS= read -r var; do
+    REQUIRED_VARS+=("$var")
+done < <(get_required_vars)
+
+# ============================================================================
+# Validation Functions
+# ============================================================================
+
+validate_environment() {
+    local env="$1"
+    local env_file="${REPO_ROOT}/.env/${env}/overrides"
+    local common_file="${REPO_ROOT}/.env/_common/defaults"
+    
+    log_info "Validating environment: $env"
+    
+    # Check if environment directory exists
+    if [[ ! -d "${REPO_ROOT}/.env/${env}" ]]; then
+        log_error "Environment directory not found: .env/${env}"
+        return 1
+    fi
+    
+    # Check if overrides file exists
+    if [[ ! -f "$env_file" ]]; then
+        log_warn "Override file not found (using defaults only): .env/${env}/overrides"
+    fi
+    
+    local missing_vars=()
+    local found_vars=()
+    
+    # Source the files
+    set +e
+    source "$common_file" 2>/dev/null
+    if [[ -f "$env_file" ]]; then
+        source "$env_file" 2>/dev/null
+    fi
+    set -e
+    
+    # Check each required variable
+    for var in "${REQUIRED_VARS[@]}"; do
+        if [[ -n "${!var:-}" ]]; then
+            found_vars+=("$var")
+        else
+            missing_vars+=("$var")
+        fi
+    done
+    
+    # Report results
+    log_info "Found variables: ${#found_vars[@]}/${#REQUIRED_VARS[@]}"
+    
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        log_error "Missing ${#missing_vars[@]} required variables:"
+        for var in "${missing_vars[@]}"; do
+            log_error "  ✗ $var"
+        done
+        return 1
+    else
+        log_success "All $env variables present"
+        return 0
+    fi
+}
+
+# ============================================================================
+# Main Validation Logic
+# ============================================================================
+
+log_info "========================================================="
+log_info "Environment Variable Validation"
+log_info "========================================================="
+log_info ""
+
+VALIDATION_FAILED=0
+
+if [[ "$ENVIRONMENT" == "all" ]]; then
+    # Validate all environments
+    for env_dir in "${REPO_ROOT}/.env"/*/; do
+        env_name=$(basename "$env_dir")
+        if [[ "$env_name" != "_common" ]]; then
+            if validate_environment "$env_name"; then
+                log_success "✓ $env_name validation passed"
+            else
+                log_error "✗ $env_name validation failed"
+                VALIDATION_FAILED=1
+            fi
+            echo ""
+        fi
+    done
+else
+    # Validate specific environment
+    if validate_environment "$ENVIRONMENT"; then
+        log_success "✓ $ENVIRONMENT validation passed"
+    else
+        log_error "✗ $ENVIRONMENT validation failed"
+        VALIDATION_FAILED=1
+    fi
+fi
+
+log_info "========================================================="
+
+if [[ $VALIDATION_FAILED -eq 0 ]]; then
+    log_success "Validation PASSED - All environments ready"
+    exit 0
+else
+    log_error "Validation FAILED - Check missing variables above"
+    exit 1
+fi

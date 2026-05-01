@@ -49,7 +49,7 @@ services:
     enabled: true
     name: "api"
     replicas: 3
-    image: "code-server-enterprise-api:latest"
+    image: "code-server-enterprise-api:v1.0.0"
     port: 3100
     resources:
       limits:
@@ -64,7 +64,7 @@ services:
     enabled: true
     name: "frontend"
     replicas: 2
-    image: "code-server-enterprise-frontend:latest"
+    image: "code-server-enterprise-frontend:v1.0.0"
     port: 3000
     resources:
       limits:
@@ -79,7 +79,7 @@ services:
     enabled: true
     name: "reputation-engine"
     replicas: 2
-    image: "code-server-enterprise-reputation-engine:latest"
+    image: "code-server-enterprise-reputation-engine:v1.0.0"
     port: 5000
     resources:
       limits:
@@ -93,7 +93,7 @@ services:
     enabled: true
     name: "activity-feed"
     replicas: 2
-    image: "code-server-enterprise-activity-feed:latest"
+    image: "code-server-enterprise-activity-feed:v1.0.0"
     port: 5001
     resources:
       limits:
@@ -108,7 +108,7 @@ services:
     enabled: true
     name: "session-broker"
     replicas: 2
-    image: "code-server-enterprise-session-broker:latest"
+    image: "code-server-enterprise-session-broker:v1.0.0"
     port: 5002
     resources:
       limits:
@@ -123,7 +123,7 @@ services:
     enabled: true
     name: "agent-runtime"
     replicas: 2
-    image: "code-server-enterprise-agent-runtime:latest"
+    image: "code-server-enterprise-agent-runtime:v1.0.0"
     port: 8004
     resources:
       limits:
@@ -152,7 +152,7 @@ services:
     enabled: true
     name: "edge-agent"
     replicas: 2
-    image: "code-server-enterprise-edge-agent:latest"
+    image: "code-server-enterprise-edge-agent:v1.0.0"
     port: 8060
     resources:
       limits:

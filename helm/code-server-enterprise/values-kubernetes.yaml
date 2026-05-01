@@ -70,7 +70,7 @@ services:
     enabled: true
     name: "api"
     replicas: 3
-    image: "code-server-enterprise:latest"
+    image: "code-server-enterprise:v1.0.0"
     port: 3100
     securityContext:
       runAsUser: 1000
@@ -107,7 +107,7 @@ services:
     enabled: true
     name: "frontend"
     replicas: 2
-    image: "code-server-enterprise-frontend:latest"
+    image: "code-server-enterprise-frontend:v1.0.0"
     port: 3000
     securityContext:
       runAsUser: 1000
@@ -132,7 +132,7 @@ services:
     enabled: true
     name: "reputation-engine"
     replicas: 2
-    image: "code-server-enterprise-reputation-engine:latest"
+    image: "code-server-enterprise-reputation-engine:v1.0.0"
     port: 5000
     securityContext:
       runAsUser: 1000
@@ -149,7 +149,7 @@ services:
     enabled: true
     name: "activity-feed"
     replicas: 2
-    image: "code-server-enterprise-activity-feed:latest"
+    image: "code-server-enterprise-activity-feed:v1.0.0"
     port: 5001
     securityContext:
       runAsUser: 1000
@@ -167,7 +167,7 @@ services:
     enabled: true
     name: "session-broker"
     replicas: 2
-    image: "code-server-enterprise-session-broker:latest"
+    image: "code-server-enterprise-session-broker:v1.0.0"
     port: 5002
     securityContext:
       runAsUser: 1000
@@ -184,7 +184,7 @@ services:
     enabled: true
     name: "agent-runtime"
     replicas: 2
-    image: "code-server-enterprise-agent-runtime:latest"
+    image: "code-server-enterprise-agent-runtime:v1.0.0"
     port: 8004
     securityContext:
       runAsUser: 1000
@@ -259,7 +259,7 @@ services:
     enabled: true
     name: "redpanda"
     replicas: 3
-    image: "vectorized/redpanda:latest"
+    image: "vectorized/redpanda:v23.3.18"
     port: 9092
     securityContext:
       runAsUser: 101
@@ -395,7 +395,7 @@ services:
     enabled: true
     name: "tempo"
     replicas: 1
-    image: "grafana/tempo:latest"
+    image: "grafana/tempo:2.4.1"
     port: 3200
     securityContext:
       runAsUser: 10001
@@ -422,7 +422,7 @@ services:
     enabled: true
     name: "ollama"
     replicas: 1
-    image: "ollama/ollama:latest"
+    image: "ollama/ollama:0.1.29"
     port: 11434
     securityContext:
       runAsUser: 11434
@@ -449,7 +449,7 @@ services:
     enabled: true
     name: "qdrant"
     replicas: 1
-    image: "qdrant/qdrant:latest"
+    image: "qdrant/qdrant:v1.8.1"
     port: 6333
     securityContext:
       runAsUser: 1000
@@ -475,7 +475,7 @@ services:
     enabled: true
     name: "edge-agent"
     replicas: 2
-    image: "code-server-enterprise-edge-agent:latest"
+    image: "code-server-enterprise-edge-agent:v1.0.0"
     port: 8060
     securityContext:
       runAsUser: 1000
@@ -492,7 +492,7 @@ services:
     enabled: true
     name: "extension-runtime"
     replicas: 2
-    image: "code-server-enterprise-extension-runtime:latest"
+    image: "code-server-enterprise-extension-runtime:v1.0.0"
     port: 8070
     securityContext:
       runAsUser: 1000
@@ -509,7 +509,7 @@ services:
     enabled: true
     name: "knowledge-graph"
     replicas: 1
-    image: "code-server-enterprise-knowledge-graph:latest"
+    image: "code-server-enterprise-knowledge-graph:v1.0.0"
     port: 8080
     securityContext:
       runAsUser: 1000

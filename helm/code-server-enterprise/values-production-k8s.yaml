@@ -96,7 +96,7 @@ statelessServices:
   frontend:
     enabled: true
     replicaCount: 2
-    image: kushin77/code-server-frontend:latest
+    image: kushin77/code-server-frontend:v1.0.0
     port: 3000
     env:
       API_URL: https://api.kushnir.cloud
@@ -117,7 +117,7 @@ statelessServices:
   api:
     enabled: true
     replicaCount: 3
-    image: kushin77/code-server-api:latest
+    image: kushin77/code-server-api:v1.0.0
     port: 3100
     env:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kushnir_db
@@ -140,7 +140,7 @@ statelessServices:
   reputation-engine:
     enabled: true
     replicaCount: 2
-    image: kushin77/reputation-engine:latest
+    image: kushin77/reputation-engine:v1.0.0
     port: 3200
     resources:
       requests:
@@ -157,7 +157,7 @@ statelessServices:
   activity-feed:
     enabled: true
     replicaCount: 2
-    image: kushin77/activity-feed:latest
+    image: kushin77/activity-feed:v1.0.0
     port: 3300
     resources:
       requests:
@@ -174,7 +174,7 @@ statelessServices:
   agent-runtime:
     enabled: true
     replicaCount: 2
-    image: kushin77/agent-runtime:latest
+    image: kushin77/agent-runtime:v1.0.0
     port: 3400
     resources:
       requests:
@@ -191,7 +191,7 @@ statelessServices:
   execution-scheduler:
     enabled: true
     replicaCount: 1
-    image: kushin77/execution-scheduler:latest
+    image: kushin77/execution-scheduler:v1.0.0
     port: 3500
     resources:
       requests:
@@ -204,7 +204,7 @@ statelessServices:
   paperclip:
     enabled: true
     replicaCount: 1
-    image: kushin77/paperclip:latest
+    image: kushin77/paperclip:v1.0.0
     port: 3600
     resources:
       requests:
@@ -261,7 +261,7 @@ redis:
 
 redpanda:
   enabled: true
-  image: vectorized/redpanda:latest
+  image: vectorized/redpanda:v23.3.18
   replicaCount: 3
   port: 9092
   persistence:
@@ -278,7 +278,7 @@ redpanda:
 
 prometheus:
   enabled: true
-  image: prom/prometheus:latest
+  image: prom/prometheus:v2.51.2
   port: 9090
   persistence:
     enabled: true
@@ -296,7 +296,7 @@ prometheus:
 
 loki:
   enabled: true
-  image: grafana/loki:latest
+  image: grafana/loki:3.0.0
   port: 3100
   persistence:
     enabled: true
@@ -313,7 +313,7 @@ loki:
 
 grafana:
   enabled: true
-  image: grafana/grafana:latest
+  image: grafana/grafana:11.0.0
   port: 3000
   adminUser: admin
   adminPassword: CHANGEME  # Change this!
@@ -331,7 +331,7 @@ grafana:
 
 alertmanager:
   enabled: true
-  image: prom/alertmanager:latest
+  image: prom/alertmanager:v0.27.0
   port: 9093
   persistence:
     enabled: true
@@ -347,7 +347,7 @@ alertmanager:
 
 ollama:
   enabled: true
-  image: ollama/ollama:latest
+  image: ollama/ollama:0.1.29
   port: 11434
   persistence:
     enabled: true
@@ -363,7 +363,7 @@ ollama:
 
 qdrant:
   enabled: true
-  image: qdrant/qdrant:latest
+  image: qdrant/qdrant:v1.8.1
   port: 6333
   persistence:
     enabled: true
@@ -379,7 +379,7 @@ qdrant:
 
 tempo:
   enabled: true
-  image: grafana/tempo:latest
+  image: grafana/tempo:2.4.1
   port: 3200
   persistence:
     enabled: true

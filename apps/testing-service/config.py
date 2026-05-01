@@ -26,3 +26,19 @@ KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "redpanda:90
 
 # ── Health check ──────────────────────────────────────────────────────────────
 HEALTH_CHECK_TIMEOUT: int = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
+
+
+def validate_config() -> None:
+    """Validate configuration on startup.
+
+    Raises RuntimeError if production environment is missing critical variables.
+    """
+    if ENVIRONMENT == "production":
+        missing = [
+            *[v for v, val in {"DATABASE_URL": DATABASE_URL}.items() if not val],
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Production deployment requires: {', '.join(missing)}. "
+                "Set these environment variables before starting."
+            )

@@ -29,3 +29,19 @@ HERMES_URL: str = os.getenv("HERMES_URL", "")  # empty = disabled
 
 # ── Health check configuration ────────────────────────────────────────────────
 HEALTH_CHECK_TIMEOUT: int = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
+
+
+def validate_config() -> None:
+    """Validate configuration on startup.
+
+    Raises RuntimeError if production environment is missing critical variables.
+    """
+    if ENVIRONMENT == "production":
+        missing = [
+            # No critical secrets required for this service
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Production deployment requires: {', '.join(missing)}. "
+                "Set these environment variables before starting."
+            )

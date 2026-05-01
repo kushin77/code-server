@@ -34,3 +34,19 @@ GITHUB_TOKEN: Optional[str] = os.getenv("GITHUB_TOKEN")
 
 # ── Health check configuration ────────────────────────────────────────────────
 HEALTH_CHECK_TIMEOUT: int = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
+
+
+def validate_config() -> None:
+    """Validate configuration on startup.
+
+    Raises RuntimeError if production environment is missing critical variables.
+    """
+    if ENVIRONMENT == "production":
+        missing = [
+            *[v for v, val in {"GITHUB_TOKEN": GITHUB_TOKEN}.items() if not val],
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Production deployment requires: {', '.join(missing)}. "
+                "Set these environment variables before starting."
+            )

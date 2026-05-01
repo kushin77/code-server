@@ -21,3 +21,19 @@ SCHEMA_REGISTRY_URL: str = os.getenv("SCHEMA_REGISTRY_URL", "")
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT: str = "json"
 ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
+
+def validate_config() -> None:
+    """Validate configuration on startup.
+
+    Raises RuntimeError if production environment is missing critical variables.
+    """
+    if ENVIRONMENT == "production":
+        missing = [
+            # No critical secrets required for this service
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Production deployment requires: {', '.join(missing)}. "
+                "Set these environment variables before starting."
+            )

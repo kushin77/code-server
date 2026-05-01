@@ -42,3 +42,19 @@ AZURE_TTS_KEY: str = os.getenv("AZURE_TTS_KEY", "")
 
 # ── Health check ──────────────────────────────────────────────────────────────
 HEALTH_CHECK_TIMEOUT: int = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
+
+
+def validate_config() -> None:
+    """Validate configuration on startup.
+
+    Raises RuntimeError if production environment is missing critical variables.
+    """
+    if ENVIRONMENT == "production":
+        missing = [
+            *[v for v, val in {"OPENAI_API_KEY": OPENAI_API_KEY}.items() if not val],
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Production deployment requires: {', '.join(missing)}. "
+                "Set these environment variables before starting."
+            )

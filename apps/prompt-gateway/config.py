@@ -26,3 +26,19 @@ CONTEXT_CACHE_TTL_SECONDS: int = int(os.getenv("CONTEXT_CACHE_TTL_SECONDS", "300
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT: str = "json"
+
+
+def validate_config() -> None:
+    """Validate configuration on startup.
+
+    Raises RuntimeError if production environment is missing critical variables.
+    """
+    if ENVIRONMENT == "production":
+        missing = [
+            *[v for v, val in {"OPENAI_API_KEY": OPENAI_API_KEY}.items() if not val],
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Production deployment requires: {', '.join(missing)}. "
+                "Set these environment variables before starting."
+            )

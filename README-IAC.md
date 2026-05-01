@@ -12,6 +12,19 @@
 
 All infrastructure is now **declarative and automated**. No manual procedures, no shell scripts, everything version-controlled and reproducible.
 
+## Configuration SSOT
+
+The deployment scripts source shell-style env files in a fixed order instead of treating them as ad hoc dotenv fragments:
+
+1. `.env.infrastructure` for endpoint construction and shared service URLs
+2. `.env.deployment` for deployment-time defaults and local overrides
+3. `.env.cluster` for HA and cluster topology values
+4. `.env.production` for production service ports, credentials, and runtime settings
+
+Use [`.env.schema.json`](.env.schema.json) as the authoritative variable inventory when adding or renaming configuration.
+
+On the production host, the working tree may contain unrelated local drift. Do not replace or reset that state during deployment unless the operator explicitly asks for it.
+
 ### Architecture
 
 ```

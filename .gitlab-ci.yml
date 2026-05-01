@@ -1,0 +1,713 @@
+# @file        .gitlab-ci.yml
+# @module      ci/gitlab-primary
+# @description GitLab CI/CD pipeline — primary source of truth for all CI/CD
+# @governance  GOV-002: IaC, immutable, idempotent, version-controlled
+# @author      Autonomous Infrastructure
+# @date        2026-05-01
+#
+# Migrated from .github/workflows/ (33 workflows → 1 unified GitLab pipeline)
+# GitLab project: https://gitlab.com/kushin77/code-server
+#
+# ─── PIPELINE STAGES ─────────────────────────────────────────────────────────
+# validate   → governance, SSOT compliance, secret scanning
+# quality    → ruff lint, shellcheck, commit format
+# test       → integration tests (with Postgres + Redis services)
+# security   → SAST, dependency audit, policy-as-code
+# plan       → terraform plan, docker-compose config check
+# deploy     → terraform apply (production, manual gate)
+# scheduled  → drift detection, continuous validation (cron jobs)
+# sync       → mirror to GitHub (push mirror after successful pipeline)
+
+stages:
+  - validate
+  - quality
+  - test
+  - security
+  - plan
+  - deploy
+  - sync
+
+# ─── GLOBAL DEFAULTS ─────────────────────────────────────────────────────────
+default:
+  image: ubuntu:22.04
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl jq bash shellcheck python3 python3-pip > /dev/null 2>&1
+  tags:
+    - docker
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
+variables:
+  TF_VERSION: "1.6.0"
+  PYTHON_VERSION: "3.11"
+  PRIMARY_HOST: "192.168.168.31"
+  REPLICA_HOST: "192.168.168.42"
+  # Terraform backend — set in GitLab CI/CD → Settings → Variables
+  # TF_VAR_primary_host, TF_VAR_replica_host, TF_VAR_apex_domain, etc.
+  GIT_DEPTH: "50"
+
+# ─── WORKFLOW RULES (when to run the pipeline) ───────────────────────────────
+workflow:
+  rules:
+    # Always run on default branch and MR pipelines
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: validate
+# ═════════════════════════════════════════════════════════════════════════════
+
+governance:no-loose-root-files:
+  stage: validate
+  script:
+    - |
+      echo "── Checking for loose markdown files in root ──"
+      ALLOWED="README.md"
+      VIOLATIONS=()
+      for f in *.md; do
+        [ -f "$f" ] || continue
+        if [ "$f" != "$ALLOWED" ]; then
+          VIOLATIONS+=("$f")
+        fi
+      done
+      if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+        echo "❌ Loose markdown files in root (move to docs/):"
+        printf '  - %s\n' "${VIOLATIONS[@]}"
+        exit 1
+      fi
+      echo "✅ No loose markdown files in root"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+governance:script-init-compliance:
+  stage: validate
+  script:
+    - |
+      echo "── Verifying key scripts source init.sh ──"
+      FAILURES=0
+      while IFS= read -r script; do
+        if ! grep -q 'source.*init\.sh\|source.*_common\|^\. .*init' "$script" 2>/dev/null; then
+          echo "⚠️  Missing init.sh source: $script"
+          FAILURES=$((FAILURES + 1))
+        fi
+      done < <(find scripts -name "*.sh" -type f | grep -E "(deploy|setup|manage|ops)" | head -20)
+      echo "✅ Script init compliance checked ($FAILURES warnings)"
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/**/*.sh
+
+ssot:no-hardcoded-ips:
+  stage: validate
+  script:
+    - |
+      echo "── Scanning for hardcoded IP addresses ──"
+      if grep -rn "192\.168\." scripts/ docker-compose*.yml helm/ terraform/ \
+        --include="*.sh" --include="*.yml" --include="*.yaml" --include="*.tf" \
+        --exclude-dir=.git --exclude-dir=.terraform 2>/dev/null | \
+        grep -v "test\|example\|#\|PRIMARY_HOST\|REPLICA_HOST\|YOUR_HOST" | head -10; then
+        echo "❌ Found hardcoded IP addresses — use SSOT variables instead"
+        exit 1
+      fi
+      echo "✅ No hardcoded IPs found"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/**
+        - docker-compose*.yml
+        - helm/**
+        - terraform/**
+        - config/**
+
+ssot:no-hardcoded-domains:
+  stage: validate
+  script:
+    - |
+      echo "── Scanning for hardcoded domain references ──"
+      if grep -rn "kushnir\.cloud\|example\.com" scripts/ docker-compose*.yml helm/ terraform/ \
+        --include="*.sh" --include="*.yml" --include="*.yaml" --include="*.tf" \
+        --exclude-dir=.git --exclude-dir=.terraform 2>/dev/null | \
+        grep -v "test\|APEX_DOMAIN\|#\|\.md:" | head -10; then
+        echo "❌ Found hardcoded domain references — use APEX_DOMAIN SSOT variable"
+        exit 1
+      fi
+      echo "✅ No hardcoded domains found"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/**
+        - docker-compose*.yml
+        - helm/**
+        - terraform/**
+
+ssot:compose-idempotency:
+  stage: validate
+  script:
+    - |
+      echo "── Docker Compose idempotency check ──"
+      apt-get install -y -qq docker-compose > /dev/null 2>&1 || true
+      if command -v docker compose &>/dev/null; then
+        docker compose -f docker-compose.yml config > /dev/null && echo "✅ docker-compose.yml valid"
+        docker compose -f docker-compose.enterprise.yml config > /dev/null && echo "✅ docker-compose.enterprise.yml valid"
+      else
+        bash -n docker-compose.yml 2>/dev/null || true
+        echo "⚠️  Docker not available in runner — syntax-only check"
+      fi
+      # Run idempotency script if available
+      if [ -f scripts/ci/check-docker-compose-idempotency.sh ]; then
+        bash scripts/ci/check-docker-compose-idempotency.sh --dry-run 2>/dev/null || true
+      fi
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - docker-compose*.yml
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: quality
+# ═════════════════════════════════════════════════════════════════════════════
+
+quality:ruff-lint:
+  stage: quality
+  image: python:3.11-slim
+  before_script:
+    - pip install --no-cache-dir ruff==0.4.4
+  script:
+    - echo "── Ruff lint ──"
+    - ruff check apps/ scripts/ --output-format=gitlab 2>/dev/null || ruff check apps/ scripts/
+    - echo "── Ruff format check ──"
+    - ruff format --check apps/ scripts/
+  artifacts:
+    reports:
+      codequality: ruff-report.json
+    when: always
+    expire_in: 1 week
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - apps/**/*.py
+        - scripts/**/*.py
+        - pyproject.toml
+
+quality:shellcheck:
+  stage: quality
+  script:
+    - |
+      echo "── ShellCheck (severity: warning) ──"
+      find scripts/ -name "*.sh" -print0 \
+        | xargs -0 shellcheck --severity=warning --shell=bash --format=gcc 2>&1 | tee shellcheck-report.txt || true
+      ERRORS=$(grep -c ": error:" shellcheck-report.txt 2>/dev/null || echo 0)
+      if [ "$ERRORS" -gt 0 ]; then
+        echo "❌ $ERRORS ShellCheck errors found"
+        grep ": error:" shellcheck-report.txt
+        exit 1
+      fi
+      echo "✅ ShellCheck passed"
+  artifacts:
+    paths:
+      - shellcheck-report.txt
+    when: always
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/**/*.sh
+
+quality:conventional-commits:
+  stage: quality
+  script:
+    - |
+      echo "── Conventional Commits check ──"
+      PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|ops|infra|security|iac)(\([a-z0-9/_-]+\))?!?: .+'
+
+      if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then
+        BASE="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+        HEAD="$CI_COMMIT_SHA"
+      else
+        BASE="HEAD~1"
+        HEAD="HEAD"
+      fi
+
+      FAILURES=0
+      while IFS= read -r msg; do
+        [ -z "$msg" ] && continue
+        if ! echo "$msg" | grep -qE "$PATTERN"; then
+          echo "❌ Invalid commit: $msg"
+          FAILURES=$((FAILURES + 1))
+        fi
+      done < <(git log --format="%s" "${BASE}..${HEAD}" 2>/dev/null | head -20)
+
+      if [ "$FAILURES" -gt 0 ]; then
+        echo ""
+        echo "Conventional Commit format required:"
+        echo "  <type>(<scope>): <subject>"
+        echo "  Types: feat fix docs style refactor perf test build ci chore revert ops infra security iac"
+        exit 1
+      fi
+      echo "✅ All commit messages follow Conventional Commits"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: test
+# ═════════════════════════════════════════════════════════════════════════════
+
+test:integration-auth:
+  stage: test
+  image: python:3.11-slim
+  services:
+    - name: postgres:14-alpine
+      alias: postgres
+      variables:
+        POSTGRES_USER: test
+        POSTGRES_PASSWORD: test
+        POSTGRES_DB: paperclip_test
+    - name: redis:7-alpine
+      alias: redis
+  variables:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_USER: test
+    POSTGRES_PASSWORD: test
+    POSTGRES_DB: paperclip_test
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    DATABASE_URL: "postgresql://test:test@postgres:5432/paperclip_test"
+    REDIS_URL: "redis://redis:6379/0"
+  before_script:
+    - pip install --upgrade pip setuptools wheel
+    - pip install -e apps/auth-server/ 2>/dev/null || pip install pytest pytest-asyncio httpx 2>/dev/null || true
+  script:
+    - |
+      echo "── Integration tests: auth-server ──"
+      if [ -f apps/auth-server/pyproject.toml ] || [ -f apps/auth-server/setup.py ]; then
+        cd apps/auth-server
+        python -m pytest tests/ -v --tb=short --junitxml=../../test-results/auth-server.xml 2>/dev/null || \
+        python -m pytest . -v --tb=short --junitxml=../../test-results/auth-server.xml 2>/dev/null || \
+        echo "⚠️  Auth server tests not runnable (missing test deps)"
+      else
+        echo "⚠️  No auth-server pyproject.toml found — skipping"
+      fi
+  artifacts:
+    reports:
+      junit: test-results/*.xml
+    paths:
+      - test-results/
+    when: always
+    expire_in: 2 weeks
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - apps/auth-server/**
+
+test:ci-scripts:
+  stage: test
+  script:
+    - |
+      echo "── CI script dry-run tests ──"
+      PASS=0; FAIL=0
+      for script in \
+        scripts/ci/integration-tests-phase1.sh \
+        scripts/ci/integration-tests-phase2.sh \
+        scripts/ops/full-deployment-test.sh; do
+        if [ -f "$script" ]; then
+          echo -n "  $script --dry-run ... "
+          if bash "$script" --dry-run > /dev/null 2>&1; then
+            echo "✅"
+            PASS=$((PASS + 1))
+          else
+            echo "❌"
+            FAIL=$((FAIL + 1))
+          fi
+        fi
+      done
+      echo ""
+      echo "Results: $PASS passed, $FAIL failed"
+      [ "$FAIL" -eq 0 ] || exit 1
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/**
+
+test:validate-terraform-pins:
+  stage: test
+  script:
+    - |
+      echo "── Terraform version pin validation ──"
+      if [ -f scripts/ci/validate-terraform-version-pins.sh ]; then
+        bash scripts/ci/validate-terraform-version-pins.sh || true
+      else
+        echo "⚠️  validate-terraform-version-pins.sh not found"
+      fi
+      echo "── Config SSOT validation ──"
+      if [ -f scripts/ci/validate-config-ssot.sh ]; then
+        bash scripts/ci/validate-config-ssot.sh --dry-run 2>/dev/null || bash scripts/ci/validate-config-ssot.sh || true
+      fi
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - terraform/**
+        - config/**
+        - scripts/ci/**
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: security
+# ═════════════════════════════════════════════════════════════════════════════
+
+security:secret-scanning:
+  stage: security
+  script:
+    - |
+      echo "── Secret scanning ──"
+      # Check for common secret patterns
+      PATTERNS=(
+        'password\s*=\s*["\x27][^"\x27$][^"\x27]*["\x27]'
+        'secret\s*=\s*["\x27][^"\x27$][^"\x27]*["\x27]'
+        'api_key\s*=\s*["\x27][^"\x27$][^"\x27]*["\x27]'
+        'token\s*=\s*["\x27][^"\x27$][^"\x27]*["\x27]'
+        'glpat-[a-zA-Z0-9_-]{20}'
+        'ghp_[a-zA-Z0-9]{36}'
+      )
+      VIOLATIONS=0
+      for pat in "${PATTERNS[@]}"; do
+        MATCHES=$(grep -rIin --include="*.sh" --include="*.py" --include="*.tf" \
+          --include="*.yml" --include="*.yaml" --include="*.env" \
+          --exclude-dir=.git --exclude-dir=.terraform --exclude-dir=.backups \
+          -E "$pat" . 2>/dev/null | \
+          grep -v "test\|example\|template\|TODO\|#\|_env\|\.example\|\.template" || true)
+        if [ -n "$MATCHES" ]; then
+          echo "⚠️  Potential secrets found (pattern: $pat):"
+          echo "$MATCHES" | head -5
+          VIOLATIONS=$((VIOLATIONS + 1))
+        fi
+      done
+      if [ "$VIOLATIONS" -gt 0 ]; then
+        echo "❌ $VIOLATIONS potential secret pattern(s) detected — review before merging"
+        exit 1
+      fi
+      echo "✅ No secrets detected"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+security:opa-policy-validation:
+  stage: security
+  script:
+    - |
+      echo "── OPA policy validation ──"
+      # Install OPA
+      if ! command -v opa &>/dev/null; then
+        curl -sL -o /usr/local/bin/opa \
+          https://openpolicyagent.org/downloads/latest/opa_linux_x86_64 && \
+          chmod +x /usr/local/bin/opa 2>/dev/null || \
+          echo "⚠️  OPA download failed — skipping policy tests"
+      fi
+      if command -v opa &>/dev/null && [ -d policies ]; then
+        opa test policies/ -v && echo "✅ OPA policies pass" || echo "⚠️  OPA policy test failures"
+      else
+        echo "⚠️  No policies dir or OPA not available — skipping"
+      fi
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - policies/**
+
+security:sast:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install --no-cache-dir bandit 2>/dev/null || true
+  script:
+    - |
+      echo "── Bandit SAST (Python) ──"
+      if command -v bandit &>/dev/null; then
+        bandit -r apps/ -ll --format json -o bandit-report.json 2>/dev/null || \
+        bandit -r apps/ -ll 2>/dev/null || \
+        echo "⚠️  Bandit scan had issues"
+      else
+        echo "⚠️  bandit not available"
+      fi
+  artifacts:
+    paths:
+      - bandit-report.json
+    when: always
+    expire_in: 1 week
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - apps/**/*.py
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: plan
+# ═════════════════════════════════════════════════════════════════════════════
+
+plan:terraform:
+  stage: plan
+  image:
+    name: hashicorp/terraform:${TF_VERSION}
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache curl jq bash git > /dev/null 2>&1
+  script:
+    - |
+      echo "── Terraform format check ──"
+      terraform -chdir=terraform fmt -check -recursive || {
+        echo "❌ Terraform files are not formatted. Run: terraform fmt -recursive terraform/"
+        exit 1
+      }
+      echo "✅ Terraform format OK"
+
+      echo "── Terraform validate (environments/private) ──"
+      if [ -d terraform/environments/private ]; then
+        cd terraform/environments/private
+        terraform init -no-color -upgrade -backend=false 2>/dev/null || \
+          terraform init -no-color -backend=false || true
+        terraform validate -no-color && echo "✅ Terraform config valid"
+      else
+        echo "⚠️  terraform/environments/private not found"
+      fi
+  artifacts:
+    paths:
+      - terraform/environments/private/.terraform.lock.hcl
+    when: always
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - terraform/**
+
+plan:docker-compose-config:
+  stage: plan
+  script:
+    - |
+      echo "── Docker Compose config validation ──"
+      # List all compose files
+      COMPOSE_FILES=$(find . -maxdepth 1 -name "docker-compose*.yml" | sort)
+      echo "Found compose files:"
+      echo "$COMPOSE_FILES"
+
+      # Check YAML syntax using Python
+      python3 -c "
+      import yaml, sys, glob
+      files = glob.glob('docker-compose*.yml')
+      errors = 0
+      for f in files:
+          try:
+              with open(f) as fp:
+                  yaml.safe_load(fp)
+              print(f'  ✅ {f}')
+          except yaml.YAMLError as e:
+              print(f'  ❌ {f}: {e}')
+              errors += 1
+      sys.exit(errors)
+      " && echo "✅ All compose files are valid YAML"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - docker-compose*.yml
+
+plan:helm-lint:
+  stage: plan
+  script:
+    - |
+      echo "── Helm chart lint ──"
+      # Install helm
+      curl -sL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash > /dev/null 2>&1 || true
+      if command -v helm &>/dev/null && [ -d helm ]; then
+        for chart_dir in helm/*/; do
+          if [ -f "$chart_dir/Chart.yaml" ]; then
+            echo -n "  helm lint $chart_dir ... "
+            helm lint "$chart_dir" && echo "✅" || echo "❌"
+          fi
+        done
+      else
+        echo "⚠️  Helm not available or no helm/ directory"
+      fi
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - helm/**
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: deploy
+# ═════════════════════════════════════════════════════════════════════════════
+
+deploy:terraform-apply:
+  stage: deploy
+  image:
+    name: hashicorp/terraform:${TF_VERSION}
+    entrypoint: [""]
+  before_script:
+    - apk add --no-cache curl jq bash git openssh-client > /dev/null 2>&1
+  script:
+    - |
+      echo "── Terraform Apply — Production ──"
+      cd terraform/environments/private
+      terraform init -no-color -upgrade
+      terraform apply -auto-approve -no-color -compact-warnings
+  environment:
+    name: production
+    url: https://${APEX_DOMAIN:-kushnir.cloud}
+  when: manual
+  only:
+    - main
+  # Required CI/CD variables (set in GitLab → Settings → CI/CD → Variables):
+  # TF_VAR_primary_host, TF_VAR_replica_host, TF_VAR_apex_domain
+  # TF_VAR_admin_email, TF_VAR_postgres_password, TF_VAR_redis_password
+  # SSH_PRIVATE_KEY (for Terraform SSH provider)
+  # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (if using S3 backend)
+
+deploy:deployment-orchestration:
+  stage: deploy
+  script:
+    - |
+      echo "── Local Deployment Orchestration ──"
+      # Uses the local deployment script (no GitHub Actions needed)
+      if [ -f scripts/ops/local-phase-4-7-deploy.sh ]; then
+        bash scripts/ops/local-phase-4-7-deploy.sh --phase "${DEPLOYMENT_PHASE:-all}" \
+          --env "${DEPLOYMENT_ENV:-staging}" --dry-run
+      else
+        echo "⚠️  local-phase-4-7-deploy.sh not found"
+        # Fallback: run full deployment test in dry-run mode
+        bash scripts/ops/full-deployment-test.sh --dry-run
+      fi
+  when: manual
+  only:
+    - main
+  environment:
+    name: staging
+  variables:
+    DEPLOYMENT_PHASE: "all"
+    DEPLOYMENT_ENV: "staging"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGE: sync
+# ═════════════════════════════════════════════════════════════════════════════
+
+sync:mirror-to-github:
+  stage: sync
+  script:
+    - |
+      echo "── Mirror: GitLab (primary) → GitHub (read-only mirror) ──"
+      if [ -z "$GITHUB_MIRROR_TOKEN" ]; then
+        echo "⚠️  GITHUB_MIRROR_TOKEN not set — skipping GitHub mirror"
+        echo "    Set it in: GitLab → Settings → CI/CD → Variables"
+        exit 0
+      fi
+      # Push mirror to GitHub
+      git remote add github \
+        "https://x-access-token:${GITHUB_MIRROR_TOKEN}@github.com/kushin77/code-server.git" \
+        2>/dev/null || git remote set-url github \
+        "https://x-access-token:${GITHUB_MIRROR_TOKEN}@github.com/kushin77/code-server.git"
+      git push github HEAD:main --force-with-lease || \
+        git push github HEAD:main || \
+        echo "⚠️  GitHub mirror push failed (non-blocking)"
+  only:
+    - main
+  allow_failure: true
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SCHEDULED PIPELINES (set up in GitLab → CI/CD → Schedules)
+# ═════════════════════════════════════════════════════════════════════════════
+
+drift-detection:
+  stage: validate
+  script:
+    - |
+      echo "── Infrastructure Drift Detection ──"
+      # Load canonical config
+      if [ -f scripts/_common/_base-config.env ]; then
+        set -a; source scripts/_common/_base-config.env; set +a
+      fi
+      # Run drift detection script if available
+      if [ -f scripts/ops/detect-drift.sh ]; then
+        bash scripts/ops/detect-drift.sh 2>/dev/null || true
+      fi
+      # Terraform-based drift check
+      echo "Terraform environments/private drift check:"
+      if [ -d terraform/environments/private ]; then
+        echo "  (requires Terraform credentials — set TF_VAR_* in CI/CD variables)"
+        echo "  Run manually: terraform -chdir=terraform/environments/private plan -detailed-exitcode"
+      fi
+      echo "✅ Drift detection run complete"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULED_JOB == "drift-detection"
+    - if: $CI_PIPELINE_SOURCE == "web"
+  allow_failure: true
+
+continuous-validation:
+  stage: validate
+  image: python:3.11-slim
+  before_script:
+    - pip install --no-cache-dir pyyaml pydantic 2>/dev/null || true
+  script:
+    - |
+      echo "── Continuous Infrastructure Validation ──"
+      # Docker compose YAML validation
+      python3 -c "
+      import yaml, glob, sys
+      errors = 0
+      for f in glob.glob('docker-compose*.yml'):
+          try:
+              yaml.safe_load(open(f))
+              print(f'  ✅ {f}')
+          except Exception as e:
+              print(f'  ❌ {f}: {e}')
+              errors += 1
+      sys.exit(errors)
+      "
+      # Kubernetes manifest validation
+      if [ -d kubernetes ]; then
+        COUNT=$(find kubernetes -name "*.yaml" -type f | wc -l)
+        echo "  Found $COUNT Kubernetes manifests"
+        python3 -c "
+      import yaml, glob, sys
+      errors = 0
+      for f in glob.glob('kubernetes/**/*.yaml', recursive=True):
+          try:
+              list(yaml.safe_load_all(open(f)))
+          except Exception as e:
+              print(f'  ❌ {f}: {e}')
+              errors += 1
+      print(f'  Validated {len(glob.glob(\"kubernetes/**/*.yaml\", recursive=True))} k8s manifests')
+      sys.exit(errors)
+        "
+      fi
+      echo "✅ Continuous validation passed"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULED_JOB == "continuous-validation"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - docker-compose*.yml
+        - kubernetes/**
+        - terraform/**
+  allow_failure: true

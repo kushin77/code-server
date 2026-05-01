@@ -20,19 +20,20 @@ from enum import Enum
 from apps._shared.python.logging import get_logger
 from agent_registry import registry, AgentStatus
 from agent_orchestrator import orchestrator
+import config as _cfg
 
 logger = get_logger(__name__)
 
 # Configuration
-HERMES_REPO_PATH = os.getenv("HERMES_REPO_PATH", "/home/akushnir/hermes-agent")
+HERMES_REPO_PATH = _cfg.HERMES_REPO_PATH
 VENV_PATH = os.path.join(HERMES_REPO_PATH, ".venv", "bin", "activate")
 
 # Agent locations: auto-register the 4 known code-server agents on startup
 _KNOWN_AGENTS = [
-    {"agent_type": "code-reviewer",      "host": os.getenv("AGENT_CODE_REVIEWER_HOST",      "code-server-agent-code-reviewer"),      "port": int(os.getenv("AGENT_CODE_REVIEWER_PORT",      "9000"))},
-    {"agent_type": "incident-responder", "host": os.getenv("AGENT_INCIDENT_RESPONDER_HOST", "code-server-agent-incident-responder"), "port": int(os.getenv("AGENT_INCIDENT_RESPONDER_PORT", "9000"))},
-    {"agent_type": "doc-writer",         "host": os.getenv("AGENT_DOC_WRITER_HOST",         "code-server-agent-doc-writer"),         "port": int(os.getenv("AGENT_DOC_WRITER_PORT",         "9000"))},
-    {"agent_type": "test-generator",     "host": os.getenv("AGENT_TEST_GENERATOR_HOST",     "code-server-agent-test-generator"),     "port": int(os.getenv("AGENT_TEST_GENERATOR_PORT",     "9000"))},
+    {"agent_type": "code-reviewer",      "host": _cfg.AGENT_CODE_REVIEWER_HOST,      "port": _cfg.AGENT_CODE_REVIEWER_PORT},
+    {"agent_type": "incident-responder", "host": _cfg.AGENT_INCIDENT_RESPONDER_HOST, "port": _cfg.AGENT_INCIDENT_RESPONDER_PORT},
+    {"agent_type": "doc-writer",         "host": _cfg.AGENT_DOC_WRITER_HOST,         "port": _cfg.AGENT_DOC_WRITER_PORT},
+    {"agent_type": "test-generator",     "host": _cfg.AGENT_TEST_GENERATOR_HOST,     "port": _cfg.AGENT_TEST_GENERATOR_PORT},
 ]
 
 
@@ -543,4 +544,4 @@ app.include_router(agents_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=_cfg.HOST, port=_cfg.PORT)

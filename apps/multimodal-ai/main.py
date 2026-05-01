@@ -146,4 +146,5 @@ async def health() -> dict:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8003, log_level="info")
+    import config as _cfg
+    uvicorn.run(app, host=_cfg.HOST, port=_cfg.PORT, log_level=_cfg.LOG_LEVEL.lower())

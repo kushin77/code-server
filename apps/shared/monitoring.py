@@ -13,11 +13,13 @@ import functools
 import inspect
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Callable, Dict, Optional
 
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info, REGISTRY, Summary, generate_latest
+
+from .slo import SLI, SLOTarget, SLOTracker
 
 
 class HealthStatus(str, Enum):
@@ -161,6 +163,38 @@ class ApplicationMetrics:
         # Health check state
         self._health_checks: Dict[str, Callable[[], bool]] = {}
         self._last_health_check: Optional[HealthCheckResult] = None
+        
+        # SLO/SLI tracking
+        self.slo_tracker = SLOTracker(config.app_name)
+        
+        # Register default SLOs
+        self.slo_tracker.register_target(
+            SLOTarget(
+                sli=SLI.AVAILABILITY,
+                target_value=0.999,  # 99.9%
+                window=timedelta(minutes=5),
+                comparison="gte",
+                severity="critical",
+            )
+        )
+        self.slo_tracker.register_target(
+            SLOTarget(
+                sli=SLI.ERROR_RATE,
+                target_value=0.001,  # 0.1%
+                window=timedelta(minutes=5),
+                comparison="lte",
+                severity="critical",
+            )
+        )
+        self.slo_tracker.register_target(
+            SLOTarget(
+                sli=SLI.LATENCY_P99,
+                target_value=0.5,  # 500ms
+                window=timedelta(minutes=5),
+                comparison="lte",
+                severity="warning",
+            )
+        )
     
     def record_request(
         self,
@@ -260,6 +294,17 @@ class ApplicationMetrics:
         self._last_health_check = result
         return result
     
+    def evaluate_slos(self) -> Dict[str, Any]:
+        """Evaluate all registered SLOs and return summary."""
+        # Calculate metrics from recorded data
+        # Note: In production, these would be calculated from Prometheus query results
+        # For now, we provide hook for external evaluation
+        return self.slo_tracker.summarize()
+    
+    def register_slo_target(self, target: SLOTarget) -> None:
+        """Register a custom SLO target for this application."""
+        self.slo_tracker.register_target(target)
+    
     def get_metrics(self) -> bytes:
         """Get Prometheus metrics exposition."""
         return generate_latest(self.config.registry)
@@ -355,6 +400,9 @@ __all__ = [
     "HealthCheckResult",
     "MonitoringConfig",
     "ApplicationMetrics",
+    "SLI",
+    "SLOTarget",
+    "SLOTracker",
     "track_metrics",
     "track_operation",
 ]

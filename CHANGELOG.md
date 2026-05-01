@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-05-01 (PHASE 34 — INFRASTRUCTURE RESILIENCE & AUTO-HEALING)
+
+### Added — Phase 34: Infrastructure Resilience Engine
+- **apps/security_ai/resilience_engine.py** (360+ lines): Auto-detect infrastructure degradations (OOMKilled, CrashLoop, timeout, memory leak, high CPU, connectivity, disk pressure).  
+- **Health metric ingestion**: Monitors container metrics (memory, CPU, response time, error rate, restart count, disk usage). Compares against thresholds; triggers degradation on >10% exceedance.
+- **Severity classification**: CRITICAL (>50% over threshold), HIGH (30-50%), MEDIUM (10-30%), LOW.
+- **Auto-remediation workflow**: Selects primary remediation action per degradation type (restart container, scale up, drain connections, restart service, migrate workload, clear cache). 
+- **Remediation tracking**: Persists remediation history; supports mark-success/mark-failed workflow for manual approval integration with Phase 29 orchestrator.
+- **Resilience scoring**: Returns 0-20 pts bonus to Phase 31 compliance gate based on remediation success rate (successful / total completed).
+- **Ops orchestrator** (`scripts/ops/phase-34-resilience.sh`): 4 modes — monitor|summary|execute|demo.
+- **Integration tests** (`scripts/ci/phase-34-integration-tests.sh`): 22/22 PASS across 6 groups (import, detection, remediation, scoring, ops, regression).
+
+### Updated — `.gitlab-ci.yml`
+- `test:phase-security-suites` now runs 5 phase suites: Phase 30-34.
+- **Total security suite**: **123/123 integration tests PASSING** per pipeline.
+
+### Verified
+- Full deployment gate: `PASS/PASS/PASS/PASS/PASS/PASS` ✅
+- Phase 30: 24/24 tests ✅
+- Phase 31: 22/22 tests ✅
+- Phase 32: 27/27 tests ✅
+- Phase 33: 25/25 tests ✅
+- Phase 34: 22/22 tests ✅
+- GitHub mirror synced: `c429cab3` pushed to `github/release/v1.0.0-production` ✅
+
 ## [1.15.0] - 2026-05-01 (PHASE 33 — COST INTELLIGENCE & OPTIMIZATION)
 
 ### Added — Phase 33: Cost Intelligence & Optimization Engine

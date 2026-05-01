@@ -190,7 +190,7 @@ class TeamPresenceClient(APIClientBase):
     
     async def get_team_size(self) -> int:
         """Get total team size"""
-        return 8  # Hardcoded for now
+        return int(os.getenv("TEAM_SIZE", "8"))
 
 if __name__ == "__main__":
     async def test():

@@ -201,7 +201,7 @@ class EventProducer(ABC):
         import socket
         try:
             return socket.gethostname()
-        except:
+        except OSError:
             return "unknown-instance"
     
     def __enter__(self):

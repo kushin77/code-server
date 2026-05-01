@@ -43,7 +43,7 @@ spec:
         fsGroup: 1002
       containers:
       - name: hermes-integration
-        image: kushin77/code-server-hermes-integration:latest
+        image: kushin77/code-server-hermes-integration:v1.0.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

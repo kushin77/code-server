@@ -16,8 +16,13 @@ from enum import Enum
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-import numpy as np
-from sklearn.ensemble import IsolationForest
+try:
+    import numpy as np
+    from sklearn.ensemble import IsolationForest
+    _ML_AVAILABLE = True
+except ImportError:
+    _ML_AVAILABLE = False
+    np = None  # type: ignore[assignment]
 
 
 class ThreatSeverity(Enum):
@@ -74,11 +79,11 @@ class ThreatDetector:
     
     def __init__(self):
         """Initialize threat detector with ML models"""
-        self.isolation_forest = IsolationForest(
-            contamination=0.05,
-            random_state=42,
-            n_jobs=-1
-        )
+        if _ML_AVAILABLE:
+            from sklearn.ensemble import IsolationForest as _IF
+            self.isolation_forest = _IF(contamination=0.05, random_state=42, n_jobs=-1)
+        else:
+            self.isolation_forest = None
         self.logger = logging.getLogger(__name__)
         self.threat_patterns = self._load_threat_patterns()
         self.baseline_behaviors = {}
@@ -115,14 +120,12 @@ class ThreatDetector:
     
     def train_baseline(self, clean_events: List[SecurityEvent]) -> None:
         """Train anomaly detector on clean (non-threat) events"""
+        if not _ML_AVAILABLE or self.isolation_forest is None:
+            self.logger.warning("ML not available — skipping baseline training")
+            return
         self.logger.info(f"Training baseline on {len(clean_events)} clean events")
-        
-        # Convert events to feature vectors
         features = self._events_to_features(clean_events)
-        
-        # Train isolation forest
         self.isolation_forest.fit(features)
-        
         self.logger.info("Baseline training complete")
     
     def detect_threats(self, events: List[SecurityEvent]) -> List[Threat]:
@@ -178,8 +181,8 @@ class ThreatDetector:
         """Detect anomalous behavior using ML"""
         threats = []
         
-        if not hasattr(self.isolation_forest, 'estimators_'):
-            self.logger.warning("Baseline not trained, skipping anomaly detection")
+        if not _ML_AVAILABLE or self.isolation_forest is None or not hasattr(self.isolation_forest, 'estimators_'):
+            self.logger.warning("ML baseline not trained, skipping anomaly detection")
             return threats
         
         # Convert events to features
@@ -243,10 +246,11 @@ class ThreatDetector:
         
         return threats
     
-    def _events_to_features(self, events: List[SecurityEvent]) -> np.ndarray:
+    def _events_to_features(self, events: List[SecurityEvent]):
         """Convert security events to numeric feature vector"""
+        if not _ML_AVAILABLE:
+            return []
         features = []
-        
         for event in events:
             feature_vector = [
                 len(event.process or ""),
@@ -254,11 +258,10 @@ class ThreatDetector:
                 len(event.metadata.get("args", "")),
                 1 if event.network_flow else 0,
                 1 if event.file_access else 0,
-                event.metadata.get("uid", 1000),  # Default user
+                event.metadata.get("uid", 1000),
                 1 if event.metadata.get("privileged") else 0,
             ]
             features.append(feature_vector)
-        
         return np.array(features) if features else np.array([]).reshape(0, 7)
     
     def _classify_threat_type(self, category: str) -> ThreatType:

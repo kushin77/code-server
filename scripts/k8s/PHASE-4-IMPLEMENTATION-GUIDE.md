@@ -1,8 +1,8 @@
 # Phase 4.1: Cluster Provisioning & Infrastructure Setup - IMPLEMENTATION GUIDE
 
-**Status**: Ready for Production Deployment  
-**Created**: April 2026  
-**Phase**: 4.1 - Infrastructure Setup (Week 1)  
+**Status**: Ready for Production Deployment
+**Created**: April 2026
+**Phase**: 4.1 - Infrastructure Setup (Week 1)
 
 ## Overview
 
@@ -39,6 +39,11 @@ This guide provides ready-to-use scripts for provisioning managed Kubernetes clu
   eastus \
   3 \
   Standard_D2s_v3
+```
+
+For local validation without Azure or Kubernetes tooling, use:
+```bash
+./scripts/k8s/provision-aks-cluster.sh --dry-run
 ```
 
 ### Step 2: Create Application Namespace
@@ -89,8 +94,9 @@ helm install code-server-enterprise ./helm/code-server-enterprise \
 ### provision-aks-cluster.sh
 - Creates 3-node AKS cluster (Standard_D2s_v3 VMs)
 - Enables auto-scaling (min 3, max 9 nodes)
-- Installs Istio with Azure storage integration
+- Installs Istio production profile and kube-prometheus-stack monitoring
 - Uses managed identity for authentication
+- Supports `--dry-run` for local validation without `az`, `kubectl`, or `helm`
 
 ### validate-deployment.sh
 - Verifies all pods running and ready
@@ -356,6 +362,6 @@ Total: ~$300-330/month
 
 ---
 
-**Status**: Production Ready  
-**Governance**: GOV-002 Enterprise Standards  
+**Status**: Production Ready
+**Governance**: GOV-002 Enterprise Standards
 **Last Updated**: April 2026

@@ -98,3 +98,42 @@ groups:
           summary: "GPU ECC errors detected"
           description: "Volatile double-bit ECC errors have been observed"
           runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+  - name: service_slos
+    interval: 30s
+    rules:
+      - alert: ControlPlaneAvailabilitySLOViolation
+        expr: (sum(rate(control_plane_requests_total{status=~"2.."}[5m])) / clamp_min(sum(rate(control_plane_requests_total[5m])), 1e-9)) < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          service: control-plane
+          sli: availability
+        annotations:
+          summary: "Control plane availability SLO violated"
+          description: "Availability has dropped below 99.9% over the 5m window"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: ControlPlaneErrorRateSLOViolation
+        expr: (sum(rate(control_plane_errors_total[5m])) / clamp_min(sum(rate(control_plane_requests_total[5m])), 1e-9)) > 0.001
+        for: 2m
+        labels:
+          severity: critical
+          service: control-plane
+          sli: error_rate
+        annotations:
+          summary: "Control plane error-rate SLO violated"
+          description: "Error rate has exceeded 0.1% over the 5m window"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"
+
+      - alert: ControlPlaneLatencyP99SLOViolation
+        expr: histogram_quantile(0.99, sum by (le) (rate(control_plane_request_latency_seconds_bucket[5m]))) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: control-plane
+          sli: latency_p99
+        annotations:
+          summary: "Control plane latency SLO violated"
+          description: "P99 latency exceeded 500ms over the 5m window"
+          runbook: "docs/OBSERVABILITY-GUIDE.md"

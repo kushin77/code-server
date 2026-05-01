@@ -4,15 +4,16 @@
 @governance GOV-002: Immutable, deterministic token validation
 """
 
-import logging
 from typing import Optional
 from fastapi import HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 
 
-logger = logging.getLogger(__name__)
 
 
 _scheduler_api_key = _svc_config.SCHEDULER_API_KEY

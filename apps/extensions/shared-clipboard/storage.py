@@ -9,7 +9,6 @@ import json
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from pathlib import Path
-import logging
 import hashlib
 
 from log import get_logger
@@ -17,7 +16,6 @@ from log import get_logger
 logger = get_logger(__name__)
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class ClipboardStorage:
     """SQLite backend for clipboard history persistence"""

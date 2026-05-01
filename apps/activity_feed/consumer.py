@@ -9,14 +9,12 @@ import asyncio
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-import logging
 
 from log import get_logger
 
 logger = get_logger(__name__)
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 @dataclass
 class ActivityEvent:

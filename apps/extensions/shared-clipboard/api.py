@@ -8,13 +8,14 @@ from fastapi import FastAPI, Query, HTTPException, WebSocket
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-import logging
 import json
 from pathlib import Path
 from .storage import ClipboardStorage
+from log import get_logger
+
+logger = get_logger(__name__)
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Shared Clipboard API", version="1.0")
 

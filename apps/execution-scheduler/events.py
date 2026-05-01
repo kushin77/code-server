@@ -5,16 +5,17 @@
 """
 
 import json
-import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 
 
-logger = logging.getLogger(__name__)
 
 
 class SchedulerEventPublisher:

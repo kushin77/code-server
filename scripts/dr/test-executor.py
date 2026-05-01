@@ -139,7 +139,7 @@ class DRTestExecutor:
         try:
             subprocess.run(["ls", "-la", "/backup/hot/"], check=True, capture_output=True)
             return True
-        except:
+        except Exception:
             return False
     
     def _verify_s3_backups(self):
@@ -149,7 +149,7 @@ class DRTestExecutor:
                 check=True, capture_output=True, text=True
             )
             return len(result.stdout.strip()) > 0
-        except:
+        except Exception:
             return False
     
     def _verify_glacier_backups(self):
@@ -159,7 +159,7 @@ class DRTestExecutor:
                 check=True, capture_output=True, text=True
             )
             return len(result.stdout.strip()) > 0
-        except:
+        except Exception:
             return False
     
     def _verify_backup_encryption(self):
@@ -171,7 +171,7 @@ class DRTestExecutor:
                 check=True, capture_output=True, text=True
             )
             return "ServerSideEncryption" in result.stdout
-        except:
+        except Exception:
             return False
     
     def _check_replica_connectivity(self):
@@ -181,7 +181,7 @@ class DRTestExecutor:
                 check=True, capture_output=True, timeout=5
             )
             return result.returncode == 0
-        except:
+        except Exception:
             return False
     
     def _check_replication_lag(self):
@@ -194,7 +194,7 @@ class DRTestExecutor:
             )
             lag = float(result.stdout.strip().split('\n')[-2].strip())
             return lag
-        except:
+        except Exception:
             return 999
     
     def _check_disk_space(self):
@@ -206,7 +206,7 @@ class DRTestExecutor:
             )
             free_kb = int(result.stdout.strip())
             return free_kb / (1024 * 1024)  # Convert to GB
-        except:
+        except Exception:
             return 0
     
     def _check_memory_available(self):
@@ -217,7 +217,7 @@ class DRTestExecutor:
                 check=True, capture_output=True, text=True, timeout=10
             )
             return int(result.stdout.strip())
-        except:
+        except Exception:
             return 0
     
     def _verify_dns_failover_config(self):

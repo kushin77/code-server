@@ -33,7 +33,7 @@ try:
     else:
         print(" ✗")
         checks.append(("Primary Host SSH", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Primary Host SSH", False))
 
@@ -51,7 +51,7 @@ try:
     else:
         print(" ✗")
         checks.append(("Docker Daemon", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Docker Daemon", False))
 
@@ -71,7 +71,7 @@ try:
     else:
         print(f" ⚠ ({count} services)")
         checks.append(("Services Running", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Services Running", False))
 
@@ -85,7 +85,7 @@ try:
     else:
         print(f" ⚠ (HTTP {response.code})")
         checks.append(("HTTP Gateway", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("HTTP Gateway", False))
 
@@ -105,7 +105,7 @@ try:
     else:
         print(" ✗")
         checks.append(("PostgreSQL", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("PostgreSQL", False))
 
@@ -125,7 +125,7 @@ try:
     else:
         print(" ✗")
         checks.append(("Redis", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Redis", False))
 
@@ -145,7 +145,7 @@ try:
     else:
         print(" ✗")
         checks.append(("Kafka", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Kafka", False))
 
@@ -160,7 +160,7 @@ try:
     else:
         print(" ✗")
         checks.append(("Prometheus", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Prometheus", False))
 
@@ -174,7 +174,7 @@ try:
     else:
         print(" ✗")
         checks.append(("Grafana", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("Grafana", False))
 
@@ -193,7 +193,7 @@ try:
     else:
         print(" ✗")
         checks.append(("System Health", False))
-except:
+except Exception:
     print(" ✗")
     checks.append(("System Health", False))
 

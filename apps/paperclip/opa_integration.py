@@ -6,13 +6,14 @@
 
 import os
 import requests
-import logging
 from typing import Dict, Any, Optional
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 
 
-logger = logging.getLogger(__name__)
 
 
 class OPAPolicyManager:

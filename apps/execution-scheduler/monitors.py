@@ -7,7 +7,6 @@
 import asyncio
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
-import logging
 import os
 
 from log import get_logger
@@ -20,7 +19,6 @@ except ModuleNotFoundError:
     psutil = None
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class LocalResourceMonitor:
     """Monitor local GPU/CPU resources"""

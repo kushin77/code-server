@@ -5,7 +5,6 @@
 # @governance GOV-003 - Event aggregation and real-time delivery to IDE
 
 import json
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
@@ -26,10 +25,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'event-bus', 's
 
 from consumer import ActivityFeedConsumer
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 # Database setup

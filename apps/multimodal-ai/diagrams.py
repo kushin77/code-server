@@ -6,17 +6,18 @@
 """Auto-generate Mermaid diagrams from natural language descriptions using an LLM."""
 
 import json
-import logging
 import os
 import re
 from typing import Dict, List, Optional
 
 import httpx
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 
 
-logger = logging.getLogger(__name__)
 
 # Configuration via environment
 _LLM_BACKEND = _svc_config.DIAGRAM_LLM_BACKEND        # ollama | openai

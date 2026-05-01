@@ -7,16 +7,17 @@
 
 import base64
 import json
-import logging
 import os
 from typing import Dict, List, Optional
 
 import httpx
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 
 
-logger = logging.getLogger(__name__)
 
 # Configuration via environment (never hardcoded)
 _VISION_BACKEND = _svc_config.VISION_BACKEND           # ollama | openai

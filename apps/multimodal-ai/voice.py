@@ -6,15 +6,16 @@
 """Voice command processing: speech-to-text → execution → text-to-speech response"""
 
 import io
-import logging
 import os
 import tempfile
 from typing import Dict, Optional
 import config as _svc_config
+from log import get_logger
+
+logger = get_logger(__name__)
 
 
 
-logger = logging.getLogger(__name__)
 
 # Configurable via environment
 _WHISPER_MODEL = _svc_config.WHISPER_MODEL

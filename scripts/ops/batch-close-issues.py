@@ -41,7 +41,7 @@ def req(method, endpoint, data=None):
             time.sleep(60)
             return req(method, endpoint, data)
         return {}
-    except:
+    except Exception:
         return {}
 
 print("🚀 BATCH GITHUB PHASE ISSUES CLOSURE")

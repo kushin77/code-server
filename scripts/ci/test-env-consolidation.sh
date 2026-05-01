@@ -4,26 +4,27 @@
 
 set -euo pipefail
 
-# Error handling
-trap 'echo "[ERROR] Script failed at line $LINENO"; exit 1' ERR
-trap 'echo "[INFO] Cleaning up..."; exit 0' EXIT
-
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$REPO_ROOT/scripts/common/logging.sh"
+
+# Error handling
+trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
+trap 'log_info "Cleaning up..."; true' EXIT
+
 cd "$REPO_ROOT"
 
-echo "=== Testing CI/CD Environment Variable Loading ==="
-echo ""
+log_section "Testing CI/CD Environment Variable Loading"
 
 # Test 1: Private environment
-echo "Test 1: Private environment CI/CD configuration"
+log_subsection "Test 1: Private environment CI/CD configuration"
 export ENVIRONMENT=private
 source "$REPO_ROOT/.env/_common/defaults"
-source "$REPO_ROOT/.env/private/overrides" 2>/dev/null || echo "⚠️ Warning: .env/private/overrides not found"
+source "$REPO_ROOT/.env/private/overrides" 2>/dev/null || log_warn "Warning: .env/private/overrides not found"
 
 if [[ "$APEX_DOMAIN" == "kushnir.cloud" ]] && [[ "$API_HOST" == "192.168.168.31" ]]; then
-    echo "✅ Private environment: PASS (APEX_DOMAIN=$APEX_DOMAIN, API_HOST=$API_HOST)"
+    log_success "Private environment: PASS (APEX_DOMAIN=$APEX_DOMAIN, API_HOST=$API_HOST)"
 else
-    echo "❌ Private environment: FAIL"
+    log_error "Private environment: FAIL"
     exit 1
 fi
 

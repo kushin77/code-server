@@ -1,6 +1,13 @@
 name: Phase 7 - Extension Building & Deployment
 
 on:
+  workflow_call:
+    inputs:
+      publish_marketplace:
+        description: 'Publish to VS Code Marketplace'
+        required: false
+        default: 'false'
+        type: string
   workflow_dispatch:
     inputs:
       publish_marketplace:
@@ -171,7 +178,7 @@ jobs:
     name: Publish to VS Code Marketplace
     runs-on: ubuntu-latest
     needs: package
-    if: github.event.inputs.publish_marketplace == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: inputs.publish_marketplace == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     environment:
       name: vscode-marketplace
     steps:

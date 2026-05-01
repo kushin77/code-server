@@ -2,6 +2,23 @@ name: Phase 4 - Kubernetes Deployment (AKS)
 
 # Trigger manually or on push to main with Phase 4 changes
 on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'staging'
+        type: string
+      cluster_name:
+        description: 'AKS cluster name'
+        required: false
+        default: 'code-server-enterprise-prod'
+        type: string
+      node_count:
+        description: 'Number of nodes'
+        required: false
+        default: '3'
+        type: string
   workflow_dispatch:
     inputs:
       environment:
@@ -71,7 +88,7 @@ jobs:
     needs: validate
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     environment:
-      name: ${{ github.event.inputs.environment || 'staging' }}
+      name: ${{ inputs.environment || 'staging' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -88,8 +105,8 @@ jobs:
 
       - name: Provision AKS Cluster
         run: |
-          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
-          NODE_COUNT="${{ github.event.inputs.node_count || '3' }}"
+          CLUSTER_NAME="${{ inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          NODE_COUNT="${{ inputs.node_count || '3' }}"
           
           echo "Provisioning AKS cluster: $CLUSTER_NAME"
           bash scripts/k8s/provision-aks-cluster.sh \
@@ -101,7 +118,7 @@ jobs:
 
       - name: Get Cluster Credentials
         run: |
-          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          CLUSTER_NAME="${{ inputs.cluster_name || 'code-server-enterprise-prod' }}"
           
           az aks get-credentials \
             --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
@@ -131,7 +148,7 @@ jobs:
 
       - name: Get Cluster Credentials
         run: |
-          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          CLUSTER_NAME="${{ inputs.cluster_name || 'code-server-enterprise-prod' }}"
           
           az aks get-credentials \
             --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
@@ -178,7 +195,7 @@ jobs:
     needs: deploy-services
     if: success()
     environment: 
-      name: ${{ github.event.inputs.environment || 'staging' }}-data-migration
+      name: ${{ inputs.environment || 'staging' }}-data-migration
     steps:
       - uses: actions/checkout@v4
 
@@ -189,7 +206,7 @@ jobs:
 
       - name: Get Cluster Credentials
         run: |
-          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          CLUSTER_NAME="${{ inputs.cluster_name || 'code-server-enterprise-prod' }}"
           
           az aks get-credentials \
             --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
@@ -242,7 +259,7 @@ jobs:
 
       - name: Get Cluster Credentials
         run: |
-          CLUSTER_NAME="${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}"
+          CLUSTER_NAME="${{ inputs.cluster_name || 'code-server-enterprise-prod' }}"
           
           az aks get-credentials \
             --resource-group "${{ env.CLUSTER_RESOURCE_GROUP }}" \
@@ -259,8 +276,8 @@ jobs:
           # Phase 4 Kubernetes Deployment Report
           
           **Deployment Date:** $(date)
-          **Cluster:** ${{ github.event.inputs.cluster_name || 'code-server-enterprise-prod' }}
-          **Environment:** ${{ github.event.inputs.environment || 'staging' }}
+          **Cluster:** ${{ inputs.cluster_name || 'code-server-enterprise-prod' }}
+          **Environment:** ${{ inputs.environment || 'staging' }}
           **Region:** ${{ env.CLUSTER_LOCATION }}
           
           ## Cluster Status

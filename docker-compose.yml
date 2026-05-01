@@ -1667,9 +1667,8 @@ networks:
     driver_opts:
       com.docker.network.bridge.name: br-services
   database:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: br-database
+    external: true
+    name: database
 
 volumes:
   caddy_data:

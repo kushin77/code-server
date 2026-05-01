@@ -22,13 +22,17 @@ BASE_URL = f"https://api.github.com/repos/{REPO}"
 RATE_LIMIT_DELAY = 1  # seconds between requests
 
 # Get GitHub token
+dry_run = '--dry-run' in sys.argv
+
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-if not GITHUB_TOKEN:
+if not GITHUB_TOKEN and not dry_run:
     print("❌ Error: GITHUB_TOKEN not found in environment")
     print("   Set GITHUB_TOKEN environment variable")
     sys.exit(1)
 
-dry_run = '--dry-run' in sys.argv
+# Use placeholder token for dry-run
+if dry_run and not GITHUB_TOKEN:
+    GITHUB_TOKEN = "gho_placeholder_for_dry_run_testing"
 
 # Color codes
 GREEN = '\033[0;32m'

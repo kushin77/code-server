@@ -30,9 +30,12 @@ HERMES_REGISTRATION_RETRIES: int = 3
 HERMES_TIMEOUT: float = 5.0  # seconds per request
 
 # ── Instance identity ─────────────────────────────────────────────────────────
-AGENT_ID: str = os.getenv("AGENT_RUNTIME_ID", f"agent-runtime-{socket.gethostname()}")
+# AGENT_TYPE is set per-container (code-reviewer, incident-responder, doc-writer,
+# test-generator, or agent-runtime for the runtime coordinator container).
+AGENT_TYPE: str = os.getenv("AGENT_TYPE", "agent-runtime")
+AGENT_ID: str = os.getenv("AGENT_RUNTIME_ID", f"{AGENT_TYPE}-{socket.gethostname()}")
 AGENT_VERSION: str = os.getenv("AGENT_RUNTIME_VERSION", "1.0.0")
-AGENT_PORT: int = int(os.getenv("AGENT_RUNTIME_PORT", "8020"))
+AGENT_PORT: int = int(os.getenv("AGENT_RUNTIME_PORT", "9000"))
 
 
 class HermesRegistrationClient:
@@ -68,7 +71,7 @@ class HermesRegistrationClient:
 
         payload = {
             "agent_id": self._agent_id,
-            "agent_type": "agent-runtime",
+            "agent_type": AGENT_TYPE,
             "version": AGENT_VERSION,
             "host": socket.gethostname(),
             "port": AGENT_PORT,

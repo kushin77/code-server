@@ -7,6 +7,7 @@
 """
 
 import asyncio
+import os
 import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -27,6 +28,8 @@ from execution_router import ExecutionRouter, ExecutionDestination
 from config import PORT, HOST, validate_config
 from log import get_logger, log_event
 from health import router as health_router
+from hermes_registration import hermes_client
+from hermes_tracing import setup_tracing, instrument_app
 
 # Validate configuration on startup (raises if production secrets missing)
 validate_config()
@@ -70,13 +73,21 @@ def record_execution_failure(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle"""
+    setup_tracing(service_name=os.environ.get("OTEL_SERVICE_NAME", "agent-runtime"))
     log_event(logger, "agent_runtime_startup")
-    # Initialize agents
-    agents["code-reviewer"] = CodeReviewerAgent()
-    agents["incident-responder"] = IncidentResponderAgent()
-    agents["doc-writer"] = DocWriterAgent()
-    agents["test-generator"] = TestGeneratorAgent()
+    # Initialize agents based on AGENT_TYPE (each container runs one type)
+    agent_type_env = os.environ.get("AGENT_TYPE", "all")
+    if agent_type_env in ("code-reviewer", "all"):
+        agents["code-reviewer"] = CodeReviewerAgent()
+    if agent_type_env in ("incident-responder", "all"):
+        agents["incident-responder"] = IncidentResponderAgent()
+    if agent_type_env in ("doc-writer", "all"):
+        agents["doc-writer"] = DocWriterAgent()
+    if agent_type_env in ("test-generator", "all"):
+        agents["test-generator"] = TestGeneratorAgent()
+    await hermes_client.register()
     yield
+    await hermes_client.deregister()
     log_event(logger, "agent_runtime_shutdown")
 
 
@@ -89,6 +100,9 @@ app = FastAPI(
 
 # Register health check router
 app.include_router(health_router, prefix="/health", tags=["health"])
+
+# Apply OTEL FastAPI auto-instrumentation (no-op if tracing not initialised)
+instrument_app(app)
 
 
 # ============================================================================

@@ -1092,11 +1092,18 @@ services:
       - "${AGENT_CODE_REVIEWER_PORT}:9000"
     environment:
       - AGENT_TYPE=code-reviewer
+      - AGENT_RUNTIME_ID=agent-code-reviewer
+      - AGENT_RUNTIME_PORT=9000
       - PAPERCLIP_URL=${PAPERCLIP_URL}
       - REPUTATION_URL=${REPUTATION_URL}
       - SCHEDULER_URL=${SCHEDULER_URL}
       - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
+      - HERMES_URL=${HERMES_URL:-}
+      - HERMES_HEARTBEAT_INTERVAL=${HERMES_HEARTBEAT_INTERVAL:-30}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_SERVICE_NAME=agent-code-reviewer
     depends_on:
       paperclip:
         condition: service_healthy
@@ -1119,7 +1126,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://agent-runtime:${AGENT_RUNTIME_PORT}/health"
+        - "http://localhost:9000/health"
       interval: 30s
       timeout: 10s
       retries: 3
@@ -1146,11 +1153,18 @@ services:
       - "${AGENT_INCIDENT_RESPONDER_PORT}:9000"
     environment:
       - AGENT_TYPE=incident-responder
+      - AGENT_RUNTIME_ID=agent-incident-responder
+      - AGENT_RUNTIME_PORT=9000
       - PAPERCLIP_URL=${PAPERCLIP_URL}
       - REPUTATION_URL=${REPUTATION_ENGINE_URL}
       - SCHEDULER_URL=${SCHEDULER_URL}
       - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
+      - HERMES_URL=${HERMES_URL:-}
+      - HERMES_HEARTBEAT_INTERVAL=${HERMES_HEARTBEAT_INTERVAL:-30}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_SERVICE_NAME=agent-incident-responder
     depends_on:
       paperclip:
         condition: service_healthy
@@ -1173,7 +1187,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://agent-runtime:${AGENT_RUNTIME_PORT}/health"
+        - "http://localhost:9000/health"
       interval: 30s
       timeout: 10s
       retries: 3
@@ -1200,11 +1214,18 @@ services:
       - "${AGENT_DOC_WRITER_PORT}:9000"
     environment:
       - AGENT_TYPE=doc-writer
+      - AGENT_RUNTIME_ID=agent-doc-writer
+      - AGENT_RUNTIME_PORT=9000
       - PAPERCLIP_URL=${PAPERCLIP_URL}
       - REPUTATION_URL=${REPUTATION_ENGINE_URL}
       - SCHEDULER_URL=${SCHEDULER_URL}
       - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
+      - HERMES_URL=${HERMES_URL:-}
+      - HERMES_HEARTBEAT_INTERVAL=${HERMES_HEARTBEAT_INTERVAL:-30}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_SERVICE_NAME=agent-doc-writer
     depends_on:
       paperclip:
         condition: service_healthy
@@ -1227,7 +1248,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://agent-runtime:${AGENT_RUNTIME_PORT}/health"
+        - "http://localhost:9000/health"
       interval: 30s
       timeout: 10s
       retries: 3
@@ -1254,11 +1275,18 @@ services:
       - "${AGENT_TEST_GENERATOR_PORT}:9000"
     environment:
       - AGENT_TYPE=test-generator
+      - AGENT_RUNTIME_ID=agent-test-generator
+      - AGENT_RUNTIME_PORT=9000
       - PAPERCLIP_URL=${PAPERCLIP_URL}
       - REPUTATION_URL=${REPUTATION_ENGINE_URL}
       - SCHEDULER_URL=${SCHEDULER_URL}
       - OIDC_ISSUER=https://${AUTH_DOMAIN}
       - LOG_LEVEL=INFO
+      - HERMES_URL=${HERMES_URL:-}
+      - HERMES_HEARTBEAT_INTERVAL=${HERMES_HEARTBEAT_INTERVAL:-30}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_SERVICE_NAME=agent-test-generator
     depends_on:
       paperclip:
         condition: service_healthy
@@ -1281,7 +1309,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://agent-runtime:${AGENT_RUNTIME_PORT}/health"
+        - "http://localhost:9000/health"
       interval: 30s
       timeout: 10s
       retries: 3

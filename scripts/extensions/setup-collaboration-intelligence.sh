@@ -40,7 +40,7 @@ declare -i step_ok=0
 # STEP 1: Verify collaboration source files
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify collaboration intelligence source files"
 
 declare -a required_files=(
@@ -52,7 +52,7 @@ all_present=true
 for file in "${required_files[@]}"; do
     if [[ -f "${PROJECT_ROOT}/${file}" ]]; then
         log_info "  ✓ ${file}"
-        ((step_ok++))
+        step_ok+=1
     else
         log_warn "  ✗ Missing: ${file}"
         all_present=false
@@ -68,7 +68,7 @@ fi
 # STEP 2: Create collaboration configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create collaboration intelligence configuration"
 
 COLLAB_CONFIG_DIR="${PROJECT_ROOT}/config/collaboration"
@@ -106,7 +106,7 @@ EOF
 
 if [[ -f "${COLLAB_CONFIG_DIR}/intelligence-config.json" ]]; then
     log_info "  ✓ Created ${COLLAB_CONFIG_DIR}/intelligence-config.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create collaboration configuration"
     exit 1
@@ -116,7 +116,7 @@ fi
 # STEP 3: Create collaboration event logging
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Prepare collaboration event logging"
 
 AUDIT_DIR="${PROJECT_ROOT}/logs"
@@ -131,13 +131,13 @@ else
     log_info "  ✓ Log file already exists: ${COLLAB_LOG}"
 fi
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 4: Create environment configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Configure environment variables"
 
 cat > "${PROJECT_ROOT}/.env.collaboration-intelligence" << 'EOF'
@@ -156,13 +156,13 @@ COLLABORATION_AUDIT_LOG=logs/collaboration-intelligence.log
 EOF
 
 log_info "  ✓ Created environment configuration: .env.collaboration-intelligence"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 5: Create event schema for compliance
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create event schema for compliance"
 
 SCHEMA_DIR="${PROJECT_ROOT}/schemas"
@@ -212,7 +212,7 @@ EOF
 
 if [[ -f "${SCHEMA_DIR}/collaboration-event.v1.json" ]]; then
     log_info "  ✓ Created event schema: ${SCHEMA_DIR}/collaboration-event.v1.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create event schema"
     exit 1
@@ -222,7 +222,7 @@ fi
 # STEP 6: Verification
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verification"
 
 CONFIG_FILES=$(find "${COLLAB_CONFIG_DIR}" -type f 2>/dev/null | wc -l)
@@ -232,7 +232,7 @@ log_info "  ✓ Configuration files: ${CONFIG_FILES}"
 log_info "  ✓ Source files: ${SOURCE_FILES}"
 log_info "  ✓ Event logging: enabled"
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # Summary

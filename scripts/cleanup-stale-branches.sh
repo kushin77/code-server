@@ -106,7 +106,7 @@ while IFS= read -r branch; do
     
     if [[ "$DRY_RUN" == "false" ]]; then
       git branch -d "$branch" 2>/dev/null || echo "      ⚠️  Could not delete (not fully merged)"
-      ((DELETED_LOCAL++))
+      DELETED_LOCAL+=1
     fi
   fi
 done < <(git branch -r --merged | grep -E '^\s+origin/' | sed 's/^\s*origin\///g' | grep -v 'HEAD\|main\|master')
@@ -131,7 +131,7 @@ while IFS= read -r branch; do
     
     if [[ "$DRY_RUN" == "false" ]]; then
       git push origin --delete "$branch" 2>/dev/null || echo "      ⚠️  Could not delete remote branch"
-      ((DELETED_REMOTE++))
+      DELETED_REMOTE+=1
     fi
   fi
 done < <(git branch -r --merged | grep -E '^\s+origin/' | sed 's/^\s*origin\///g' | grep -v 'HEAD\|main\|master')

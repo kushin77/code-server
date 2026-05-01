@@ -137,7 +137,7 @@ verify_immutability() {
     if [[ "$line" =~ ^[[:space:]]*image:[[:space:]] ]]; then
       if [[ "$line" != *"@sha256:"* ]]; then
         warn "Unpinned image found: $line"
-        ((unpinned_count++))
+        unpinned_count+=1
       fi
     fi
   done < "$compose_file"

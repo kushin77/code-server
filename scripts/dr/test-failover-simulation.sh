@@ -26,12 +26,17 @@ RESULTS_DIR="$REPO_ROOT/artifacts/failover-results"
 HEALTH_CHECK_URL="${HEALTH_CHECK_URL:-http://localhost:3100/health}"
 MAX_FAILOVER_TIME=300  # 5 minutes
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Colors (handled by scripts/common/logging.sh if available)
+if [[ -z "${RED:-}" ]]; then
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m'
+fi
+
+# Override NC if RESET is available from logging.sh
+NC="${RESET:-$NC}"
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
@@ -151,7 +156,7 @@ verify_failover() {
     # Check 1: Service availability
     if curl -sf "$HEALTH_CHECK_URL" > /dev/null 2>&1; then
         echo "✅ Service Availability: PASS" | tee -a "$RESULTS_DIR/verification-results.txt"
-        ((criteria_met++))
+        criteria_met+=1
     else
         echo "❌ Service Availability: FAIL" | tee -a "$RESULTS_DIR/verification-results.txt"
     fi
@@ -159,7 +164,7 @@ verify_failover() {
     # Check 2: Database connectivity
     if docker-compose -f "$DOCKER_COMPOSE_FILE" exec -T postgres psql -U postgres -c "SELECT 1;" > /dev/null 2>&1; then
         echo "✅ Database Connectivity: PASS" | tee -a "$RESULTS_DIR/verification-results.txt"
-        ((criteria_met++))
+        criteria_met+=1
     else
         echo "❌ Database Connectivity: FAIL" | tee -a "$RESULTS_DIR/verification-results.txt"
     fi
@@ -167,7 +172,7 @@ verify_failover() {
     # Check 3: Cache availability
     if docker-compose -f "$DOCKER_COMPOSE_FILE" exec -T redis redis-cli ping > /dev/null 2>&1; then
         echo "✅ Cache Availability: PASS" | tee -a "$RESULTS_DIR/verification-results.txt"
-        ((criteria_met++))
+        criteria_met+=1
     else
         echo "❌ Cache Availability: FAIL" | tee -a "$RESULTS_DIR/verification-results.txt"
     fi
@@ -175,7 +180,7 @@ verify_failover() {
     # Check 4: Message broker
     if docker-compose -f "$DOCKER_COMPOSE_FILE" exec -T kafka kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1; then
         echo "✅ Message Broker: PASS" | tee -a "$RESULTS_DIR/verification-results.txt"
-        ((criteria_met++))
+        criteria_met+=1
     else
         echo "⚠️  Message Broker: SKIPPED (optional)" | tee -a "$RESULTS_DIR/verification-results.txt"
     fi

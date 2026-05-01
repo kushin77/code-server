@@ -155,7 +155,7 @@ PYTHON_EOF
         
         if [[ "$close_response" == "success"* ]]; then
             log_success "Closed #${issue_num} - Phase ${phase_num}"
-            ((closed_count++))
+            closed_count+=1
         else
             log_error "Could not close #${issue_num}: $close_response"
         fi

@@ -176,7 +176,7 @@ for snapshot in snapshots:
 " | while read -r snapshot_key; do
       if [[ -n "${snapshot_key}" ]]; then
         if curl -s -X DELETE ${headers} "${GRAFANA_URL}/api/snapshots/${snapshot_key}" >/dev/null 2>&1; then
-          ((deleted_count++))
+          deleted_count+=1
         fi
       fi
     done

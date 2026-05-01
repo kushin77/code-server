@@ -178,7 +178,7 @@ verify_backup_integrity() {
     while IFS= read -r backup; do
       if ! file "$backup" | grep -q gzip; then
         log_error "PostgreSQL backup corruption detected: $(basename $backup)"
-        ((ERRORS++))
+        ERRORS+=1
       fi
     done < <(find "${BACKUP_DIR}/postgres" -name "*.sql.gz" -type f)
   fi
@@ -188,7 +188,7 @@ verify_backup_integrity() {
     while IFS= read -r backup; do
       if ! file "$backup" | grep -q gzip; then
         log_error "Redis backup corruption detected: $(basename $backup)"
-        ((ERRORS++))
+        ERRORS+=1
       fi
     done < <(find "${BACKUP_DIR}/redis" -name "*.rdb.gz" -type f)
   fi
@@ -210,11 +210,11 @@ echo ""
 
 VERIFICATION_FAILED=0
 
-verify_postgres_backups || ((VERIFICATION_FAILED++))
-verify_redis_backups || ((VERIFICATION_FAILED++))
-verify_volume_backups || ((VERIFICATION_FAILED++))
-verify_disk_space || ((VERIFICATION_FAILED++))
-verify_backup_integrity || ((VERIFICATION_FAILED++))
+verify_postgres_backups || VERIFICATION_FAILED+=1
+verify_redis_backups || VERIFICATION_FAILED+=1
+verify_volume_backups || VERIFICATION_FAILED+=1
+verify_disk_space || VERIFICATION_FAILED+=1
+verify_backup_integrity || VERIFICATION_FAILED+=1
 
 echo ""
 if [ $VERIFICATION_FAILED -eq 0 ]; then

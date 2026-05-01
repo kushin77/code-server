@@ -191,7 +191,7 @@ phase_5_health() {
     fi
     
     sleep 5
-    ((attempt++))
+    attempt+=1
   done
   
   if [[ $attempt -ge $max_attempts ]]; then

@@ -24,6 +24,20 @@ fi
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)
+      DRY_RUN=true
+      ;;
+  esac
+done
+
+OUTPUT_ROOT="${PROJECT_ROOT}"
+if [[ "$DRY_RUN" == true ]]; then
+  OUTPUT_ROOT="${PROJECT_ROOT}/.dry-run/team-communication-setup"
+fi
+
 # ============================================================================
 # Logging
 # ============================================================================
@@ -40,7 +54,7 @@ declare -i step_ok=0
 # STEP 1: Verify team communication source files
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify team communication source files"
 
 declare -a required_files=(
@@ -52,7 +66,6 @@ all_present=true
 for file in "${required_files[@]}"; do
     if [[ -f "${PROJECT_ROOT}/${file}" ]]; then
         log_info "  ✓ ${file}"
-        ((step_ok++))
     else
         log_warn "  ✗ Missing: ${file}"
         all_present=false
@@ -64,14 +77,16 @@ if [[ "$all_present" != "true" ]]; then
     exit 1
 fi
 
+step_ok+=1
+
 # ============================================================================
 # STEP 2: Create team communication configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create team communication configuration"
 
-COMMS_CONFIG_DIR="${PROJECT_ROOT}/config/team-communications"
+COMMS_CONFIG_DIR="${OUTPUT_ROOT}/config/team-communications"
 mkdir -p "${COMMS_CONFIG_DIR}"
 
 # Create main configuration
@@ -123,7 +138,7 @@ EOF
 
 if [[ -f "${COMMS_CONFIG_DIR}/team-comms-config.json" ]]; then
     log_info "  ✓ Created ${COMMS_CONFIG_DIR}/team-comms-config.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create team communication configuration"
     exit 1
@@ -133,10 +148,10 @@ fi
 # STEP 3: Prepare communication audit logging
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Prepare communication audit logging"
 
-AUDIT_DIR="${PROJECT_ROOT}/logs"
+AUDIT_DIR="${OUTPUT_ROOT}/logs"
 mkdir -p "${AUDIT_DIR}"
 
 # Initialize logs
@@ -150,16 +165,16 @@ for logfile in team-communication.log google-chat-sync.log video-meetings.log; d
     fi
 done
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 4: Create communication environment configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Configure communication environment variables"
 
-cat > "${PROJECT_ROOT}/.env.team-communications" << 'EOF'
+cat > "${OUTPUT_ROOT}/.env.team-communications" << 'EOF'
 # Team Communication Configuration
 # P2 #1539 Phase 6: Real-time messaging, video meetings, Google Chat integration
 
@@ -187,18 +202,18 @@ PREVENT_SPAM_ENABLED=true
 GOOGLE_CHAT_SYNC_INTERVAL_SECONDS=60
 EOF
 
-log_info "  ✓ Created environment configuration: .env.team-communications"
+log_info "  ✓ Created environment configuration: ${OUTPUT_ROOT}/.env.team-communications"
 log_info "  ⚠ NOTE: Set GOOGLE_CHAT_WEBHOOK_URL and GOOGLE_CHAT_SPACE_ID environment variables"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 5: Create communication schemas for compliance
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create communication event schemas"
 
-SCHEMA_DIR="${PROJECT_ROOT}/schemas"
+SCHEMA_DIR="${OUTPUT_ROOT}/schemas"
 mkdir -p "${SCHEMA_DIR}"
 
 # Message schema
@@ -326,13 +341,12 @@ cat > "${SCHEMA_DIR}/video-meeting.v1.json" << 'EOF'
 EOF
 
 log_info "  ✓ Created communication schemas for compliance"
-((step_ok++))
 
 # ============================================================================
 # STEP 6: Create notification templates
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create notification templates"
 
 TEMPLATES_DIR="${COMMS_CONFIG_DIR}/notification-templates"
@@ -370,24 +384,26 @@ cat > "${TEMPLATES_DIR}/member-joined.json" << 'EOF'
 EOF
 
 log_info "  ✓ Created notification templates"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 7: Verification
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verification"
 
 CONFIG_FILES=$(find "${COMMS_CONFIG_DIR}" -type f 2>/dev/null | wc -l)
-SOURCE_FILES=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" -name "*communication*" -o -name "*google-chat*" 2>/dev/null | wc -l)
-SCHEMA_FILES=$(find "${SCHEMA_DIR}" -name "*message\|*presence\|*meeting" -type f 2>/dev/null | wc -l)
+SOURCE_FILES=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" \( -name "*communication*" -o -name "*google-chat*" \) -type f 2>/dev/null | wc -l)
+SCHEMA_FILES=$(find "${SCHEMA_DIR}" -type f \( -name "*message*" -o -name "*presence*" -o -name "*meeting*" \) 2>/dev/null | wc -l)
 
 log_info "  ✓ Configuration files: ${CONFIG_FILES}"
 log_info "  ✓ Source files: ${SOURCE_FILES}"
 log_info "  ✓ Schema files: ${SCHEMA_FILES}"
 
-((step_ok++))
+step_ok+=1
+
+step_ok+=1
 
 # ============================================================================
 # Summary
@@ -419,7 +435,7 @@ log_info "  - Rate limiting and spam prevention"
 log_info "  - Idempotent initialization"
 log_info ""
 log_info "Configuration: ${COMMS_CONFIG_DIR}/team-comms-config.json"
-log_info "Environment: ${PROJECT_ROOT}/.env.team-communications"
+log_info "Environment: ${OUTPUT_ROOT}/.env.team-communications"
 log_info "Schemas: ${SCHEMA_DIR}/team-*.json"
 log_info "Audit logs: ${AUDIT_DIR}/team-*.log"
 log_info ""

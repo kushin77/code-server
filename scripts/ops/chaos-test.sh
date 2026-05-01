@@ -87,9 +87,9 @@ collect_baseline() {
     
     for i in {1..10}; do
         if curl -sf "http://localhost:3100/health" >/dev/null 2>&1; then
-            ((response_count++))
+            response_count+=1
         else
-            ((error_count++))
+            error_count+=1
         fi
     done
     
@@ -106,9 +106,9 @@ collect_during_fault() {
     # Collect for 30 seconds
     while [ $(($(date +%s) - start)) -lt 30 ]; do
         if curl -sf "http://localhost:3100/health" >/dev/null 2>&1; then
-            ((response_count++))
+            response_count+=1
         else
-            ((error_count++))
+            error_count+=1
         fi
         sleep 0.5
     done
@@ -126,7 +126,7 @@ collect_recovery_metrics() {
     
     while [ $(($(date +%s) - recovery_start)) -lt $max_wait ]; do
         if curl -sf "http://localhost:3100/health" >/dev/null 2>&1; then
-            ((response_count++))
+            response_count+=1
             
             # Check for sustained health (5 consecutive successes)
             if [ $response_count -ge 5 ]; then
@@ -136,7 +136,7 @@ collect_recovery_metrics() {
             fi
         else
             response_count=0
-            ((error_count++))
+            error_count+=1
         fi
         sleep 1
     done
@@ -520,9 +520,9 @@ scenario_rate_limiter_disable() {
         local http_code=$(echo "$response" | tail -1)
         
         if [ "$http_code" == "429" ]; then
-            ((rate_limited_count++))
+            rate_limited_count+=1
         elif [ "$http_code" == "200" ]; then
-            ((success_count++))
+            success_count+=1
         fi
     done
     
@@ -694,9 +694,9 @@ run_all_scenarios() {
         log_info "====== Running: $scenario ======"
         
         if run_scenario "$scenario"; then
-            ((passed++))
+            passed+=1
         else
-            ((failed++))
+            failed+=1
         fi
         
         sleep 5  # Brief pause between scenarios

@@ -63,10 +63,10 @@ analyze_gaps() {
         
         if [[ -f "$full_path" ]]; then
             log_analysis "✅ FOUND: ${doc_path}"
-            ((existing_count++))
+            existing_count+=1
         else
             log_analysis "❌ MISSING: ${doc_path} — ${description}"
-            ((missing_count++))
+            missing_count+=1
             missing_docs+=("$doc_path|$description")
         fi
     done
@@ -78,7 +78,7 @@ analyze_gaps() {
     if command -v markdown-link-check &> /dev/null; then
         for md_file in $(find "${PROJECT_ROOT}/docs" -name "*.md" 2>/dev/null || true); do
             if ! markdown-link-check "$md_file" &> /dev/null; then
-                ((broken_links++))
+                broken_links+=1
                 log_warn "Broken links found in: $md_file"
             fi
         done

@@ -31,21 +31,21 @@ CHECKS_TOTAL=0
 # ==============================================================================
 
 check_docker_compose_syntax() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking Docker Compose syntax..."
   
   if python3 -c "import yaml; yaml.safe_load(open('docker-compose.yml'))" 2>/dev/null; then
     log_success "✓ docker-compose.yml valid YAML"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_error "✗ docker-compose.yml YAML syntax error"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   fi
 }
 
 check_all_compose_files() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Validating all docker-compose*.yml files..."
   
   local failed=0
@@ -53,23 +53,23 @@ check_all_compose_files() {
     if [ -f "$file" ]; then
       if ! python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
         log_warn "⚠ $file has YAML issues"
-        ((failed++))
+        failed+=1
       fi
     fi
   done
   
   if [ $failed -eq 0 ]; then
     log_success "✓ All docker-compose files valid"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_error "✗ $failed docker-compose files have issues"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   fi
 }
 
 check_service_health_checks() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Verifying service health checks..."
   
   local service_count=$(grep -c "^  [a-z]" docker-compose.yml || true)
@@ -78,36 +78,36 @@ check_service_health_checks() {
   # Expected: most services have health checks (27/28 production, 11 init with restart: no)
   if [ $healthcheck_count -ge 25 ]; then
     log_success "✓ Health checks coverage: $healthcheck_count/28 services"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ Limited health checks: $healthcheck_count/28 services"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 
 check_script_syntax() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Validating bash script syntax (202 scripts)..."
   
   local errors=0
   while IFS= read -r script; do
     if ! bash -n "$script" 2>/dev/null; then
-      ((errors++))
+      errors+=1
     fi
   done < <(find scripts -name "*.sh" -type f)
   
   if [ $errors -eq 0 ]; then
     log_success "✓ All 202 scripts have valid syntax"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_error "✗ $errors scripts have syntax errors"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   fi
 }
 
 check_ssot_compliance() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking SSOT compliance (scripts/_common/init.sh sourcing)..."
   
   local total_scripts=$(find scripts -name "*.sh" -type f | wc -l)
@@ -115,15 +115,15 @@ check_ssot_compliance() {
   
   if [ "$sourcing_init" -ge $((total_scripts - 5)) ]; then
     log_success "✓ SSOT compliance: $sourcing_init/$total_scripts scripts"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ SSOT compliance: $sourcing_init/$total_scripts scripts"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 
 check_resource_limits() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Verifying service resource limits..."
   
   local deploy_count=$(grep -c "deploy:" docker-compose.yml || true)
@@ -131,114 +131,114 @@ check_resource_limits() {
   
   if [ $limits_count -ge 20 ]; then
     log_success "✓ Resource limits defined: $limits_count services"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ Limited resource limits: $limits_count services"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 
 check_image_pinning() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking image version pinning (no 'latest' tags)..."
   
   if grep -q "image:.*:latest" docker-compose.yml; then
     log_error "✗ Found 'latest' image tags (should use sha256 digests)"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   else
     log_success "✓ All images pinned to sha256 digests"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   fi
 }
 
 check_environment_vars() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking environment variable configuration..."
   
   if [ -f "scripts/_common/config.env" ]; then
     log_success "✓ SSOT config found: scripts/_common/config.env"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ SSOT config not found: scripts/_common/config.env"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 
 check_git_status() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking git repository status..."
   
   if [ -z "$(git status --porcelain)" ]; then
     log_success "✓ Working tree clean"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ Uncommitted changes present"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 
 check_network_configuration() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Verifying network configurations..."
   
   local network_count=$(grep -c "^networks:" docker-compose.yml || true)
   
   if [ $network_count -gt 0 ]; then
     log_success "✓ Network definitions present"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_error "✗ No network definitions found"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   fi
 }
 
 check_volumes() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking volume definitions..."
   
   local volume_count=$(grep -c "^volumes:" docker-compose.yml || true)
   
   if [ $volume_count -gt 0 ]; then
     log_success "✓ Volume definitions present"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_error "✗ No volume definitions found"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   fi
 }
 
 check_terraform_files() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Verifying Terraform configuration..."
   
   if python3 -c "import hcl2" 2>/dev/null; then
     log_success "✓ Terraform validation tools available"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ Terraform validation tools not available"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 
 check_ci_workflows() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Validating CI/CD workflow definitions..."
   
   if python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ssot-compliance.yml'))" 2>/dev/null; then
     log_success "✓ CI workflow YAML valid"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_error "✗ CI workflow YAML invalid"
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
     return 1
   fi
 }
 
 check_documentation_completeness() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   log_info "Checking documentation completeness..."
   
   local required_docs=(
@@ -250,16 +250,16 @@ check_documentation_completeness() {
   local missing=0
   for doc in "${required_docs[@]}"; do
     if [ ! -f "$doc" ]; then
-      ((missing++))
+      missing+=1
     fi
   done
   
   if [ $missing -eq 0 ]; then
     log_success "✓ All required documentation present"
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   else
     log_warn "⚠ Missing $missing documentation files"
-    ((WARNINGS++))
+    WARNINGS+=1
   fi
 }
 

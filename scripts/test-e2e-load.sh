@@ -96,7 +96,7 @@ wait_for_service() {
         
         echo -n "."
         sleep 1
-        ((elapsed++))
+        elapsed+=1
     done
     
     log_error "Service did not become ready within ${timeout}s"

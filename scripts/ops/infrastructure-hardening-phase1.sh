@@ -154,10 +154,10 @@ fix_idempotency() {
     
     # Verify all idempotent scripts created
     local scripts_created=0
-    [[ -x ./scripts/ops/deploy-idempotent.sh ]] && ((scripts_created++))
-    [[ -x ./scripts/ops/rollback-idempotent.sh ]] && ((scripts_created++))
-    [[ -x ./scripts/ops/backup-idempotent.sh ]] && ((scripts_created++))
-    [[ -x ./scripts/ops/health-check-idempotent.sh ]] && ((scripts_created++))
+    [[ -x ./scripts/ops/deploy-idempotent.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/rollback-idempotent.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/backup-idempotent.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/health-check-idempotent.sh ]] && scripts_created+=1
     
     if [[ $scripts_created -eq 4 ]]; then
       success "All idempotent scripts created"

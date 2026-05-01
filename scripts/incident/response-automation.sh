@@ -58,7 +58,7 @@ detect_service_outage() {
     if [[ "$container_status" == *"unhealthy"* ]] || [[ "$container_status" == *"Exit"* ]]; then
       local container_name=$(echo "$container_status" | awk '{print $1}')
       affected_services+=("$container_name")
-      ((unhealthy++))
+      unhealthy+=1
     fi
   done < <(docker ps 2>/dev/null || echo "")
   

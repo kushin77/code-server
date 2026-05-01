@@ -41,7 +41,7 @@ run_sast() {
             log_success "Bandit scan passed"
         else
             log_warning "Bandit found potential issues"
-            ((issues++))
+            issues+=1
         fi
         
         # Check for critical issues
@@ -61,7 +61,7 @@ run_sast() {
             
             if [ "$error_count" -gt 0 ]; then
                 log_warning "ESLint found $error_count errors"
-                ((issues++))
+                issues+=1
             else
                 log_success "ESLint scan passed"
             fi
@@ -74,7 +74,7 @@ run_sast() {
     log_info "Checking for SQL injection patterns..."
     if grep -r "execute.*format" apps/auth-server/src/ 2>/dev/null | grep -v ".pyc"; then
         log_error "Found potential SQL injection patterns"
-        ((issues++))
+        issues+=1
     else
         log_success "No SQL injection patterns detected"
     fi
@@ -83,7 +83,7 @@ run_sast() {
     log_info "Checking for XSS patterns..."
     if grep -r "dangerouslySetInnerHTML\|innerHTML\|eval(" apps/auth-server/src/**/*.ts 2>/dev/null; then
         log_error "Found potential XSS patterns"
-        ((issues++))
+        issues+=1
     else
         log_success "No XSS patterns detected"
     fi
@@ -95,7 +95,7 @@ run_sast() {
        grep -v ".pyc" | \
        grep -v "placeholder\|example\|test\|dummy"; then
         log_warning "Found potential hardcoded values"
-        ((issues++))
+        issues+=1
     else
         log_success "No obvious hardcoded secrets"
     fi
@@ -121,7 +121,7 @@ run_sca() {
                 log_success "Python dependencies secure"
             else
                 log_error "Python dependencies have known vulnerabilities"
-                ((issues++))
+                issues+=1
             fi
         else
             log_warning "Safety not installed for Python scanning"
@@ -138,7 +138,7 @@ run_sca() {
             
             if [ "$critical" -gt 0 ]; then
                 log_error "Found $critical critical vulnerabilities"
-                ((issues++))
+                issues+=1
             elif [ "$high" -gt 0 ]; then
                 log_warning "Found $high high-severity vulnerabilities"
             else
@@ -157,7 +157,7 @@ run_sca() {
             log_success "Snyk scan passed"
         else
             log_warning "Snyk found vulnerabilities"
-            ((issues++))
+            issues+=1
         fi
     fi
     
@@ -181,7 +181,7 @@ run_secrets_detection() {
             log_success "No secrets found in git history"
         else
             log_error "Secrets detected in git history"
-            ((secrets_found++))
+            secrets_found+=1
         fi
     else
         log_warning "git-secrets not installed"
@@ -194,7 +194,7 @@ run_secrets_detection() {
         if trufflehog filesystem . --json > /tmp/trufflehog-report.json 2>&1; then
             if [ -s /tmp/trufflehog-report.json ]; then
                 log_warning "TruffleHog found potential secrets"
-                ((secrets_found++))
+                secrets_found+=1
             else
                 log_success "No secrets detected by TruffleHog"
             fi
@@ -209,19 +209,19 @@ run_secrets_detection() {
     # AWS keys
     if grep -r "AKIA\|aws_secret_access_key" . 2>/dev/null | grep -v ".git" | grep -v "node_modules"; then
         log_warning "Potential AWS keys found"
-        ((patterns_found++))
+        patterns_found+=1
     fi
     
     # GitHub tokens
     if grep -r "ghp_\|gho_\|ghu_\|ghs_\|ghr_" . 2>/dev/null | grep -v ".git" | grep -v "node_modules"; then
         log_warning "Potential GitHub tokens found"
-        ((patterns_found++))
+        patterns_found+=1
     fi
     
     # Private keys
     if grep -r "BEGIN RSA PRIVATE KEY\|BEGIN PRIVATE KEY" . 2>/dev/null | grep -v ".git" | grep -v "node_modules"; then
         log_error "Private keys found in repository"
-        ((patterns_found++))
+        patterns_found+=1
     fi
     
     if [ $patterns_found -eq 0 ]; then
@@ -268,7 +268,7 @@ run_container_security() {
         # Check for root user
         if grep -q "^USER root$" "$dockerfile"; then
             log_warning "Container runs as root"
-            ((issues++))
+            issues+=1
         else
             log_success "Container uses non-root user"
         fi
@@ -314,7 +314,7 @@ run_dast() {
     
     if echo "$response" | grep -qi "sql\|syntax error\|database"; then
         log_warning "Potential SQL injection error message exposed"
-        ((issues++))
+        issues+=1
     else
         log_success "SQL injection test passed"
     fi
@@ -328,7 +328,7 @@ run_dast() {
     
     if echo "$response" | grep -q "<script>"; then
         log_warning "Potential XSS vulnerability"
-        ((issues++))
+        issues+=1
     else
         log_success "XSS test passed"
     fi
@@ -354,7 +354,7 @@ run_dast() {
         log_success "Authentication required"
     else
         log_error "Unauthenticated access allowed"
-        ((issues++))
+        issues+=1
     fi
     
     # Test with invalid token
@@ -376,14 +376,14 @@ run_dast() {
         log_success "X-Content-Type-Options header present"
     else
         log_warning "X-Content-Type-Options header missing"
-        ((issues++))
+        issues+=1
     fi
     
     if echo "$headers" | grep -q "X-Frame-Options"; then
         log_success "X-Frame-Options header present"
     else
         log_warning "X-Frame-Options header missing"
-        ((issues++))
+        issues+=1
     fi
     
     if echo "$headers" | grep -q "Strict-Transport-Security"; then
@@ -413,7 +413,7 @@ run_infrastructure_security() {
             cd - >/dev/null
         else
             log_error "Terraform validation failed"
-            ((issues++))
+            issues+=1
             cd - >/dev/null || true
         fi
     fi
@@ -426,7 +426,7 @@ run_infrastructure_security() {
             log_success "Docker Compose configuration valid"
         else
             log_error "Docker Compose validation failed"
-            ((issues++))
+            issues+=1
         fi
     fi
     
@@ -448,54 +448,54 @@ run_comprehensive_scan() {
     
     # SAST
     if run_sast; then
-        ((total_passed++))
+        total_passed+=1
     else
-        ((total_failed++))
+        total_failed+=1
     fi
     
     log_info ""
     
     # SCA
     if run_sca; then
-        ((total_passed++))
+        total_passed+=1
     else
-        ((total_failed++))
+        total_failed+=1
     fi
     
     log_info ""
     
     # Secrets
     if run_secrets_detection; then
-        ((total_passed++))
+        total_passed+=1
     else
-        ((total_failed++))
+        total_failed+=1
     fi
     
     log_info ""
     
     # Container
     if run_container_security; then
-        ((total_passed++))
+        total_passed+=1
     else
-        ((total_failed++))
+        total_failed+=1
     fi
     
     log_info ""
     
     # Infrastructure
     if run_infrastructure_security; then
-        ((total_passed++))
+        total_passed+=1
     else
-        ((total_failed++))
+        total_failed+=1
     fi
     
     # DAST (optional - requires running service)
     if curl -sf "http://localhost:3100/health" >/dev/null 2>&1; then
         log_info ""
         if run_dast; then
-            ((total_passed++))
+            total_passed+=1
         else
-            ((total_failed++))
+            total_failed+=1
         fi
     else
         log_warning "Skipping DAST - service not available"

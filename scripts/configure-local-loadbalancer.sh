@@ -606,7 +606,7 @@ test_session_affinity() {
   
   for i in {1..10}; do
     local response=$(curl -s -m 2 "http://$LOCALHOST:$port/whoami" 2>/dev/null || echo "unknown")
-    [[ "$response" == *"$PRIMARY_HOST"* ]] && ((host1_count++)) || ((host2_count++))
+    [[ "$response" == *"$PRIMARY_HOST"* ]] && host1_count+=1 || host2_count+=1
   done
   
   echo "  Primary host: $host1_count, Replica host: $host2_count" >> "$TEST_RESULTS"

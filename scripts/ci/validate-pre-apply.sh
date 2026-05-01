@@ -49,13 +49,13 @@ log_check() {
 }
 
 pass_check() {
-  ((CHECKS_PASSED++))
+  CHECKS_PASSED+=1
   echo -e "${GREEN}✓${NC}"
 }
 
 fail_check() {
   local msg="$1"
-  ((CHECKS_FAILED++))
+  CHECKS_FAILED+=1
   echo -e "${RED}✗${NC}"
   VALIDATION_ERRORS+=("  • $msg")
 }
@@ -131,7 +131,7 @@ check_ssh_connectivity() {
   if [[ "$ssh_ok" == true ]]; then
     pass_check
   else
-    ((CHECKS_FAILED++))
+    CHECKS_FAILED+=1
   fi
 }
 
@@ -249,7 +249,7 @@ check_keepalived() {
   if [[ "$keepalived_ok" == true ]]; then
     pass_check
   else
-    ((CHECKS_PASSED++))
+    CHECKS_PASSED+=1
   fi
 }
 

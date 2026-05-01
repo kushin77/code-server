@@ -37,17 +37,17 @@ log_info() {
 
 log_success() {
     echo -e "${GREEN}[✓]${NC} $*" | tee -a "$VALIDATION_LOG"
-    ((PASSED_TESTS++))
+    PASSED_TESTS+=1
 }
 
 log_error() {
     echo -e "${RED}[✗]${NC} $*" | tee -a "$VALIDATION_LOG"
-    ((FAILED_TESTS++))
+    FAILED_TESTS+=1
 }
 
 log_warning() {
     echo -e "${YELLOW}[!]${NC} $*" | tee -a "$VALIDATION_LOG"
-    ((SKIPPED_TESTS++))
+    SKIPPED_TESTS+=1
 }
 
 test_section() {
@@ -62,7 +62,7 @@ run_test() {
     local test_name="$1"
     local test_cmd="$2"
     
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS+=1
     
     if eval "$test_cmd" &>/dev/null; then
         log_success "$test_name"

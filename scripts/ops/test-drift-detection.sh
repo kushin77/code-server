@@ -122,21 +122,21 @@ test_immutability_compliance() {
     "${REPO_ROOT}/docker-compose.yml" \
     "${REPO_ROOT}/docker-compose.override.yml" 2>/dev/null || true | grep -v "@sha256"; then
     log_warn "⚠️  Floating tags found in docker-compose"
-    ((violations++)) || true
+    violations+=1 || true
   fi
   
   # Check terraform for version ranges
   log_info "Checking Terraform for version ranges..."
   if grep -r 'version\s*=\s*"[~*]' "${TERRAFORM_DIR}/../../modules/"*.tf 2>/dev/null || true; then
     log_warn "⚠️  Version ranges found in Terraform"
-    ((violations++)) || true
+    violations+=1 || true
   fi
   
   # Check for hardcoded domains
   log_info "Checking for hardcoded domain strings..."
   if grep -r 'kushnir\.cloud' "${TERRAFORM_DIR}" 2>/dev/null | grep -v "APEX_DOMAIN\|variable\|#" || true; then
     log_warn "⚠️  Hardcoded domain found"
-    ((violations++)) || true
+    violations+=1 || true
   fi
   
   if [ "$violations" -eq 0 ]; then
@@ -177,7 +177,7 @@ test_secret_detection() {
       "${TERRAFORM_DIR}" \
       2>/dev/null | grep -v "^\s*#" | grep -v '${' | grep -v '[['; then
       log_warn "⚠️  Potential secret found matching: $pattern"
-      ((secrets_found++)) || true
+      secrets_found+=1 || true
     fi
   done
   
@@ -205,10 +205,10 @@ test_canonical_config_usage() {
   
   for script in "${REPO_ROOT}"/scripts/ops/*.sh; do
     if [ -f "$script" ]; then
-      ((total_scripts++))
+      total_scripts+=1
       
       if grep -q "source.*init.sh\|source.*_base-config.env" "$script"; then
-        ((sourcing_scripts++))
+        sourcing_scripts+=1
       fi
     fi
   done
@@ -435,12 +435,12 @@ main() {
       local tests_total=6
       
       # Run all tests
-      test_no_drift_scenario && ((tests_passed++)) || true
-      test_immutability_compliance && ((tests_passed++)) || true
-      test_secret_detection && ((tests_passed++)) || true
-      test_canonical_config_usage && ((tests_passed++)) || true
-      test_drift_detection_workflow && ((tests_passed++)) || true
-      test_compliance_checks && ((tests_passed++)) || true
+      test_no_drift_scenario && tests_passed+=1 || true
+      test_immutability_compliance && tests_passed+=1 || true
+      test_secret_detection && tests_passed+=1 || true
+      test_canonical_config_usage && tests_passed+=1 || true
+      test_drift_detection_workflow && tests_passed+=1 || true
+      test_compliance_checks && tests_passed+=1 || true
       
       log_info ""
       log_info "=========================================="

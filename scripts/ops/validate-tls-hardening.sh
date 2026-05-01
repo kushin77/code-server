@@ -37,7 +37,7 @@ validate_caddyfile_tls_config() {
   # Check for TLS 1.2 minimum
   if ! grep -q "min_version tls1_2" "${caddyfile}"; then
     log "ERROR: TLS 1.2 minimum not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ TLS 1.2 minimum enforced"
   fi
@@ -45,7 +45,7 @@ validate_caddyfile_tls_config() {
   # Check for strong ciphers
   if ! grep -q "TLS_ECDHE.*GCM" "${caddyfile}"; then
     log "ERROR: Strong ECDHE ciphers not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ Strong ECDHE ciphers configured"
   fi
@@ -53,7 +53,7 @@ validate_caddyfile_tls_config() {
   # Check for HSTS header
   if ! grep -q "Strict-Transport-Security" "${caddyfile}"; then
     log "ERROR: HSTS header not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ HSTS header configured"
   fi
@@ -61,7 +61,7 @@ validate_caddyfile_tls_config() {
   # Check for CSP header
   if ! grep -q "Content-Security-Policy" "${caddyfile}"; then
     log "ERROR: Content-Security-Policy header not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ CSP header configured"
   fi
@@ -69,7 +69,7 @@ validate_caddyfile_tls_config() {
   # Check for X-Frame-Options
   if ! grep -q "X-Frame-Options" "${caddyfile}"; then
     log "ERROR: X-Frame-Options header not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ X-Frame-Options header configured"
   fi
@@ -77,7 +77,7 @@ validate_caddyfile_tls_config() {
   # Check for X-Content-Type-Options
   if ! grep -q "X-Content-Type-Options" "${caddyfile}"; then
     log "ERROR: X-Content-Type-Options header not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ X-Content-Type-Options header configured"
   fi
@@ -85,7 +85,7 @@ validate_caddyfile_tls_config() {
   # Check for Permissions-Policy
   if ! grep -q "Permissions-Policy" "${caddyfile}"; then
     log "ERROR: Permissions-Policy header not configured"
-    ((errors++))
+    errors+=1
   else
     log "✓ Permissions-Policy header configured"
   fi
@@ -247,7 +247,7 @@ main() {
   
   # Validate configuration
   if ! validate_caddyfile_tls_config; then
-    ((errors++))
+    errors+=1
   fi
   
   log ""

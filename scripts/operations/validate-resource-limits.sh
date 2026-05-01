@@ -101,7 +101,7 @@ for service in "${services[@]}"; do
             echo "Check: deploy/resources/limits/reservations missing"
             echo ""
         } >> "${REPORT_FILE}"
-        ((missing_limits++))
+        missing_limits+=1
     fi
 done
 

@@ -73,7 +73,7 @@ create_snapshot() {
         if sudo tar -czf "$snapshot_file" -C "$(dirname $mount_point)" "$(basename $mount_point)" 2>/dev/null; then
             local size=$(du -h "$snapshot_file" | cut -f1)
             log_success "  Snapshot created: $snapshot_file ($size)"
-            ((snapshot_count++))
+            snapshot_count+=1
         else
             log_warning "  Failed to create snapshot for $volume"
         fi
@@ -95,13 +95,13 @@ verify_snapshots() {
     local valid_count=0
     
     while IFS= read -r snapshot; do
-        ((snapshot_count++))
+        snapshot_count+=1
         
         log_info "Verifying: $(basename $snapshot)"
         
         if tar -tzf "$snapshot" > /dev/null 2>&1; then
             log_success "  ✅ Snapshot integrity verified"
-            ((valid_count++))
+            valid_count+=1
         else
             log_error "  ❌ Snapshot is corrupted"
         fi

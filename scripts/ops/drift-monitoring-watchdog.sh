@@ -247,11 +247,11 @@ main() {
   echo ""
   
   # Run all checks
-  check_terraform_drift && ((checks_passed++)) || ((checks_failed++))
-  check_container_health && ((checks_passed++)) || ((checks_failed++))
-  check_container_parity && ((checks_passed++)) || ((checks_failed++))
-  check_disk_space && ((checks_passed++)) || ((checks_failed++))
-  check_keepalived_status && ((checks_passed++)) || ((checks_failed++))
+  check_terraform_drift && checks_passed+=1 || checks_failed+=1
+  check_container_health && checks_passed+=1 || checks_failed+=1
+  check_container_parity && checks_passed+=1 || checks_failed+=1
+  check_disk_space && checks_passed+=1 || checks_failed+=1
+  check_keepalived_status && checks_passed+=1 || checks_failed+=1
   
   echo ""
   echo "============================================"

@@ -28,7 +28,7 @@ ssh -o BatchMode=yes akushnir@$REDIS_HOST << EOF
     STATUS=\$(docker exec code-server-redis redis-cli LASTSAVE)
     echo "Waiting for BGSAVE... (attempt $((COUNT+1))/30)"
     sleep 1
-    ((COUNT++))
+    COUNT+=1
   done
   
   # Copy RDB file

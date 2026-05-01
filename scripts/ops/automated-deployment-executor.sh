@@ -145,7 +145,7 @@ stage_pre_checks() {
   for var in "${required_vars[@]}"; do
     if [[ -z "${!var:-}" ]]; then
       log_error "Missing required environment variable: $var"
-      ((failures++))
+      failures+=1
     fi
   done
   
@@ -221,7 +221,7 @@ stage_backup() {
         log_warn "Volume backup skipped: $volume (empty or unavailable)"
         continue
       }
-      ((backup_count++))
+      backup_count+=1
     fi
   done
   
@@ -318,7 +318,7 @@ stage_services_deploy() {
     docker-compose up -d $service_group 2>&1 | tee -a "$LOG_FILE"
     
     sleep 3
-    ((stage_num++))
+    stage_num+=1
   done
   
   log_success "All services deployed"
@@ -346,10 +346,10 @@ stage_health_verification() {
     local total_services=0
     
     while IFS=$'\t' read -r name status; do
-      ((total_services++))
+      total_services+=1
       
       if [[ $status == *"healthy"* ]] || [[ $status == *"Up"* ]]; then
-        ((healthy_count++))
+        healthy_count+=1
       else
         unhealthy_services+=("$name")
       fi
@@ -362,7 +362,7 @@ stage_health_verification() {
     
     log_info "Health check progress: $healthy_count/$total_services healthy (attempt $((attempt + 1))/$max_attempts)"
     sleep 5
-    ((attempt++))
+    attempt+=1
   done
   
   log_error "Health check timeout - services did not reach healthy status"

@@ -31,12 +31,13 @@ readonly ROLLBACK_FAILURE_THRESHOLD="${ROLLBACK_FAILURE_THRESHOLD:-3}"
 
 # Health check endpoints (from canonical config)
 declare -A HEALTH_ENDPOINTS=(
-  ["caddy"]="http://localhost:80/health"
-  ["execution-scheduler"]="http://localhost:8080/health"
-  ["opa"]="http://localhost:8181/health"
-  ["oauth2-proxy"]="http://localhost:4180/"
-  ["postgres"]="localhost:5432"
-  ["redis"]="localhost:6379"
+  ["caddy"]="code-server-caddy"
+  ["execution-scheduler"]="code-server-execution-scheduler"
+  ["opa"]="code-server-opa"
+  ["oauth2-proxy"]="code-server-oauth2-proxy"
+  ["redpanda"]="code-server-redpanda"
+  ["postgres"]="code-server-postgres"
+  ["redis"]="code-server-redis"
 )
 
 # Service dependencies for validation
@@ -55,6 +56,20 @@ trap 'log_info "Health check complete"; true' EXIT
 # ==============================================================================
 # HEALTH CHECK FUNCTIONS
 # ==============================================================================
+
+get_git_sha() {
+  git -C "${REPO_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "unknown"
+}
+
+# Run a Docker health check on a remote host.
+check_remote_container_health() {
+  local host="$1"
+  local container="$2"
+
+  ssh -o BatchMode=yes -o ConnectTimeout=10 -l akushnir -p 22 "$host" \
+    "docker inspect --format '{{.State.Health.Status}}' ${container} 2>/dev/null" \
+    | grep -Eq '^(healthy|no-health)$'
+}
 
 # Check HTTP endpoint health
 check_http_health() {
@@ -85,27 +100,27 @@ check_port_health() {
 # Main health check for a service
 check_service_health() {
   local service="$1"
-  local endpoint="${HEALTH_ENDPOINTS[$service]:-}"
+  local container_name="${HEALTH_ENDPOINTS[$service]:-}"
   local retry_count=0
   
-  if [ -z "$endpoint" ]; then
+  if [ -z "$container_name" ]; then
     log_warn "No health endpoint configured for service: $service"
     return 1
   fi
   
-  # Determine check type based on endpoint format
+  if [ -z "${PRIMARY_HOST:-}" ] || [ -z "${REPLICA_HOST:-}" ]; then
+    log_warn "PRIMARY_HOST/REPLICA_HOST not set; cannot run remote health checks"
+    return 1
+  fi
+
+  local host
   while [ $retry_count -lt "$HEALTH_CHECK_RETRIES" ]; do
-    if [[ "$endpoint" =~ ^http ]]; then
-      if check_http_health "$service" "$endpoint"; then
-        log_info "✅ $service health check passed"
+    for host in "$PRIMARY_HOST" "$REPLICA_HOST"; do
+      if check_remote_container_health "$host" "$container_name"; then
+        log_info "✅ $service health check passed on ${host}"
         return 0
       fi
-    else
-      if check_port_health "$service" "$endpoint"; then
-        log_info "✅ $service port check passed"
-        return 0
-      fi
-    fi
+    done
     
     retry_count=$((retry_count + 1))
     if [ $retry_count -lt "$HEALTH_CHECK_RETRIES" ]; then

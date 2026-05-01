@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: code-server-config
+  namespace: code-server
+data:
+  API_PROTOCOL: "http"
+  API_PORT: "8080"
+  DB_NAME: "code_server"

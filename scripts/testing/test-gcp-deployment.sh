@@ -299,8 +299,8 @@ run_validation_suite() {
     
     local failed=0
     
-    validate_prerequisites || ((failed++))
-    validate_gcp_configuration || ((failed++))
+    validate_prerequisites || failed+=1
+    validate_gcp_configuration || failed+=1
     
     if [[ $failed -gt 0 ]]; then
         log_error "$failed validation test(s) failed"
@@ -316,12 +316,12 @@ run_deployment_suite() {
     
     local failed=0
     
-    validate_prerequisites || ((failed++))
-    validate_gcp_configuration || ((failed++))
-    test_authentication || ((failed++))
-    test_list_instances || ((failed++))
-    test_deployment || ((failed++))
-    test_instance_status || ((failed++))
+    validate_prerequisites || failed+=1
+    validate_gcp_configuration || failed+=1
+    test_authentication || failed+=1
+    test_list_instances || failed+=1
+    test_deployment || failed+=1
+    test_instance_status || failed+=1
     
     if [[ $failed -gt 0 ]]; then
         log_error "$failed deployment test(s) failed"
@@ -337,9 +337,9 @@ run_integration_suite() {
     
     local failed=0
     
-    test_instance_status || ((failed++))
-    test_ssh_connectivity || ((failed++))
-    test_phase_2b_integration || ((failed++))
+    test_instance_status || failed+=1
+    test_ssh_connectivity || failed+=1
+    test_phase_2b_integration || failed+=1
     
     if [[ $failed -gt 0 ]]; then
         log_error "$failed integration test(s) failed (non-critical)"
@@ -354,9 +354,9 @@ run_full_suite() {
     
     local failed=0
     
-    run_validation_suite || ((failed++))
-    run_deployment_suite || ((failed++))
-    run_integration_suite || ((failed++))
+    run_validation_suite || failed+=1
+    run_deployment_suite || failed+=1
+    run_integration_suite || failed+=1
     
     if [[ $failed -gt 0 ]]; then
         log_error "$failed test suite(s) had failures"

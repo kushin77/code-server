@@ -107,9 +107,9 @@ for file in "${logging_files[@]}"; do
             
             # This would require more careful parsing, so mark for manual review
             log_info "    ⚠ Manual review needed for: $(grep -c 'echo.*\[' "${PROJECT_ROOT}/${file}" 2>/dev/null || echo 0) inline logs"
-            ((issues_fixed++))
+            issues_fixed+=1
         fi
-        ((step_ok++))
+        step_ok+=1
     fi
 done
 
@@ -117,7 +117,7 @@ done
 # STEP 3: Externalize hardcoded URLs and IPs to environment variables
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Externalize hardcoded URLs and IPs"
 
 declare -a url_replacements=(
@@ -134,9 +134,9 @@ for replacement in "${url_replacements[@]}"; do
         # Check if already uses environment variable
         if ! grep -q "${var}=" "${PROJECT_ROOT}/${file}" 2>/dev/null; then
             log_info "  ⚠ Review needed for: ${file}"
-            ((issues_fixed++))
+            issues_fixed+=1
         fi
-        ((step_ok++))
+        step_ok+=1
     fi
 done
 
@@ -144,7 +144,7 @@ done
 # STEP 4: Verify GOV-002 compliance headers
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify GOV-002 compliance headers"
 
 # Count files with proper headers
@@ -155,7 +155,7 @@ FILES_TOTAL=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" -name '*.ts' -
 
 if [[ $FILES_WITH_HEADERS -eq $FILES_TOTAL ]]; then
     log_info "  ✓ All Phase 6 extension files have GOV-002 headers"
-    ((step_ok++))
+    step_ok+=1
 else
     log_info "  ⚠ $(($FILES_TOTAL - $FILES_WITH_HEADERS)) files missing headers"
 fi
@@ -164,7 +164,7 @@ fi
 # STEP 5: Create deduplication report
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Generate deduplication report"
 
 REPORT_FILE="${PROJECT_ROOT}/artifacts/P3-1533-DEDUPLICATION-REPORT.md"
@@ -256,7 +256,7 @@ EOF
 
 if [[ -f "${REPORT_FILE}" ]]; then
     log_info "  ✓ Created deduplication report: ${REPORT_FILE}"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create report"
 fi
@@ -265,14 +265,14 @@ fi
 # STEP 6: Summary
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Summary"
 
 log_info "  ✓ Issues identified and documented"
 log_info "  ✓ Issues fixable: ${issues_fixed}"
 log_info ""
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # Completion Summary

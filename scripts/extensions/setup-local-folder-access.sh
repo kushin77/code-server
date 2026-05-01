@@ -40,7 +40,7 @@ declare -i step_ok=0
 # STEP 1: Verify local folder access source files
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify local folder access source files"
 
 declare -a required_files=(
@@ -52,7 +52,7 @@ all_present=true
 for file in "${required_files[@]}"; do
     if [[ -f "${PROJECT_ROOT}/${file}" ]]; then
         log_info "  ✓ ${file}"
-        ((step_ok++))
+        step_ok+=1
     else
         log_warn "  ✗ Missing: ${file}"
         all_present=false
@@ -68,7 +68,7 @@ fi
 # STEP 2: Create local folder access configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create local folder access configuration"
 
 FOLDER_CONFIG_DIR="${PROJECT_ROOT}/config/workspace"
@@ -105,7 +105,7 @@ EOF
 
 if [[ -f "${FOLDER_CONFIG_DIR}/local-access-config.json" ]]; then
     log_info "  ✓ Created ${FOLDER_CONFIG_DIR}/local-access-config.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create local folder access configuration"
     exit 1
@@ -115,7 +115,7 @@ fi
 # STEP 3: Create mount directory structure
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Prepare mount directory structure"
 
 MOUNT_DIR="${PROJECT_ROOT}/.local-folders"
@@ -126,7 +126,7 @@ touch "${MOUNT_DIR}/.gitkeep"
 
 if [[ -d "${MOUNT_DIR}" ]]; then
     log_info "  ✓ Created mount directory: ${MOUNT_DIR}"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create mount directory"
     exit 1
@@ -136,7 +136,7 @@ fi
 # STEP 4: Create access audit logging
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Prepare access audit logging"
 
 AUDIT_DIR="${PROJECT_ROOT}/logs"
@@ -151,13 +151,13 @@ else
     log_info "  ✓ Log file already exists: ${LOCAL_ACCESS_LOG}"
 fi
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 5: Create environment configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Configure environment variables"
 
 cat > "${PROJECT_ROOT}/.env.local-folder-access" << 'EOF'
@@ -178,13 +178,13 @@ MAX_CONCURRENT_MOUNTS=10
 EOF
 
 log_info "  ✓ Created environment configuration: .env.local-folder-access"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 6: Create access schema for compliance
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create access schema for compliance"
 
 SCHEMA_DIR="${PROJECT_ROOT}/schemas"
@@ -238,7 +238,7 @@ EOF
 
 if [[ -f "${SCHEMA_DIR}/local-folder-mount.v1.json" ]]; then
     log_info "  ✓ Created mount schema: ${SCHEMA_DIR}/local-folder-mount.v1.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create mount schema"
     exit 1
@@ -248,7 +248,7 @@ fi
 # STEP 7: Verification
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verification"
 
 CONFIG_FILES=$(find "${FOLDER_CONFIG_DIR}" -type f 2>/dev/null | wc -l)
@@ -259,7 +259,7 @@ log_info "  ✓ Source files: ${SOURCE_FILES}"
 log_info "  ✓ Mount directory: created"
 log_info "  ✓ Audit logging: enabled"
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # Summary

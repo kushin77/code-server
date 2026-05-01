@@ -83,9 +83,9 @@ audit_docker_compose() {
   for file in "${compose_files[@]}"; do
     if [ -f "$file" ]; then
       if docker-compose -f "$file" config > /dev/null 2>&1; then
-        ((valid_files++))
+        valid_files+=1
       else
-        ((invalid_files++))
+        invalid_files+=1
       fi
     fi
   done

@@ -66,7 +66,7 @@ check_closed_issues() {
     while IFS=$'\t' read -r issue_num issue_title labels; do
         [ -z "$issue_num" ] && continue
         
-        ((checked++))
+        checked+=1
         
         # Check if issue has a priority label
         local has_priority=false
@@ -76,7 +76,7 @@ check_closed_issues() {
         
         if [[ "$has_priority" == false ]]; then
             violations+=("Issue #$issue_num missing priority label (P0/P1/P2/P3)")
-            ((violations_count++))
+            violations_count+=1
             continue
         fi
         
@@ -88,11 +88,11 @@ check_closed_issues() {
         local close_reason=$(github_gh issue view "$issue_num" --repo "$REPO_SLUG" --json comments --jq '.comments[] | select(.body | test("(manual close|auto-closed|stale|duplicate|by design)"))' 2>/dev/null || echo "")
         
         if [[ -n "$linked_pr" ]] || [[ -n "$close_reason" ]]; then
-            ((compliant++))
+            compliant+=1
             log_governance "✅ #$issue_num: Compliant ($([ -n "$linked_pr" ] && echo "linked PR" || echo "documented close"))"
         else
             violations+=("Issue #$issue_num closed without linked PR or documented reason: \"$issue_title\"")
-            ((violations_count++))
+            violations_count+=1
             log_governance "❌ #$issue_num: VIOLATION"
         fi
     done < <(printf '%s\n' "$closed_issues")

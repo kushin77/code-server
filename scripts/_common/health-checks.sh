@@ -154,11 +154,11 @@ check_all_services() {
   
   log_info "Checking all critical services..."
   
-  check_postgres_health || ((failed++))
-  check_redis_health || ((failed++))
-  check_kafka_broker_health || ((failed++))
-  check_qdrant_health || ((failed++))
-  check_opa_health || ((failed++))
+  check_postgres_health || failed+=1
+  check_redis_health || failed+=1
+  check_kafka_broker_health || failed+=1
+  check_qdrant_health || failed+=1
+  check_opa_health || failed+=1
   
   if [[ $failed -eq 0 ]]; then
     log_success "All services are healthy"

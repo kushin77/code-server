@@ -24,13 +24,13 @@ log_info "Running operational SSOT audit (Shell & Python)..."
 ALL_FILES=$(find scripts -name "*.sh" -o -name "*.py" -type f | grep -v "_common" | grep -v "audit" | grep -v "validate-trap")
 
 for file in $ALL_FILES; do
-    ((SCRIPTS_CHECKED++))
+    SCRIPTS_CHECKED+=1
     
     # [SHELL ONLY] Check init.sh sourcing
     if [[ "$file" == *.sh ]]; then
         if ! grep -q "source.*init\.sh" "$file"; then
             log_warning "Missing init.sh: $file"
-            ((SCRIPTS_MISSING_INIT++))
+            SCRIPTS_MISSING_INIT+=1
         fi
     fi
 
@@ -55,7 +55,7 @@ for file in $ALL_FILES; do
         if [[ "$file" != *".env"* ]] && [[ "$file" != *"PRODUCTION_HANDOVER"* ]]; then
              log_warning "Hardcoded IP usage in $file"
              echo "$RAW_LINES" | sed 's/^/  -> /'
-             ((HARDCODED_VARS++))
+             HARDCODED_VARS+=1
         fi
     fi
 done

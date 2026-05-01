@@ -245,7 +245,7 @@ test_rto_validation() {
   local optimizations_found=0
   for check in "${performance_checks[@]}"; do
     if grep -q "$check" "$ROLLBACK_SCRIPT"; then
-      ((optimizations_found++))
+      optimizations_found+=1
     fi
   done
   
@@ -465,13 +465,13 @@ main() {
   
   case "$action" in
     all)
-      test_checkpoint_creation && ((tests_passed++)) || true
-      test_auto_rollback_trigger && ((tests_passed++)) || true
-      test_manual_rollback && ((tests_passed++)) || true
-      test_emergency_rollback && ((tests_passed++)) || true
-      test_rto_validation && ((tests_passed++)) || true
-      test_state_consistency && ((tests_passed++)) || true
-      test_documentation && ((tests_passed++)) || true
+      test_checkpoint_creation && tests_passed+=1 || true
+      test_auto_rollback_trigger && tests_passed+=1 || true
+      test_manual_rollback && tests_passed+=1 || true
+      test_emergency_rollback && tests_passed+=1 || true
+      test_rto_validation && tests_passed+=1 || true
+      test_state_consistency && tests_passed+=1 || true
+      test_documentation && tests_passed+=1 || true
       ;;
     *)
       log_error "Unknown action: $action"

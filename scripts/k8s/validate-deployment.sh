@@ -25,9 +25,9 @@ NAMESPACE="${1:-code-server-enterprise}"
 PASSED=0
 WARNINGS=0
 
-check_pass() { echo -e "${GREEN}✓${NC} $1"; ((PASSED++)); }
-check_fail() { echo -e "${RED}✗${NC} $1"; ((FAILED++)); }
-check_warn() { echo -e "${YELLOW}⚠${NC} $1"; ((WARNINGS++)); }
+check_pass() { echo -e "${GREEN}✓${NC} $1"; PASSED+=1; }
+check_fail() { echo -e "${RED}✗${NC} $1"; FAILED+=1; }
+check_warn() { echo -e "${YELLOW}⚠${NC} $1"; WARNINGS+=1; }
 
 echo -e "${BLUE}=== Kubernetes Deployment Validation ===${NC}"
 echo "Namespace: $NAMESPACE"

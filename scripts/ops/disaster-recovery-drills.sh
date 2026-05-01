@@ -101,10 +101,10 @@ dr_service_recovery() {
   local healthy=0
   local total=0
   for service in $(docker compose ps --services); do
-    ((total++))
+    total+=1
     local health=$(docker compose ps "$service" --format="{{.Health}}" 2>/dev/null || echo "none")
     if [[ "$health" == "healthy" || "$health" == "none" ]]; then
-      ((healthy++))
+      healthy+=1
     fi
   done
   
@@ -208,7 +208,7 @@ dr_config_restore() {
       log "Configuration file: $file (status: $git_status)"
     else
       warn "Configuration file not found: $file"
-      ((missing++)) || true
+      missing+=1 || true
     fi
   done
   
@@ -400,12 +400,12 @@ main() {
   local tests_total=6
   
   # Execute all drills
-  dr_service_recovery && ((tests_passed++)) || true
-  dr_database_recovery && ((tests_passed++)) || true
-  dr_config_restore && ((tests_passed++)) || true
-  dr_backup_verification && ((tests_passed++)) || true
-  dr_failover_capability && ((tests_passed++)) || true
-  dr_rto_test && ((tests_passed++)) || true
+  dr_service_recovery && tests_passed+=1 || true
+  dr_database_recovery && tests_passed+=1 || true
+  dr_config_restore && tests_passed+=1 || true
+  dr_backup_verification && tests_passed+=1 || true
+  dr_failover_capability && tests_passed+=1 || true
+  dr_rto_test && tests_passed+=1 || true
   
   # Generate report
   generate_dr_report

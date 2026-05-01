@@ -44,7 +44,7 @@ retry() {
       delay=$((delay * 2))  # Exponential backoff
     fi
     
-    ((attempt++))
+    attempt+=1
   done
   
   echo "Command failed after $max_attempts attempts" >&2

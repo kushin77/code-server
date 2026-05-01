@@ -134,7 +134,7 @@ gh_call() {
             sleep "$backoff"
         fi
         
-        ((attempt++))
+        attempt+=1
     done
     
     log "ERROR" "Command failed permanently after $RETRY_COUNT attempts: gh ${cmd[*]}"

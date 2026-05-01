@@ -81,7 +81,7 @@ validate_init_container_definitions() {
   for service in "${init_services[@]}"; do
     if docker-compose config | grep -q "^\s*${service}:"; then
       log_success "Init service defined: $service"
-      ((valid++))
+      valid+=1
     else
       log_warn "Init service missing: $service"
     fi
@@ -250,7 +250,7 @@ verify_services_healthy() {
     
     log_info "Wait for health checks... (attempt $((attempt + 1))/$max_attempts, healthy: $healthy_count)"
     sleep 5
-    ((attempt++))
+    attempt+=1
   done
   
   log_error "Services did not reach healthy status within timeout"

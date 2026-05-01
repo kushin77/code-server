@@ -31,12 +31,12 @@ check_health() {
   local services_total=0
   
   for service in $(docker compose ps --services); do
-    ((services_total++))
+    services_total+=1
     
     local health=$(docker compose exec -T "$service" sh -c 'echo ok' 2>/dev/null || echo 'fail')
     
     if [[ "$health" == "ok" ]]; then
-      ((services_healthy++))
+      services_healthy+=1
       log "✅ $service: healthy"
     else
       log "❌ $service: unhealthy"

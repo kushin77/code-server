@@ -195,7 +195,7 @@ services_without_limits=0
 for service in opa oauth2-proxy caddy prometheus grafana loki qdrant postgres redis redpanda redpanda-console ollama; do
   if ! grep -A 10 "^  $service:" "$compose_file" | grep -q "deploy:" ; then
     echo "⚠️  $service: Missing deploy section"
-    ((services_without_limits++))
+    services_without_limits+=1
   fi
 done
 

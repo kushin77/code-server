@@ -33,19 +33,19 @@ log_header() {
 log_pass() {
   echo -e "${GREEN}✅ $1${NC}"
   echo "✅ $1" >> "$REPORT_FILE"
-  ((PASS++))
+  PASS+=1
 }
 
 log_warn() {
   echo -e "${YELLOW}⚠️  $1${NC}"
   echo "⚠️  $1" >> "$REPORT_FILE"
-  ((WARN++))
+  WARN+=1
 }
 
 log_fail() {
   echo -e "${RED}❌ $1${NC}"
   echo "❌ $1" >> "$REPORT_FILE"
-  ((FAIL++))
+  FAIL+=1
 }
 
 log_info() {

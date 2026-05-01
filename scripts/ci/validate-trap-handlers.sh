@@ -19,12 +19,12 @@ while read -r script; do
     if [[ $(wc -l < "$script") -lt 15 ]]; then continue; fi
     if [[ "$script" == *"init.sh"* ]]; then continue; fi
 
-    ((SCRIPTS_CHECKED++))
+    SCRIPTS_CHECKED+=1
     
     # We look for ANY form of trap assignment
     if ! grep -q "trap.*ERR" "$script" || ! grep -q "trap.*EXIT" "$script"; then
         log_error "Missing required traps in: $script"
-        ((SCRIPTS_FAIL++))
+        SCRIPTS_FAIL+=1
     fi
 done < <(find "$REPO_ROOT/scripts/ops" "$REPO_ROOT/scripts/ci" -name "*.sh" -type f)
 

@@ -35,10 +35,10 @@ check_item() {
   
   if eval "$cmd" > /dev/null 2>&1; then
     echo -e "${GREEN}✅ PASS${NC}" | tee -a "$LOG_FILE"
-    ((PASS++))
+    PASS+=1
   else
     echo -e "${RED}❌ FAIL${NC}" | tee -a "$LOG_FILE"
-    ((FAIL++))
+    FAIL+=1
   fi
 }
 
@@ -50,7 +50,7 @@ check_warning() {
   
   if eval "$cmd" > /dev/null 2>&1; then
     echo -e "${YELLOW}⚠️  WARN${NC}" | tee -a "$LOG_FILE"
-    ((WARN++))
+    WARN+=1
   else
     echo -e "${GREEN}✅ OK${NC}" | tee -a "$LOG_FILE"
   fi
@@ -105,28 +105,28 @@ DISK=$(df -h /home | awk 'NR==2 {print $5}' | sed 's/%//')
 echo "  CPU Usage: $CPU% (target <60%)" | tee -a "$LOG_FILE"
 if [ "$CPU" -lt 60 ]; then
   echo -e "    ${GREEN}✅ PASS${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "    ${RED}❌ FAIL${NC}" | tee -a "$LOG_FILE"
-  ((FAIL++))
+  FAIL+=1
 fi
 
 echo "  Memory Usage: $MEM% (target <70%)" | tee -a "$LOG_FILE"
 if [ "$MEM" -lt 70 ]; then
   echo -e "    ${GREEN}✅ PASS${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "    ${RED}❌ FAIL${NC}" | tee -a "$LOG_FILE"
-  ((FAIL++))
+  FAIL+=1
 fi
 
 echo "  Disk Usage: $DISK% (target <70%)" | tee -a "$LOG_FILE"
 if [ "$DISK" -lt 70 ]; then
   echo -e "    ${GREEN}✅ PASS${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "    ${RED}❌ FAIL${NC}" | tee -a "$LOG_FILE"
-  ((FAIL++))
+  FAIL+=1
 fi
 
 echo ""

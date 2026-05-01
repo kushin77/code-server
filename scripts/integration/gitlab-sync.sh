@@ -183,16 +183,16 @@ sync_issues() {
         if [ -z "$gitlab_issue" ]; then
             # Create new issue
             if create_gitlab_issue "$issue"; then
-                ((stats_created++))
+                stats_created+=1
             else
-                ((stats_failed++))
+                stats_failed+=1
             fi
         else
             # Update existing issue
             if update_gitlab_issue "$gitlab_issue" "$issue"; then
-                ((stats_updated++))
+                stats_updated+=1
             else
-                ((stats_failed++))
+                stats_failed+=1
             fi
         fi
     done
@@ -296,7 +296,7 @@ full_reset() {
                 "${GITLAB_INSTANCE}/api/v4/projects/${GITLAB_PROJECT_ID}/issues/${issue_id}" \
                 --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" > /dev/null
         fi
-        ((count++))
+        count+=1
     done
     
     log_success "Full reset complete: deleted $count GitLab issues"

@@ -41,7 +41,7 @@ declare -i step_ok=0
 # STEP 1: Verify TypeScript source files exist
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify Copilot autonomy source files"
 
 declare -a required_files=(
@@ -54,7 +54,7 @@ all_present=true
 for file in "${required_files[@]}"; do
     if [[ -f "${PROJECT_ROOT}/${file}" ]]; then
         log_info "  ✓ ${file}"
-        ((step_ok++))
+        step_ok+=1
     else
         log_warn "  ✗ Missing: ${file}"
         all_present=false
@@ -70,7 +70,7 @@ fi
 # STEP 2: Create configuration for Copilot autonomy
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create Copilot autonomy configuration"
 
 COPILOT_CONFIG_DIR="${PROJECT_ROOT}/config/copilot"
@@ -105,7 +105,7 @@ EOF
 
 if [[ -f "${COPILOT_CONFIG_DIR}/autonomy-config.json" ]]; then
     log_info "  ✓ Created ${COPILOT_CONFIG_DIR}/autonomy-config.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create autonomy configuration"
     exit 1
@@ -115,7 +115,7 @@ fi
 # STEP 3: Create audit logging directory
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Prepare audit logging"
 
 AUDIT_DIR="${PROJECT_ROOT}/logs"
@@ -130,13 +130,13 @@ else
     log_info "  ✓ Log file already exists: ${COPILOT_LOG}"
 fi
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 4: Create extension configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Update extension package.json with Copilot autonomy"
 
 TEAM_HUB_PKG="${PROJECT_ROOT}/apps/extensions/team-hub/package.json"
@@ -149,7 +149,7 @@ if [[ -f "${TEAM_HUB_PKG}" ]]; then
     else
         log_info "  ✓ Copilot autonomy activation events present in package.json"
     fi
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Package.json not found: ${TEAM_HUB_PKG}"
     exit 1
@@ -159,7 +159,7 @@ fi
 # STEP 5: Create environment variable configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_step: Configure environment variables"
 
 # Create/update copilot environment file
@@ -179,13 +179,13 @@ COPILOT_INTERACTION_HISTORY_SIZE=1000
 EOF
 
 log_info "  ✓ Created environment configuration: .env.copilot-autonomy"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 6: Verification and summary
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_step: Verification"
 
 # Count files
@@ -196,7 +196,7 @@ log_info "  ✓ Configuration files: ${CONFIG_FILES}"
 log_info "  ✓ Source files: ${SOURCE_FILES}"
 log_info "  ✓ Audit logging: enabled"
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # Summary

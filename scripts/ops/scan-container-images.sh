@@ -49,7 +49,7 @@ CRITICAL_COUNT=0
 HIGH_COUNT=0
 
 for IMAGE in $IMAGES; do
-  ((TOTAL_IMAGES++))
+  TOTAL_IMAGES+=1
   echo -n "Scanning $IMAGE... "
   
   # Run Trivy scan
@@ -59,7 +59,7 @@ for IMAGE in $IMAGES; do
     HIGH=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity=="HIGH")] | length' /tmp/scan_output.json 2>/dev/null || echo "0")
     
     if [[ $CRIT -gt 0 ]] || [[ $HIGH -gt 0 ]]; then
-      ((IMAGES_WITH_VULNS++))
+      IMAGES_WITH_VULNS+=1
       CRITICAL_COUNT=$((CRITICAL_COUNT + CRIT))
       HIGH_COUNT=$((HIGH_COUNT + HIGH))
       echo "⚠️  Found vulnerabilities (C:$CRIT H:$HIGH)"

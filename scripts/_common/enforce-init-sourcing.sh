@@ -44,7 +44,7 @@ fix_script() {
   # Skip if already sources init.sh
   if grep -q "source.*init\.sh\|source.*_common/init\.sh\|source.*_base-config" "$script_file"; then
     log_warn "Already sources init.sh: $(basename "$script_file")"
-    ((SKIPPED++))
+    SKIPPED+=1
     return 0
   fi
 
@@ -77,12 +77,12 @@ fix_script() {
 
   if [ $inserted -eq 1 ]; then
     mv "$temp_file" "$script_file"
-    ((FIXED++))
+    FIXED+=1
     log_info "✅ Fixed: $(basename "$script_file")"
   else
     rm -f "$temp_file"
     log_error "Could not find insertion point in: $(basename "$script_file")"
-    ((ERRORS++))
+    ERRORS+=1
     return 1
   fi
 }

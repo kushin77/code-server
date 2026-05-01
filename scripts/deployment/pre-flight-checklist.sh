@@ -130,7 +130,7 @@ check_code_quality() {
   local script_errors=0
   while IFS= read -r script; do
     if ! bash -n "$script" 2>/dev/null; then
-      ((script_errors++))
+      script_errors+=1
     fi
   done < <(find scripts -name "*.sh" -type f)
   
@@ -146,7 +146,7 @@ check_code_quality() {
   local yaml_errors=0
   while IFS= read -r yaml_file; do
     if ! python3 -c "import yaml; yaml.safe_load(open('$yaml_file'))" 2>/dev/null; then
-      ((yaml_errors++))
+      yaml_errors+=1
     fi
   done < <(find . -name "*.yml" -o -name "*.yaml" | grep -E "docker-compose|\.ssot" || true)
   

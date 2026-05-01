@@ -56,7 +56,7 @@ check_direct_gh_usage() {
       if [[ "$line_content" =~ [^_]gh[[:space:]] || "$line_content" =~ ^gh[[:space:]] ]] && ! [[ "$line_content" =~ \|\| ]]; then
         log_warn "Direct gh usage at $file:$line_num: $line_content"
         violation_list+=("{\"file\": $(json_escape "$file"), \"line\": $line_num, \"content\": $(json_escape "$line_content")}")
-        ((violations++))
+        violations+=1
       fi
     done < <(grep -n "gh " "$file" 2>/dev/null || true)
   done <<< "$files"
@@ -99,7 +99,7 @@ check_wrapper_functions() {
   for wrapper in "${wrappers[@]}"; do
     if ! grep -q "^$wrapper()" scripts/_common/github-*.sh 2>/dev/null; then
       log_warn "Wrapper function not found: $wrapper"
-      ((missing++))
+      missing+=1
     else
       log_info "✓ Found wrapper: $wrapper"
     fi
@@ -121,7 +121,7 @@ check_hardcoded_endpoints() {
     [[ "$line" =~ github-token-rotation\.sh: ]] && continue
     [[ "$line" =~ ^[^:]+:[0-9]+:[[:space:]]*# ]] && continue
     log_warn "Hardcoded GitHub API endpoint: $line"
-    ((violations++))
+    violations+=1
   done < <(grep -rn "api\.github\.com\|https://github\.com/api" --include="*.sh" . 2>/dev/null || true)
   
   if [[ $violations -gt 0 ]]; then

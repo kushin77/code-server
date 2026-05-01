@@ -66,7 +66,7 @@ validate_service_ports() {
   for port in "${ports[@]}"; do
     # Validate port format (host:container or just container)
     if [[ "$port" =~ ^[0-9]+:[0-9]+$ ]] || [[ "$port" =~ ^[0-9]+$ ]]; then
-      ((valid_ports++))
+      valid_ports+=1
     else
       echo -e "${COLOR_WARN}[ServiceValidator]${COLOR_RESET} Invalid port format in $service_name: $port"
     fi
@@ -100,7 +100,7 @@ validate_service_environment() {
   for var in "${env_vars[@]}"; do
     # Check format KEY=VALUE or KEY
     if [[ "$var" =~ ^[A-Z_][A-Z0-9_]*= ]] || [[ "$var" =~ ^[A-Z_][A-Z0-9_]*$ ]]; then
-      ((valid_vars++))
+      valid_vars+=1
       
       # Flag potential sensitive data
       if [[ "$var" =~ (PASSWORD|SECRET|TOKEN|KEY|AUTH) ]]; then
@@ -142,7 +142,7 @@ validate_service_volumes() {
   for volume in "${volumes[@]}"; do
     # Named volume (name:path) or path (path:path) or path with modes (path:path:ro)
     if [[ "$volume" =~ ^[^:]+:[^:]+$ ]] || [[ "$volume" =~ ^[^:]+:[^:]+:[a-z]+$ ]]; then
-      ((valid_volumes++))
+      valid_volumes+=1
       
       # For local paths, check if they exist on host (extracted from host:container format)
       local host_path="${volume%%:*}"
@@ -268,13 +268,13 @@ validate_service_config() {
   
   # Validate image
   if ! validate_service_image "$service_name" "$image"; then
-    ((failed++))
+    failed+=1
   fi
   
   # Validate resources if specified
   if [[ -n "$memory" ]] || [[ -n "$cpu" ]]; then
     if ! validate_service_resources "$service_name" "$memory" "$cpu"; then
-      ((failed++))
+      failed+=1
     fi
   fi
   

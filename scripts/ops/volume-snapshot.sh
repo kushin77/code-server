@@ -58,7 +58,7 @@ snapshot_host() {
       if [[ -f "\$SNAPSHOT_PATH" ]]; then
         SIZE=\$(du -h "\$SNAPSHOT_PATH" | cut -f1)
         echo "    ✓ \$VOLUME: \$SIZE"
-        ((SNAPSHOT_COUNT++))
+        SNAPSHOT_COUNT+=1
       fi
     done
     
@@ -91,7 +91,7 @@ cleanup_old_snapshots() {
     DELETED=0
     for FILE in \$(find "\$BACKUP_DIR" -name "*.tar.gz" -mtime +$RETENTION_DAYS 2>/dev/null); do
       rm -f "\$FILE"
-      ((DELETED++))
+      DELETED+=1
     done
     
     if [[ \$DELETED -gt 0 ]]; then

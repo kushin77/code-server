@@ -45,7 +45,7 @@ declare -i step_ok=0
 # STEP 1: Verify GitHub OAuth source files
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify GitHub OAuth source files"
 
 declare -a required_files=(
@@ -57,7 +57,7 @@ all_present=true
 for file in "${required_files[@]}"; do
     if [[ -f "${PROJECT_ROOT}/${file}" ]]; then
         log_info "  ✓ ${file}"
-        ((step_ok++))
+        step_ok+=1
     else
         log_warn "  ✗ Missing: ${file}"
         all_present=false
@@ -73,7 +73,7 @@ fi
 # STEP 2: Create GitHub OAuth configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create GitHub OAuth configuration"
 
 OAUTH_CONFIG_DIR="${PROJECT_ROOT}/config/oauth"
@@ -123,7 +123,7 @@ EOF
 
 if [[ -f "${OAUTH_CONFIG_DIR}/github-oauth-config.json" ]]; then
     log_info "  ✓ Created ${OAUTH_CONFIG_DIR}/github-oauth-config.json"
-    ((step_ok++))
+    step_ok+=1
 else
     log_error "Failed to create GitHub OAuth configuration"
     exit 1
@@ -133,7 +133,7 @@ fi
 # STEP 3: Prepare audit logging for OAuth operations
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Prepare OAuth audit logging"
 
 AUDIT_DIR="${PROJECT_ROOT}/logs"
@@ -148,13 +148,13 @@ else
     log_info "  ✓ Log file already exists: ${OAUTH_AUDIT_LOG}"
 fi
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 4: Create OAuth environment configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Configure OAuth environment variables"
 
 cat > "${PROJECT_ROOT}/.env.github-oauth" << EOF
@@ -178,13 +178,13 @@ EOF
 
 log_info "  ✓ Created environment configuration: .env.github-oauth"
 log_info "  ⚠ NOTE: Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 5: Create OAuth schemas for compliance
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create OAuth event schemas"
 
 SCHEMA_DIR="${PROJECT_ROOT}/schemas"
@@ -312,13 +312,13 @@ cat > "${SCHEMA_DIR}/github-permission.v1.json" << 'EOF'
 EOF
 
 log_info "  ✓ Created OAuth schemas for compliance"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 6: Create secure credential storage directory
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create secure credential storage"
 
 CREDENTIALS_DIR="${PROJECT_ROOT}/.oauth-credentials"
@@ -344,13 +344,13 @@ This directory stores encrypted OAuth tokens and credentials for GitHub integrat
 EOF
 
 log_info "  ✓ Created secure credential storage"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 7: Verification
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verification"
 
 CONFIG_FILES=$(find "${OAUTH_CONFIG_DIR}" -type f 2>/dev/null | wc -l)
@@ -361,7 +361,7 @@ log_info "  ✓ Configuration files: ${CONFIG_FILES}"
 log_info "  ✓ Source files: ${SOURCE_FILES}"
 log_info "  ✓ Schema files: ${SCHEMA_FILES}"
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # Summary

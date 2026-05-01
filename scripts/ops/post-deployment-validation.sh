@@ -43,15 +43,15 @@ NC='\033[0m'
 
 check_service_running() {
   local service=$1
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   
   if docker-compose ps | grep -q "^.*$service.*Up"; then
     log_success "Service running: $service"
-    ((CHECKS_PASS++))
+    CHECKS_PASS+=1
     return 0
   else
     log_error "Service not running: $service"
-    ((CHECKS_FAIL++))
+    CHECKS_FAIL+=1
     return 1
   fi
 }
@@ -59,15 +59,15 @@ check_service_running() {
 check_port_listening() {
   local port=$1
   local service=$2
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   
   if nc -zv localhost "$port" &>/dev/null; then
     log_success "Port listening: $port ($service)"
-    ((CHECKS_PASS++))
+    CHECKS_PASS+=1
     return 0
   else
     log_error "Port not listening: $port ($service)"
-    ((CHECKS_FAIL++))
+    CHECKS_FAIL+=1
     return 1
   fi
 }
@@ -76,34 +76,34 @@ check_endpoint_healthy() {
   local url=$1
   local expected_code=${2:-200}
   local description=$3
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   
   local response=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
   
   if [[ "$response" == "$expected_code" ]]; then
     log_success "Endpoint healthy: $description"
-    ((CHECKS_PASS++))
+    CHECKS_PASS+=1
     return 0
   else
     log_error "Endpoint unhealthy: $description (got $response, expected $expected_code)"
-    ((CHECKS_FAIL++))
+    CHECKS_FAIL+=1
     return 1
   fi
 }
 
 check_service_logs() {
   local service=$1
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   
   local error_count=$(docker-compose logs "$service" 2>/dev/null | grep -iE "ERROR|FATAL|PANIC" | wc -l)
   
   if [[ $error_count -eq 0 ]]; then
     log_success "Service logs clean: $service"
-    ((CHECKS_PASS++))
+    CHECKS_PASS+=1
     return 0
   else
     log_error "Service logs contain errors: $service ($error_count errors found)"
-    ((CHECKS_FAIL++))
+    CHECKS_FAIL+=1
     return 1
   fi
 }
@@ -164,14 +164,14 @@ main() {
   
   echo ""
   log_info "=== Storage Checks ==="
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL+=1
   local used_percent=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
   if [[ $used_percent -lt 80 ]]; then
     log_success "Disk usage acceptable: ${used_percent}%"
-    ((CHECKS_PASS++))
+    CHECKS_PASS+=1
   else
     log_error "Disk usage high: ${used_percent}%"
-    ((CHECKS_FAIL++))
+    CHECKS_FAIL+=1
   fi
   
   echo ""

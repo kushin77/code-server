@@ -89,7 +89,7 @@ scan_and_create_issues() {
 
   while IFS=$'\t' read -r file line_num type content priority; do
     [[ -z "$file" ]] && continue
-    create_issue_from_todo "$file" "$line_num" "$type" "$content" "$priority" && ((created++)) || ((skipped++))
+    create_issue_from_todo "$file" "$line_num" "$type" "$content" "$priority" && created+=1 || skipped+=1
   done < <(find_todos_in_code | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     parse_todo_item "$line"

@@ -35,11 +35,11 @@ log_violation() {
   
   if [[ "$severity" == "CRITICAL" ]]; then
     log_error "  [$rule] $message"
-    ((CRITICAL_VIOLATIONS++))
+    CRITICAL_VIOLATIONS+=1
   else
     log_warn "  [$rule] $message"
   fi
-  ((VIOLATIONS_FOUND++))
+  VIOLATIONS_FOUND+=1
 }
 
 # ==============================================================================
@@ -129,7 +129,7 @@ main() {
   
   for filename in "${compose_files[@]}"; do
     if [[ -f "$filename" ]]; then
-      ((files_checked++))
+      files_checked+=1
       log_info "Checking: $filename"
       
       validate_yaml_syntax "$filename" || continue

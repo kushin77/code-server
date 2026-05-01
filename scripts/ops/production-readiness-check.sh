@@ -43,22 +43,22 @@ log_info ""
 
 check_pass() {
     local name=$1
-    ((CHECKS_PASSED++))
-    ((CHECKS_TOTAL++))
+    CHECKS_PASSED+=1
+    CHECKS_TOTAL+=1
     log_success "$name"
 }
 
 check_warn() {
     local name=$1
-    ((CHECKS_WARNING++))
-    ((CHECKS_TOTAL++))
+    CHECKS_WARNING+=1
+    CHECKS_TOTAL+=1
     log_warn "$name"
 }
 
 check_fail() {
     local name=$1
-    ((CHECKS_FAILED++))
-    ((CHECKS_TOTAL++))
+    CHECKS_FAILED+=1
+    CHECKS_TOTAL+=1
     log_error "$name"
 }
 

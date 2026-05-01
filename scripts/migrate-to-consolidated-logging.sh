@@ -97,16 +97,16 @@ main() {
     for script in "${SCRIPTS_TO_MIGRATE[@]}"; do
         if [[ ! -f "${REPO_ROOT}/${script}" ]]; then
             log_error "Script not found: ${REPO_ROOT}/${script}"
-            ((failed++))
+            failed+=1
             continue
         fi
         
         cd "${REPO_ROOT}"
         
         if add_logging_source "${script}" && migrate_echo_statements "${script}"; then
-            ((updated++))
+            updated+=1
         else
-            ((failed++))
+            failed+=1
         fi
     done
     

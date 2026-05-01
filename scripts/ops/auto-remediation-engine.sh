@@ -305,14 +305,14 @@ main() {
   local remediations_success=0
   
   # Run all remediation checks
-  remediate_unhealthy_containers && ((remediations_success++)) || true
-  ((remediations_attempted++))
+  remediate_unhealthy_containers && remediations_success+=1 || true
+  remediations_attempted+=1
   
-  remediate_disk_space && ((remediations_success++)) || true
-  ((remediations_attempted++))
+  remediate_disk_space && remediations_success+=1 || true
+  remediations_attempted+=1
   
-  remediate_terraform_drift && ((remediations_success++)) || true
-  ((remediations_attempted++))
+  remediate_terraform_drift && remediations_success+=1 || true
+  remediations_attempted+=1
   
   echo ""
   echo "============================================"

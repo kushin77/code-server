@@ -58,8 +58,8 @@ while IFS= read -r script; do
         continue
     fi
     if grep -qE 'source.*scripts/_common/(logging|config|utils)\.sh|source.*scripts/_common/_base' "$script" 2>/dev/null; then
-        ((audit_results[duplicate_sourcing]++))
-        ((blocking_issues++))
+        audit_results[duplicate_sourcing]+=1
+        blocking_issues+=1
         issues+=("DUPLICATE_SOURCING: $script - direct sourcing of _common/*.sh files (must use init.sh)")
         log_warn "  $script: direct sourcing detected"
     fi
@@ -73,8 +73,8 @@ log_info "CHECK 2: Inline echo logging (should use log_error/log_warn functions)
 
 while IFS= read -r script; do
     if grep -qE 'echo.*"(ERROR|WARN|INFO|DEBUG):' "$script" 2>/dev/null; then
-        ((audit_results[inline_logging]++))
-        ((blocking_issues++))
+        audit_results[inline_logging]+=1
+        blocking_issues+=1
         issues+=("INLINE_LOGGING: $script - using echo for logging instead of log_* functions")
         log_warn "  $script: inline logging detected"
     fi
@@ -92,8 +92,8 @@ readonly AUDIT_HOSTS=("${PRIMARY_HOST}" "${REPLICA_HOST}" "${NAS_HOST}")
 while IFS= read -r script; do
     for host in "${AUDIT_HOSTS[@]}"; do
         if grep -F "$host" "$script" 2>/dev/null | grep -v '^[[:space:]]*#' | grep -v 'APEX_DOMAIN\|template\|example' >/dev/null; then
-            ((audit_results[hardcoded_ips]++))
-            ((blocking_issues++))
+            audit_results[hardcoded_ips]+=1
+            blocking_issues+=1
             issues+=("HARDCODED_IP: $script - contains hardcoded IP addresses")
             log_warn "  $script: hardcoded IP detected"
             break
@@ -109,8 +109,8 @@ log_info "CHECK 4: Missing GOV-002 metadata headers (@file, @module, @descriptio
 
 while IFS= read -r script; do
     if ! head -10 "$script" | grep -q '@file' || ! head -10 "$script" | grep -q '@module' || ! head -10 "$script" | grep -q '@description'; then
-        ((audit_results[missing_headers]++))
-        ((blocking_issues++))
+        audit_results[missing_headers]+=1
+        blocking_issues+=1
         issues+=("MISSING_HEADER: $script - GOV-002 metadata incomplete")
         log_warn "  $script: GOV-002 header incomplete"
     fi

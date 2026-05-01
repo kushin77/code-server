@@ -33,11 +33,11 @@ check_file() {
   
   if [[ -f "$APP_DIR/$file" ]]; then
     echo "  ✓ $description ($file)"
-    ((VALIDATION_PASS++))
+    VALIDATION_PASS+=1
     return 0
   else
     echo "  ✗ $description ($file) - MISSING"
-    ((VALIDATION_FAIL++))
+    VALIDATION_FAIL+=1
     return 1
   fi
 }
@@ -48,11 +48,11 @@ check_command() {
   
   if command -v "$cmd" &> /dev/null; then
     echo "  ✓ $description ($cmd)"
-    ((VALIDATION_PASS++))
+    VALIDATION_PASS+=1
     return 0
   else
     echo "  ✗ $description ($cmd) - NOT INSTALLED"
-    ((VALIDATION_FAIL++))
+    VALIDATION_FAIL+=1
     return 1
   fi
 }
@@ -69,10 +69,10 @@ echo ""
 echo "Checking source code..."
 if [[ -f "$APP_DIR/src/main.py" ]] || [[ -f "$APP_DIR/src/server.js" ]]; then
   echo "  ✓ Source code found"
-  ((VALIDATION_PASS++))
+  VALIDATION_PASS+=1
 else
   echo "  ✗ Source code not found (src/main.py or src/server.js)"
-  ((VALIDATION_FAIL++))
+  VALIDATION_FAIL+=1
 fi
 
 # Check for health checks
@@ -80,10 +80,10 @@ echo ""
 echo "Checking health check implementation..."
 grep -r "health" "$APP_DIR/src" >/dev/null 2>&1 && {
   echo "  ✓ Health check endpoints implemented"
-  ((VALIDATION_PASS++))
+  VALIDATION_PASS+=1
 } || {
   echo "  ⚠️  Health checks not found"
-  ((VALIDATION_PASS++))
+  VALIDATION_PASS+=1
 }
 
 # Check for tests
@@ -91,7 +91,7 @@ echo ""
 echo "Checking test coverage..."
 if [[ -d "$APP_DIR/tests" ]] && [[ -n "$(find "$APP_DIR/tests" -name "test_*.py" -o -name "*.test.js")" ]]; then
   echo "  ✓ Test files found"
-  ((VALIDATION_PASS++))
+  VALIDATION_PASS+=1
 else
   echo "  ⚠️  No test files found"
 fi
@@ -105,10 +105,10 @@ if [[ -f "$APP_DIR/docker-compose.yml" ]]; then
     cd "$APP_DIR"
     docker-compose config >/dev/null 2>&1 && {
       echo "  ✓ docker-compose.yml syntax valid"
-      ((VALIDATION_PASS++))
+      VALIDATION_PASS+=1
     } || {
       echo "  ✗ docker-compose.yml syntax invalid"
-      ((VALIDATION_FAIL++))
+      VALIDATION_FAIL+=1
     }
     cd - >/dev/null
   fi
@@ -119,14 +119,14 @@ echo ""
 echo "Checking Dockerfile..."
 grep -q "HEALTHCHECK" "$APP_DIR/Dockerfile" && {
   echo "  ✓ Health check defined"
-  ((VALIDATION_PASS++))
+  VALIDATION_PASS+=1
 } || {
   echo "  ⚠️  No HEALTHCHECK in Dockerfile"
 }
 
 grep -q "EXPOSE" "$APP_DIR/Dockerfile" && {
   echo "  ✓ Port exposed"
-  ((VALIDATION_PASS++))
+  VALIDATION_PASS+=1
 } || {
   echo "  ⚠️  No EXPOSE directive"
 }
@@ -138,10 +138,10 @@ if command -v docker &> /dev/null; then
   cd "$APP_DIR"
   if docker build --dry-run . >/dev/null 2>&1; then
     echo "  ✓ Dockerfile buildable"
-    ((VALIDATION_PASS++))
+    VALIDATION_PASS+=1
   else
     echo "  ✗ Dockerfile build would fail"
-    ((VALIDATION_FAIL++))
+    VALIDATION_FAIL+=1
   fi
   cd - >/dev/null
 else

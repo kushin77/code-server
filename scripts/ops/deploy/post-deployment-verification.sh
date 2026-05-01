@@ -34,11 +34,11 @@ test_endpoint() {
   
   if echo "$response" | grep -q "$expect"; then
     echo -e "${GREEN}✅ PASS${NC}" | tee -a "$LOG_FILE"
-    ((PASS++))
+    PASS+=1
   else
     echo -e "${RED}❌ FAIL${NC}" | tee -a "$LOG_FILE"
     echo "    Response: $response" | tee -a "$LOG_FILE"
-    ((FAIL++))
+    FAIL+=1
   fi
 }
 
@@ -57,28 +57,28 @@ echo -n "  Docker Services: " | tee -a "$LOG_FILE"
 services=$(docker ps --format 'table {{.Names}}' | wc -l)
 if [ "$services" -ge 5 ]; then
   echo -e "${GREEN}✅ $services services running${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "${RED}❌ Only $services services running (expect 5+)${NC}" | tee -a "$LOG_FILE"
-  ((FAIL++))
+  FAIL+=1
 fi
 
 echo -n "  Database: " | tee -a "$LOG_FILE"
 if docker exec code-server-postgres psql -U purebliss_user -d purebliss_db -c "SELECT 1;" > /dev/null 2>&1; then
   echo -e "${GREEN}✅ Responsive${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "${RED}❌ Not responsive${NC}" | tee -a "$LOG_FILE"
-  ((FAIL++))
+  FAIL+=1
 fi
 
 echo -n "  Redis: " | tee -a "$LOG_FILE"
 if docker exec code-server-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
   echo -e "${GREEN}✅ Responsive${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "${RED}❌ Not responsive${NC}" | tee -a "$LOG_FILE"
-  ((FAIL++))
+  FAIL+=1
 fi
 
 echo ""
@@ -92,7 +92,7 @@ disk=$(df -h /home | awk 'NR==2 {print $5}' | sed 's/%//')
 echo "  CPU: $cpu% (target <60%)" | tee -a "$LOG_FILE"
 if [ "$cpu" -lt 60 ]; then
   echo -e "    ${GREEN}✅ OK${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "    ${YELLOW}⚠️  High${NC}" | tee -a "$LOG_FILE"
 fi
@@ -100,7 +100,7 @@ fi
 echo "  Memory: $mem% (target <70%)" | tee -a "$LOG_FILE"
 if [ "$mem" -lt 70 ]; then
   echo -e "    ${GREEN}✅ OK${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "    ${YELLOW}⚠️  High${NC}" | tee -a "$LOG_FILE"
 fi
@@ -108,7 +108,7 @@ fi
 echo "  Disk: $disk% (target <70%)" | tee -a "$LOG_FILE"
 if [ "$disk" -lt 70 ]; then
   echo -e "    ${GREEN}✅ OK${NC}" | tee -a "$LOG_FILE"
-  ((PASS++))
+  PASS+=1
 else
   echo -e "    ${YELLOW}⚠️  High${NC}" | tee -a "$LOG_FILE"
 fi

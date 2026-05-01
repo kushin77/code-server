@@ -28,13 +28,13 @@ print_status() {
     
     if [ "$result" = "PASS" ]; then
         echo -e "${GREEN}✓ PASS${NC} - $check_name"
-        ((PASSED++))
+        PASSED+=1
     elif [ "$result" = "WARN" ]; then
         echo -e "${YELLOW}⚠ WARN${NC} - $check_name $threshold"
-        ((WARNING++))
+        WARNING+=1
     else
         echo -e "${RED}✗ FAIL${NC} - $check_name $threshold"
-        ((FAILED++))
+        FAILED+=1
     fi
 }
 

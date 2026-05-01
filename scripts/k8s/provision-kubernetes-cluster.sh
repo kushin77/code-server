@@ -233,7 +233,7 @@ wait_for_cluster_ready() {
     
     log_info "Waiting for nodes to be ready... (attempt $((attempt + 1))/$max_attempts)"
     sleep 30
-    ((attempt++))
+    attempt+=1
   done
   
   log_error "Cluster did not become ready within timeout"

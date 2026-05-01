@@ -24,17 +24,17 @@ NC='\033[0m' # No Color
 
 check_pass() {
   echo -e "${GREEN}✅${NC} $1"
-  ((PASS++))
+  PASS+=1
 }
 
 check_fail() {
   echo -e "${RED}❌${NC} $1"
-  ((FAIL++))
+  FAIL+=1
 }
 
 check_warn() {
   echo -e "${YELLOW}⚠️ ${NC} $1"
-  ((WARN++))
+  WARN+=1
 }
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"

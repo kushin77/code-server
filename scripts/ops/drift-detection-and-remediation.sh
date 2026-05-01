@@ -96,14 +96,14 @@ detect_service_drift() {
     
     if [[ "$actual_state" != "$expected_state" && "$actual_state" != "running" ]]; then
       warn "Service $service drift: expected=$expected_state, actual=$actual_state"
-      ((drift_found++)) || true
+      drift_found+=1 || true
     fi
     
     # Check health status
     local health=$(docker compose ps "$service" --format="{{.Health}}" 2>/dev/null || echo "none")
     if [[ "$health" != "healthy" && "$health" != "none" ]]; then
       warn "Service $service health drift: status=$health"
-      ((drift_found++)) || true
+      drift_found+=1 || true
     fi
   done
   
@@ -186,7 +186,7 @@ detect_image_drift() {
       local image="${BASH_REMATCH[1]}"
       if ! docker image inspect "$image" &>/dev/null; then
         warn "Image not found locally: $image"
-        ((missing_images++)) || true
+        missing_images+=1 || true
       fi
     fi
   done < docker-compose.yml
@@ -264,7 +264,7 @@ remediate_drift() {
     if [[ "$health" == "unhealthy" ]]; then
       log "Restarting unhealthy service: $service"
       docker compose restart "$service"
-      ((remediation_count++)) || true
+      remediation_count+=1 || true
     fi
   done
   
@@ -272,7 +272,7 @@ remediate_drift() {
   if ! docker network inspect services &>/dev/null; then
     log "Recreating missing network: services"
     docker network create services --driver bridge
-    ((remediation_count++)) || true
+    remediation_count+=1 || true
   fi
   
   # Remediation 3: Re-pull images if missing
@@ -321,13 +321,13 @@ main() {
       
       local drift_found=0
       
-      detect_compose_drift || ((drift_found++))
-      detect_service_drift || ((drift_found++))
-      detect_env_drift || ((drift_found++))
-      detect_volume_drift || ((drift_found++))
-      detect_network_drift || ((drift_found++))
-      detect_image_drift || ((drift_found++))
-      detect_resource_drift || ((drift_found++))
+      detect_compose_drift || drift_found+=1
+      detect_service_drift || drift_found+=1
+      detect_env_drift || drift_found+=1
+      detect_volume_drift || drift_found+=1
+      detect_network_drift || drift_found+=1
+      detect_image_drift || drift_found+=1
+      detect_resource_drift || drift_found+=1
       
       generate_drift_report
       

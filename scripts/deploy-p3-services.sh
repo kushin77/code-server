@@ -209,7 +209,7 @@ verify_replica_services() {
         if ssh -i ~/.ssh/id_rsa -o IdentitiesOnly=yes -o ConnectTimeout=5 \
             akushnir@"$replica" "curl -fsS http://localhost:$port/health >/dev/null 2>&1" 2>/dev/null; then
             log_success "Service on port $port: HEALTHY"
-            ((services_ok++))
+            services_ok+=1
         else
             log_warning "Service on port $port: No response"
         fi

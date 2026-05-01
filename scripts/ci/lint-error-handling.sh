@@ -84,11 +84,11 @@ with_traps=0
 missing_traps=0
 
 for script in $(find "$REPO_ROOT/scripts/ops" -name "*.sh" -type f | sort); do
-  ((total++))
+  total+=1
   if grep -q "^trap " "$script"; then
-    ((with_traps++))
+    with_traps+=1
   else
-    ((missing_traps++))
+    missing_traps+=1
     if [[ "$STRICT_MODE" != "false" ]]; then
       red "✗ $script"
     fi

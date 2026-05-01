@@ -190,7 +190,7 @@ validate_all_secrets() {
   
   for secret in "${secrets[@]}"; do
     if ! validate_secret_not_empty "$secret"; then
-      ((failed++))
+      failed+=1
     fi
   done
   

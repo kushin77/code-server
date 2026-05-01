@@ -32,7 +32,7 @@ find_missing_docs() {
   for doc in "${!REQUIRED_DOCS[@]}"; do
     if [[ ! -f "$DOCS_DIR/$doc" ]]; then
       log_warn "Missing: $doc"
-      ((missing_count++))
+      missing_count+=1
     else
       log_info "✓ Found: $doc"
     fi
@@ -72,7 +72,7 @@ check_broken_links() {
       # Check if local file exists
       if [[ ! "$url" =~ ^# ]] && [[ ! -f "$DOCS_DIR/$url" ]]; then
         log_warn "Broken link in $file: $url"
-        ((broken_count++))
+        broken_count+=1
       fi
     done <<< "$links"
   done <<< "$md_files"
@@ -137,7 +137,7 @@ scan_and_create_doc_issues() {
   for doc in "${!REQUIRED_DOCS[@]}"; do
     if [[ ! -f "$DOCS_DIR/$doc" ]]; then
       create_doc_issue "$doc" "${REQUIRED_DOCS[$doc]}"
-      ((created_count++))
+      created_count+=1
     fi
   done
   

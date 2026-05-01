@@ -75,7 +75,7 @@ deploy() {
   for service in $(docker compose ps --services); do
     if ! docker compose ps "$service" | grep -q "healthy\|running"; then
       log_warn "Service $service not healthy"
-      ((unhealthy++)) || true
+      unhealthy+=1 || true
     fi
   done
   

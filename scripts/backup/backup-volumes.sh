@@ -143,14 +143,14 @@ for VOLUME in "${VOLUMES[@]}"; do
       # Add to statistics
       VOLUME_SIZE=$(stat -f%z "$BACKUP_PATH" 2>/dev/null || stat -c%s "$BACKUP_PATH" 2>/dev/null || echo 0)
       TOTAL_SIZE=$((TOTAL_SIZE + VOLUME_SIZE))
-      ((BACKUP_COUNT++))
+      BACKUP_COUNT+=1
     else
       log_error "  Backup file not created: $BACKUP_NAME"
-      ((FAILED_COUNT++))
+      FAILED_COUNT+=1
     fi
   else
     log_error "  Failed to backup volume: $VOLUME"
-    ((FAILED_COUNT++))
+    FAILED_COUNT+=1
   fi
 done
 

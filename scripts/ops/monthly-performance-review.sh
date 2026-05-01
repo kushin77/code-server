@@ -48,10 +48,10 @@ log_info "Checking for slow queries (>1s)..." | tee -a "$REPORT_FILE"
 SLOW_COUNT=$(docker exec code-server-postgres psql -U postgres -t -c "SELECT COUNT(*) FROM pg_stat_statements WHERE mean_exec_time > 1000;" 2>/dev/null || echo "0")
 if [ "$SLOW_COUNT" -gt 0 ]; then
   echo "⚠️  FOUND: $SLOW_COUNT queries with >1s mean time" | tee -a "$REPORT_FILE"
-  ((WARNING++))
+  WARNING+=1
 else
   log_check "No slow queries (>1s)" | tee -a "$REPORT_FILE"
-  ((PASSED++))
+  PASSED+=1
 fi
 
 # 3. Check replication lag
@@ -59,10 +59,10 @@ log_info "Checking replication lag..." | tee -a "$REPORT_FILE"
 REP_LAG=$(ssh -o ConnectTimeout=5 -o BatchMode=yes akushnir@192.168.168.31 "docker exec code-server-postgres psql -U postgres -c 'SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::INT, 0);' 2>/dev/null | tail -1" 2>/dev/null || echo "999")
 if [ "$REP_LAG" -lt 5 ]; then
   log_check "Replication lag: ${REP_LAG}s (target <5s)" | tee -a "$REPORT_FILE"
-  ((PASSED++))
+  PASSED+=1
 else
   echo "⚠️  Replication lag: ${REP_LAG}s (target <5s)" | tee -a "$REPORT_FILE"
-  ((WARNING++))
+  WARNING+=1
 fi
 
 echo "" | tee -a "$REPORT_FILE"
@@ -76,7 +76,7 @@ log_info "Checking Redis memory usage..." | tee -a "$REPORT_FILE"
 REDIS_USED=$(docker exec code-server-redis redis-cli INFO memory 2>/dev/null | grep used_memory_human | cut -d':' -f2 || echo "unknown")
 REDIS_MAX=$(docker exec code-server-redis redis-cli CONFIG GET maxmemory 2>/dev/null | tail -1 || echo "8589934592")
 log_check "Redis memory: $REDIS_USED (limit: 8GB)" | tee -a "$REPORT_FILE"
-((PASSED++))
+PASSED+=1
 
 echo "" | tee -a "$REPORT_FILE"
 
@@ -89,10 +89,10 @@ log_info "Checking inter-host latency..." | tee -a "$REPORT_FILE"
 LATENCY=$(ssh -o ConnectTimeout=5 -o BatchMode=yes akushnir@192.168.168.31 "ping -c 3 192.168.168.42 2>/dev/null | grep avg | cut -d'/' -f5 | cut -d'.' -f1" 2>/dev/null || echo "999")
 if [ "$LATENCY" -lt 2 ]; then
   log_check "Network latency: ${LATENCY}ms (target <2ms)" | tee -a "$REPORT_FILE"
-  ((PASSED++))
+  PASSED+=1
 else
   echo "⚠️  Network latency: ${LATENCY}ms (target <2ms)" | tee -a "$REPORT_FILE"
-  ((WARNING++))
+  WARNING+=1
 fi
 
 echo "" | tee -a "$REPORT_FILE"
@@ -114,10 +114,10 @@ log_info "Checking disk space..." | tee -a "$REPORT_FILE"
 DISK_USED=$(df -h / | tail -1 | awk '{print $5}' | sed 's/%//')
 if [ "$DISK_USED" -lt 80 ]; then
   log_check "Disk usage: ${DISK_USED}% (target <80%)" | tee -a "$REPORT_FILE"
-  ((PASSED++))
+  PASSED+=1
 else
   echo "⚠️  Disk usage: ${DISK_USED}% (target <80%)" | tee -a "$REPORT_FILE"
-  ((WARNING++))
+  WARNING+=1
 fi
 
 echo "" | tee -a "$REPORT_FILE"
@@ -130,7 +130,7 @@ echo "" | tee -a "$REPORT_FILE"
 log_info "Checking application health..." | tee -a "$REPORT_FILE"
 RUNNING_CONTAINERS=$(docker ps -q | wc -l)
 log_check "Running containers: $RUNNING_CONTAINERS (target: ≥87)" | tee -a "$REPORT_FILE"
-((PASSED++))
+PASSED+=1
 
 echo "" | tee -a "$REPORT_FILE"
 

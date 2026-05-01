@@ -33,39 +33,39 @@ PASS=0
 FAIL=0
 
 echo "✅ PHASE 1: DOCKER COMPOSE VALIDATION"
-docker-compose config --quiet 2>/dev/null && echo "   ✓ Docker Compose syntax valid" && ((PASS++)) || echo "   ✗ Docker Compose syntax error" && ((FAIL++))
-grep -c "@sha256" docker-compose.yml >/dev/null 2>&1 && echo "   ✓ Container images digest-pinned" && ((PASS++)) || echo "   ✗ Images not digest-pinned" && ((FAIL++))
-grep -c ":?" docker-compose.yml >/dev/null 2>&1 && echo "   ✓ Secrets marked fail-fast" && ((PASS++)) || echo "   ✗ Secrets not fail-fast" && ((FAIL++))
+docker-compose config --quiet 2>/dev/null && echo "   ✓ Docker Compose syntax valid" && PASS+=1 || echo "   ✗ Docker Compose syntax error" && FAIL+=1
+grep -c "@sha256" docker-compose.yml >/dev/null 2>&1 && echo "   ✓ Container images digest-pinned" && PASS+=1 || echo "   ✗ Images not digest-pinned" && FAIL+=1
+grep -c ":?" docker-compose.yml >/dev/null 2>&1 && echo "   ✓ Secrets marked fail-fast" && PASS+=1 || echo "   ✗ Secrets not fail-fast" && FAIL+=1
 echo ""
 
 echo "✅ PHASE 2: ENVIRONMENT VARIABLES"
-[ -n "$PRIMARY_HOST" ] && echo "   ✓ PRIMARY_HOST set" && ((PASS++)) || echo "   ✗ PRIMARY_HOST missing" && ((FAIL++))
-[ -n "$REPLICA_HOST" ] && echo "   ✓ REPLICA_HOST set" && ((PASS++)) || echo "   ✗ REPLICA_HOST missing" && ((FAIL++))
-[ -n "$OAUTH2_COOKIE_SECRET" ] && echo "   ✓ OAUTH2_COOKIE_SECRET set" && ((PASS++)) || echo "   ✗ OAUTH2_COOKIE_SECRET missing" && ((FAIL++))
-[ -n "$SCHEDULER_API_KEY" ] && echo "   ✓ SCHEDULER_API_KEY set" && ((PASS++)) || echo "   ✗ SCHEDULER_API_KEY missing" && ((FAIL++))
+[ -n "$PRIMARY_HOST" ] && echo "   ✓ PRIMARY_HOST set" && PASS+=1 || echo "   ✗ PRIMARY_HOST missing" && FAIL+=1
+[ -n "$REPLICA_HOST" ] && echo "   ✓ REPLICA_HOST set" && PASS+=1 || echo "   ✗ REPLICA_HOST missing" && FAIL+=1
+[ -n "$OAUTH2_COOKIE_SECRET" ] && echo "   ✓ OAUTH2_COOKIE_SECRET set" && PASS+=1 || echo "   ✗ OAUTH2_COOKIE_SECRET missing" && FAIL+=1
+[ -n "$SCHEDULER_API_KEY" ] && echo "   ✓ SCHEDULER_API_KEY set" && PASS+=1 || echo "   ✗ SCHEDULER_API_KEY missing" && FAIL+=1
 echo ""
 
 echo "✅ PHASE 3: TERRAFORM VERSIONING"
-grep -q "required_version" terraform/versions.tf && echo "   ✓ Terraform version locked" && ((PASS++)) || echo "   ✗ Terraform version not locked" && ((FAIL++))
-grep -q 'version = "= 3.0.2"' terraform/versions.tf && echo "   ✓ Docker provider pinned" && ((PASS++)) || echo "   ✗ Docker provider not pinned" && ((FAIL++))
-grep -q 'version = "= 5.26.0"' terraform/versions.tf && echo "   ✓ AWS provider pinned" && ((PASS++)) || echo "   ✗ AWS provider not pinned" && ((FAIL++))
+grep -q "required_version" terraform/versions.tf && echo "   ✓ Terraform version locked" && PASS+=1 || echo "   ✗ Terraform version not locked" && FAIL+=1
+grep -q 'version = "= 3.0.2"' terraform/versions.tf && echo "   ✓ Docker provider pinned" && PASS+=1 || echo "   ✗ Docker provider not pinned" && FAIL+=1
+grep -q 'version = "= 5.26.0"' terraform/versions.tf && echo "   ✓ AWS provider pinned" && PASS+=1 || echo "   ✗ AWS provider not pinned" && FAIL+=1
 echo ""
 
 echo "✅ PHASE 4: OPERATIONAL SCRIPTS"
-[ -f "scripts/edge-agent/register-edge-agent.sh" ] && bash -n scripts/edge-agent/register-edge-agent.sh 2>/dev/null && echo "   ✓ Edge agent registration script valid" && ((PASS++)) || echo "   ✗ Edge agent script error" && ((FAIL++))
-[ -f "scripts/ops/deploy-production-fix.sh" ] && bash -n scripts/ops/deploy-production-fix.sh 2>/dev/null && echo "   ✓ Deployment script valid" && ((PASS++)) || echo "   ✗ Deployment script error" && ((FAIL++))
-[ -f "scripts/ops/monitor-replication.sh" ] && bash -n scripts/ops/monitor-replication.sh 2>/dev/null && echo "   ✓ Replication monitoring script valid" && ((PASS++)) || echo "   ✗ Replication script error" && ((FAIL++))
+[ -f "scripts/edge-agent/register-edge-agent.sh" ] && bash -n scripts/edge-agent/register-edge-agent.sh 2>/dev/null && echo "   ✓ Edge agent registration script valid" && PASS+=1 || echo "   ✗ Edge agent script error" && FAIL+=1
+[ -f "scripts/ops/deploy-production-fix.sh" ] && bash -n scripts/ops/deploy-production-fix.sh 2>/dev/null && echo "   ✓ Deployment script valid" && PASS+=1 || echo "   ✗ Deployment script error" && FAIL+=1
+[ -f "scripts/ops/monitor-replication.sh" ] && bash -n scripts/ops/monitor-replication.sh 2>/dev/null && echo "   ✓ Replication monitoring script valid" && PASS+=1 || echo "   ✗ Replication script error" && FAIL+=1
 echo ""
 
 echo "✅ PHASE 5: SECURITY VALIDATION"
-! grep -rq "192.168.168" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null && echo "   ✓ No hardcoded IPs found" && ((PASS++)) || echo "   ✗ Hardcoded IPs detected" && ((FAIL++))
-! grep -rq "default-secret" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null && echo "   ✓ No default secrets in code" && ((PASS++)) || echo "   ✗ Default secrets found" && ((FAIL++))
+! grep -rq "192.168.168" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null && echo "   ✓ No hardcoded IPs found" && PASS+=1 || echo "   ✗ Hardcoded IPs detected" && FAIL+=1
+! grep -rq "default-secret" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null && echo "   ✓ No default secrets in code" && PASS+=1 || echo "   ✗ Default secrets found" && FAIL+=1
 echo ""
 
 echo "✅ PHASE 6: GIT ARTIFACTS"
-[ -f "DEPLOYMENT-MANIFEST.md" ] && echo "   ✓ Deployment manifest exists" && ((PASS++)) || echo "   ✗ Deployment manifest missing" && ((FAIL++))
-[ -f "OPERATIONAL-READINESS-SIGN-OFF.md" ] && echo "   ✓ Operational readiness sign-off exists" && ((PASS++)) || echo "   ✗ Operational readiness missing" && ((FAIL++))
-git log --oneline | grep -q "hardening" && echo "   ✓ Hardening commits in git history" && ((PASS++)) || echo "   ✗ Git history verification failed" && ((FAIL++))
+[ -f "DEPLOYMENT-MANIFEST.md" ] && echo "   ✓ Deployment manifest exists" && PASS+=1 || echo "   ✗ Deployment manifest missing" && FAIL+=1
+[ -f "OPERATIONAL-READINESS-SIGN-OFF.md" ] && echo "   ✓ Operational readiness sign-off exists" && PASS+=1 || echo "   ✗ Operational readiness missing" && FAIL+=1
+git log --oneline | grep -q "hardening" && echo "   ✓ Hardening commits in git history" && PASS+=1 || echo "   ✗ Git history verification failed" && FAIL+=1
 echo ""
 
 echo "═══════════════════════════════════════════════════════════════════════════════"

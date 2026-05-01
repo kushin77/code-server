@@ -19,7 +19,7 @@ get_depth() {
   local depth=1
   while [[ "$script" == */scripts/* ]]; do
     script="${script%/*}"
-    ((depth++))
+    depth+=1
   done
   echo $depth
 }
@@ -38,13 +38,13 @@ fix_script() {
 
   # Skip if already has init.sh sourcing
   if grep -q "source.*init\.sh\|source.*_common/init\.sh" "$script"; then
-    ((SKIPPED++))
+    SKIPPED+=1
     return 0
   fi
 
   # Skip test/example scripts
   if [[ "$script" =~ (test|example|template|\.backups) ]]; then
-    ((SKIPPED++))
+    SKIPPED+=1
     return 0
   fi
 
@@ -73,7 +73,7 @@ fix_script() {
   } > "$temp"
 
   mv "$temp" "$script"
-  ((FIXED++))
+  FIXED+=1
 }
 
 # Find and fix all scripts

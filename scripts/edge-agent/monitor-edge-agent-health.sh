@@ -148,7 +148,7 @@ health_check_loop() {
                     log_info "Agent $agent_id: HEALTHY"
                 else
                     mark_agent_unhealthy "$agent_id" "$control_plane" "Heartbeat timeout"
-                    ((unhealthy_count++))
+                    unhealthy_count+=1
                 fi
             fi
         done < <(echo "$agents" | grep -o '"agent_id":"[^"]*' | cut -d'"' -f4)

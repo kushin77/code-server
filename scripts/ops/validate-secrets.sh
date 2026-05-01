@@ -27,7 +27,7 @@ mkdir -p "${REPO_ROOT}/logs"
 
 error() {
   log "ERROR" "$@"
-  ((ERRORS++))
+  ERRORS+=1
 }
 
 warn() {

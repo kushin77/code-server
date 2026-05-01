@@ -144,7 +144,7 @@ main() {
     local linked_count=0
     for issue in "${issues[@]}"; do
         if link_pr_to_issue "$pr_number" "$issue"; then
-            ((linked_count++))
+            linked_count+=1
         fi
     done
     

@@ -47,7 +47,7 @@ service_has_deploy() {
 for service in opa oauth2-proxy caddy prometheus grafana loki qdrant postgres redis redpanda redpanda-console ollama; do
   if ! service_has_deploy "$service"; then
     echo "⚠️  $service: Missing deploy section"
-    ((services_without_limits++))
+    services_without_limits+=1
   fi
 done
 

@@ -25,6 +25,17 @@ CRITICAL_SERVICES=(
   "prometheus:9090"
 )
 
+REMOTE_CONTAINER_PREFIX="${REMOTE_CONTAINER_PREFIX:-code-server}"
+
+check_remote_container_health() {
+  local host="$1"
+  local container="$2"
+
+  ssh -o BatchMode=yes -o ConnectTimeout=10 -l akushnir -p 22 "$host" \
+    "docker inspect --format '{{.State.Health.Status}}' ${container} 2>/dev/null" \
+    | grep -Eq '^(healthy|no-health)$'
+}
+
 log_info "═══════════════════════════════════════════════════════"
 log_info "CRITICAL SERVICES HEALTH CHECK"
 log_info "═══════════════════════════════════════════════════════"
@@ -33,42 +44,63 @@ log_info "═══════════════════════�
 check_service_health() {
   local service_host="$1"
   local timeout="$2"
-  
+
   IFS=':' read -r service_name service_port <<< "${service_host}"
-  
-  log_info "Checking ${service_name}:${service_port}..."
-  
-  if timeout "${timeout}" bash -c "cat < /dev/null > /dev/tcp/${service_name}/${service_port}" 2>/dev/null; then
-    log_success "✓ ${service_name} is healthy"
-    return 0
-  else
-    log_error "✗ ${service_name} is unreachable"
+
+  if [[ -z "${PRIMARY_HOST:-}" || -z "${REPLICA_HOST:-}" ]]; then
+    log_warn "⚠ PRIMARY_HOST/REPLICA_HOST not configured"
     return 1
   fi
+
+  local host
+  local container_name="${REMOTE_CONTAINER_PREFIX}-${service_name}"
+
+  for host in "${PRIMARY_HOST}" "${REPLICA_HOST}"; do
+    log_info "Checking ${container_name} on ${host}..."
+    if check_remote_container_health "$host" "$container_name"; then
+      log_success "✓ ${container_name} is healthy on ${host}"
+      return 0
+    fi
+  done
+
+  log_error "✗ ${container_name} is unhealthy on all hosts"
+  return 1
 }
 
-# Check Docker Compose status
-check_docker_compose_status() {
-  log_info "Checking Docker Compose services..."
-  
-  if ! docker-compose ps -q 2>/dev/null | grep -q .; then
-    log_warn "⚠ No Docker Compose services running"
+# Check remote stack status
+check_remote_stack_status() {
+  log_info "Checking remote stack services..."
+
+  if [[ -z "${PRIMARY_HOST:-}" || -z "${REPLICA_HOST:-}" ]]; then
+    log_warn "⚠ PRIMARY_HOST/REPLICA_HOST not configured"
     return 1
   fi
-  
+
+  local host
+  local service
   local unhealthy=0
-  while IFS= read -r line; do
-    if [[ "$line" == *"unhealthy"* ]] || [[ "$line" == *"Exit"* ]]; then
-      ((unhealthy++))
-    fi
-  done < <(docker-compose ps)
-  
+
+  for host in "${PRIMARY_HOST}" "${REPLICA_HOST}"; do
+    for service in "${CRITICAL_SERVICES[@]}"; do
+      service_name="${service%%:*}"
+      container_name="${REMOTE_CONTAINER_PREFIX}-${service_name}"
+
+      log_info "Checking ${container_name} on ${host}..."
+      if check_remote_container_health "$host" "$container_name"; then
+        log_success "✓ ${container_name} is healthy on ${host}"
+      else
+        log_error "✗ ${container_name} is unhealthy on ${host}"
+        unhealthy+=1
+      fi
+    done
+  done
+
   if [[ ${unhealthy} -gt 0 ]]; then
-    log_warn "⚠ Found ${unhealthy} unhealthy services"
+    log_warn "⚠ Found ${unhealthy} unhealthy remote services"
     return 1
   fi
-  
-  log_success "✓ All Docker Compose services healthy"
+
+  log_success "✓ All remote critical services healthy"
   return 0
 }
 
@@ -99,7 +131,7 @@ check_deployment_scripts() {
   local invalid_count=0
   while IFS= read -r script; do
     if ! bash -n "${script}" 2>/dev/null; then
-      ((invalid_count++))
+      invalid_count+=1
       log_error "✗ Script syntax error: ${script}"
     fi
   done < <(find scripts/ops -name "*.sh" -type f)
@@ -119,16 +151,16 @@ main() {
   log_info "Starting health checks (timeout: ${TIMEOUT}s)..."
   echo
   
-  # Check Docker Compose
-  if ! check_docker_compose_status; then
-    ((failed++))
+  # Check remote stack
+  if ! check_remote_stack_status; then
+    failed+=1
   fi
   echo
   
   # Check critical services
   for service in "${CRITICAL_SERVICES[@]}"; do
     if ! check_service_health "${service}" "${TIMEOUT}"; then
-      ((failed++))
+      failed+=1
     fi
   done
   echo
@@ -139,7 +171,7 @@ main() {
   
   # Check deployment scripts
   if ! check_deployment_scripts; then
-    ((failed++))
+    failed+=1
   fi
   echo
   

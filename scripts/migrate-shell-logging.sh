@@ -117,9 +117,9 @@ main() {
     
     for script in "${SCRIPTS_TO_UPDATE[@]}"; do
         if update_script "$script"; then
-            ((updated++))
+            updated+=1
         else
-            ((failed++))
+            failed+=1
         fi
     done
     

@@ -322,7 +322,7 @@ main() {
     
     local hosts_deployed=1
     if [[ -n "$REPLICA_HOST" && "$REPLICA_HOST" != "$PRIMARY_HOST" ]]; then
-        ((hosts_deployed++))
+        hosts_deployed+=1
     fi
     
     log_success "Deployment complete!"

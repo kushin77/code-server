@@ -136,7 +136,7 @@ check_other_open_prs() {
     local other_prs=0
     while read -r pr; do
         if [[ "$pr" != "$exclude_pr" ]]; then
-            ((other_prs++))
+            other_prs+=1
             log_info "Found another open PR #$pr linked to issue #$issue_number"
         fi
     done <<< "$open_prs"
@@ -196,7 +196,7 @@ main() {
         if ! check_other_open_prs "$issue" "$pr_number"; then
             # No other open PRs - safe to close
             if close_linked_issue "$issue" "$pr_number" "$merge_commit"; then
-                ((closed_count++))
+                closed_count+=1
             fi
         else
             log_info "Skipping close of issue #$issue - other open PRs still linked"

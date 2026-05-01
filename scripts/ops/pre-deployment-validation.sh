@@ -25,10 +25,10 @@ FAILED=0
 check_result() {
   if [ $1 -eq 0 ]; then
     echo "✅ $2" | tee -a /tmp/pre-deployment-validation.log
-    ((PASSED++))
+    PASSED+=1
   else
     echo "❌ $2" | tee -a /tmp/pre-deployment-validation.log
-    ((FAILED++))
+    FAILED+=1
   fi
 }
 

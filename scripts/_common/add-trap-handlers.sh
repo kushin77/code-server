@@ -59,7 +59,7 @@ add_trap_to_script() {
     
     # Skip if already has trap
     if has_trap_handler "$file"; then
-        ((SKIPPED_COUNT++))
+        SKIPPED_COUNT+=1
         log_warn "Already has trap handler: $file"
         return 0
     fi
@@ -86,7 +86,7 @@ add_trap_to_script() {
     else
         cp "$temp_file" "$file"
         log_success "Added trap handler: $file"
-        ((MODIFIED_COUNT++))
+        MODIFIED_COUNT+=1
     fi
     
     rm "$temp_file"
@@ -108,7 +108,7 @@ main() {
         local count=0
         while IFS= read -r script; do
             add_trap_to_script "$script"
-            ((count++))
+            count+=1
             if (( count % 10 == 0 )); then
                 log_info "Processed $count scripts..."
             fi

@@ -126,7 +126,7 @@ for issue_number in "${issue_numbers[@]}"; do
 This issue has been automatically closed as the related pull request has been merged." \
             2>/dev/null || log_error "Failed to close issue #$issue_number"
         
-        ((closed_count++))
+        closed_count+=1
     fi
 done
 

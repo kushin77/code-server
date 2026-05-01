@@ -54,12 +54,12 @@ log_test() {
 
 log_pass() {
     echo -e "${GREEN}✅ PASS${NC}: $1"
-    ((TESTS_PASSED++))
+    TESTS_PASSED+=1
 }
 
 log_fail() {
     echo -e "${RED}❌ FAIL${NC}: $1"
-    ((TESTS_FAILED++))
+    TESTS_FAILED+=1
 }
 
 log_info() {
@@ -72,7 +72,7 @@ log_info() {
 
 test_dns_resolution() {
     log_test "DNS Resolution (nslookup)" 1
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Try to resolve kushnir.cloud
     result=$(nslookup $DOMAIN 2>&1 | grep -A1 "Name:" | tail -1 | awk '{print $2}')
@@ -92,7 +92,7 @@ test_dns_resolution() {
 
 test_port_connectivity() {
     log_test "Port 443 Connectivity (nc timeout)" 2
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Test port 443 connectivity
     if timeout 5 bash -c "echo > /dev/tcp/$DOMAIN/443" 2>/dev/null; then
@@ -109,7 +109,7 @@ test_port_connectivity() {
 
 test_tls_certificate() {
     log_test "TLS Certificate Details (openssl s_client)" 3
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Get certificate details
     cert_info=$(openssl s_client -connect $DOMAIN:443 -servername $DOMAIN </dev/null 2>&1)
@@ -141,7 +141,7 @@ test_tls_certificate() {
 
 test_http_response() {
     log_test "HTTP Response Status (curl -I)" 4
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Install curl if needed
     if ! command -v curl &> /dev/null; then
@@ -166,7 +166,7 @@ test_http_response() {
 
 test_appsmith_availability() {
     log_test "Appsmith OAuth Page Availability (curl -s)" 5
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     if ! command -v curl &> /dev/null; then
         log_fail "curl not available, skipping test"
@@ -191,7 +191,7 @@ test_appsmith_availability() {
 
 test_response_time() {
     log_test "Response Time Measurement (curl time-to-first-byte)" 6
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     if ! command -v curl &> /dev/null; then
         log_fail "curl not available, skipping test"
@@ -222,7 +222,7 @@ test_response_time() {
 
 test_certificate_expiration() {
     log_test "Certificate Expiration Date" 7
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Get certificate expiration
     expiry=$(openssl s_client -connect $DOMAIN:443 -servername $DOMAIN </dev/null 2>&1 | grep "notAfter" | cut -d= -f2)
@@ -253,7 +253,7 @@ test_certificate_expiration() {
 
 test_external_from_primary() {
     log_test "External Connectivity from Primary Host (SSH)" 8
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Test from primary host
     if ssh on-prem-primary "timeout 5 bash -c 'echo > /dev/tcp/$DOMAIN/443'" 2>/dev/null; then
@@ -269,7 +269,7 @@ test_external_from_primary() {
 
 test_secondary_status() {
     log_test "Secondary Host HA Status" 9
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Check secondary host status
     if ssh on-prem-secondary "docker ps -q | wc -l" 2>/dev/null | grep -q "[0-9]"; then
@@ -286,7 +286,7 @@ test_secondary_status() {
 
 test_firewall_nat() {
     log_test "Firewall NAT Configuration (external → internal)" 10
-    ((TESTS_TOTAL++))
+    TESTS_TOTAL+=1
     
     # Verify routing from external IP to internal
     if ssh on-prem-primary "curl -s -k https://kushnir.cloud/ | wc -c" 2>/dev/null | grep -q "[0-9]"; then

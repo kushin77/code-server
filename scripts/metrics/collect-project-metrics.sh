@@ -86,7 +86,7 @@ calculate_metrics() {
         local closed_epoch=$(date -d "$closed" +%s)
         local diff=$((closed_epoch - created_epoch))
         total_cycle_time=$((total_cycle_time + diff))
-        ((cycle_count++))
+        cycle_count+=1
     done
     
     local avg_cycle_time=0
@@ -142,7 +142,7 @@ calculate_metrics() {
         local merged_epoch=$(date -d "$merged" +%s)
         local diff=$((merged_epoch - created_epoch))
         total_review_time=$((total_review_time + diff))
-        ((review_count++))
+        review_count+=1
     done
     
     local avg_review_time=0

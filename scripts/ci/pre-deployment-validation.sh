@@ -29,9 +29,9 @@ WARN=0
 
 # Logging functions
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $*"; ((PASS++)); }
-log_error() { echo -e "${RED}[✗]${NC} $*"; ((FAIL++)); }
-log_warn() { echo -e "${YELLOW}[⚠]${NC} $*"; ((WARN++)); }
+log_success() { echo -e "${GREEN}[✓]${NC} $*"; PASS+=1; }
+log_error() { echo -e "${RED}[✗]${NC} $*"; FAIL+=1; }
+log_warn() { echo -e "${YELLOW}[⚠]${NC} $*"; WARN+=1; }
 
 # Set required environment variables for validation
 export OAUTH2_COOKIE_SECRET="${OAUTH2_COOKIE_SECRET:-$(openssl rand -hex 32)}"
@@ -138,15 +138,15 @@ fi
 # Check provider pinning
 PROVIDER_CHECK=0
 if grep -q 'version = "= 3.0.2"' terraform/versions.tf 2>/dev/null; then
-    ((PROVIDER_CHECK++))
+    PROVIDER_CHECK+=1
     log_success "Provider pinned: docker = 3.0.2"
 fi
 if grep -q 'version = "= 5.26.0"' terraform/versions.tf 2>/dev/null; then
-    ((PROVIDER_CHECK++))
+    PROVIDER_CHECK+=1
     log_success "Provider pinned: aws = 5.26.0"
 fi
 if grep -q 'version = "= 2.23.0"' terraform/versions.tf 2>/dev/null; then
-    ((PROVIDER_CHECK++))
+    PROVIDER_CHECK+=1
     log_success "Provider pinned: kubernetes = 2.23.0"
 fi
 if [ $PROVIDER_CHECK -eq 0 ]; then
@@ -204,10 +204,10 @@ fi
 # Check for DATABASE_URL requirement
 DB_CHECKS=0
 if grep -rq "DATABASE_URL:?" apps/ 2>/dev/null; then
-    ((DB_CHECKS++))
+    DB_CHECKS+=1
 fi
 if grep -rq "RuntimeError.*DATABASE_URL" apps/ 2>/dev/null; then
-    ((DB_CHECKS++))
+    DB_CHECKS+=1
 fi
 if [ $DB_CHECKS -gt 0 ]; then
     log_success "Database URL fail-fast configured"
@@ -222,7 +222,7 @@ for secret in "${SECRETS[@]}"; do
     if grep -rq "$secret" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null; then
         log_error "Hardcoded secret found: $secret"
     else
-        ((SECRET_CHECK++))
+        SECRET_CHECK+=1
     fi
 done
 if [ $SECRET_CHECK -eq ${#SECRETS[@]} ]; then

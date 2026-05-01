@@ -88,13 +88,13 @@ migrate_script() {
     # Check preconditions
     if uses_shared_logging "$script"; then
         log_warning "Script already uses shared logging: $script"
-        ((SCRIPTS_SKIPPED++))
+        SCRIPTS_SKIPPED+=1
         return 0
     fi
     
     if ! has_local_logging "$script"; then
         log_warning "Script has no local logging functions: $script"
-        ((SCRIPTS_SKIPPED++))
+        SCRIPTS_SKIPPED+=1
         return 0
     fi
     
@@ -169,16 +169,16 @@ source "$REPO_ROOT/apps/_shared/test.sh"
     # Validate bash syntax
     if bash -n "$script" 2>/dev/null; then
         log_success "Migrated: $script"
-        ((SCRIPTS_MIGRATED++))
+        SCRIPTS_MIGRATED+=1
         rm -f "$backup"  # Remove backup if successful
     else
         log_error "Migration failed (syntax error): $script"
         log_info "Restoring from backup..."
         mv "$backup" "$script"
-        ((SCRIPTS_FAILED++))
+        SCRIPTS_FAILED+=1
     fi
     
-    ((SCRIPTS_PROCESSED++))
+    SCRIPTS_PROCESSED+=1
 }
 
 ##############################################################################

@@ -194,60 +194,60 @@ main() {
     echo -e "\n${BLUE}--- SERVICE HEALTH CHECKS ---${NC}\n"
     
     if test_service_health "Reputation Engine" "$BASE_URL_REPUTATION"; then
-        ((passed++))
+        passed+=1
     else
-        ((failed++))
+        failed+=1
     fi
     
     if test_service_health "Execution Scheduler" "$BASE_URL_SCHEDULER"; then
-        ((passed++))
+        passed+=1
     else
-        ((failed++))
+        failed+=1
     fi
     
     if test_service_health "Paperclip Control Plane" "$BASE_URL_PAPERCLIP"; then
-        ((passed++))
+        passed+=1
     else
-        ((failed++))
+        failed+=1
     fi
     
     # Service-specific tests
     echo -e "\n${BLUE}--- SERVICE FUNCTIONALITY ---${NC}\n"
     
     if test_reputation_engine; then
-        ((passed++))
+        passed+=1
     else
-        ((failed++))
+        failed+=1
     fi
     
     if test_execution_scheduler; then
-        ((passed++))
+        passed+=1
     else
-        ((failed++))
+        failed+=1
     fi
     
     if test_paperclip_approvals; then
-        ((passed++))
+        passed+=1
     else
-        ((failed++))
+        failed+=1
     fi
     
     # Infrastructure tests
     echo -e "\n${BLUE}--- INFRASTRUCTURE ---${NC}\n"
     
     test_cross_service_latency
-    ((passed++))
+    passed+=1
     
     if test_postgres_connectivity; then
-        ((passed++))
+        passed+=1
     else
-        ((skipped++))
+        skipped+=1
     fi
     
     if test_kafka_connectivity; then
-        ((passed++))
+        passed+=1
     else
-        ((skipped++))
+        skipped+=1
     fi
     
     # Summary

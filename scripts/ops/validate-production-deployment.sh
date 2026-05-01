@@ -32,14 +32,14 @@ TOTAL_CHECKS=0
 # Helper functions
 log_pass() {
     echo -e "${GREEN}✓${NC} $1" | tee -a "$LOG_FILE"
-    ((PASSED_CHECKS++))
-    ((TOTAL_CHECKS++))
+    PASSED_CHECKS+=1
+    TOTAL_CHECKS+=1
 }
 
 log_fail() {
     echo -e "${RED}✗${NC} $1" | tee -a "$LOG_FILE"
-    ((FAILED_CHECKS++))
-    ((TOTAL_CHECKS++))
+    FAILED_CHECKS+=1
+    TOTAL_CHECKS+=1
 }
 
 log_error() {
@@ -232,7 +232,12 @@ check_monitoring() {
 ################################################################################
 check_logs() {
     log_section "7. LOG ANALYSIS"
-     tr -d '\n' || echo "0")
+    local error_count=0
+
+    if command -v docker-compose >/dev/null 2>&1; then
+        error_count=$(docker-compose logs 2>/dev/null | grep -i "FATAL\|CRITICAL\|ERROR" | wc -l | tr -d '[:space:]' || echo 0)
+    fi
+
     if [[ "$error_count" =~ ^[0-9]+$ ]] && [[ $error_count -eq 0 ]]; then
         log_pass "No FATAL/CRITICAL errors in logs"
     elif [[ "$error_count" =~ ^[0-9]+$ ]]; then
@@ -242,9 +247,7 @@ check_logs() {
             docker-compose logs 2>/dev/null | grep -i "FATAL\|CRITICAL\|ERROR" | head -5 || true
         fi
     else
-        log_info "Unable to check logs (docker-compose may not be available)"  echo "Sample errors:"
-            docker-compose logs 2>/dev/null | grep -i "FATAL\|CRITICAL\|ERROR" | head -5
-        fi
+        log_info "Unable to check logs (docker-compose may not be available)"
     fi
 }
 

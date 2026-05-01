@@ -24,6 +24,20 @@ fi
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)
+      DRY_RUN=true
+      ;;
+  esac
+done
+
+OUTPUT_ROOT="${PROJECT_ROOT}"
+if [[ "$DRY_RUN" == true ]]; then
+  OUTPUT_ROOT="${PROJECT_ROOT}/.dry-run/team-coordination-setup"
+fi
+
 # ============================================================================
 # Logging
 # ============================================================================
@@ -40,7 +54,7 @@ declare -i step_ok=0
 # STEP 1: Verify advanced team coordination source files
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verify advanced team coordination source files"
 
 declare -a required_files=(
@@ -52,7 +66,6 @@ all_present=true
 for file in "${required_files[@]}"; do
     if [[ -f "${PROJECT_ROOT}/${file}" ]]; then
         log_info "  ✓ ${file}"
-        ((step_ok++))
     else
         log_warn "  ✗ Missing: ${file}"
         all_present=false
@@ -64,14 +77,16 @@ if [[ "$all_present" != "true" ]]; then
     exit 1
 fi
 
+step_ok+=1
+
 # ============================================================================
 # STEP 2: Create team coordination configuration
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create team coordination configuration"
 
-COORDINATION_CONFIG_DIR="${PROJECT_ROOT}/config/team-coordination"
+COORDINATION_CONFIG_DIR="${OUTPUT_ROOT}/config/team-coordination"
 mkdir -p "${COORDINATION_CONFIG_DIR}"
 
 # Create main configuration
@@ -112,16 +127,16 @@ cat > "${COORDINATION_CONFIG_DIR}/coordination-config.json" << 'EOF'
 EOF
 
 log_success "Configuration created: ${COORDINATION_CONFIG_DIR}/coordination-config.json"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 3: Create team coordination environment variables
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create team coordination environment variables"
 
-cat > "${PROJECT_ROOT}/.env.team-coordination" << 'EOF'
+cat > "${OUTPUT_ROOT}/.env.team-coordination" << 'EOF'
 # Team Coordination Configuration
 # P2 #1539 Phase 7: Advanced team orchestration and task distribution
 
@@ -147,17 +162,17 @@ AUDIT_MAX_ENTRIES=10000
 AUDIT_RETENTION_DAYS=90
 EOF
 
-log_success "Environment file created: .env.team-coordination"
-((step_ok++))
+log_success "Environment file created: ${OUTPUT_ROOT}/.env.team-coordination"
+step_ok+=1
 
 # ============================================================================
 # STEP 4: Create team coordination audit logging schema
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create team coordination audit logging schema"
 
-SCHEMA_DIR="${PROJECT_ROOT}/schemas"
+SCHEMA_DIR="${OUTPUT_ROOT}/schemas"
 mkdir -p "${SCHEMA_DIR}"
 
 cat > "${SCHEMA_DIR}/team-coordination-audit-schema.json" << 'EOF'
@@ -215,14 +230,14 @@ cat > "${SCHEMA_DIR}/team-coordination-audit-schema.json" << 'EOF'
 }
 EOF
 
-log_success "Schema created: schemas/team-coordination-audit-schema.json"
-((step_ok++))
+log_success "Schema created: ${SCHEMA_DIR}/team-coordination-audit-schema.json"
+step_ok+=1
 
 # ============================================================================
 # STEP 5: Create team coordination notification templates
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create team coordination notification templates"
 
 TEMPLATE_DIR="${COORDINATION_CONFIG_DIR}"
@@ -257,16 +272,16 @@ cat > "${TEMPLATE_DIR}/notification-templates.json" << 'EOF'
 EOF
 
 log_success "Notification templates created: ${TEMPLATE_DIR}/notification-templates.json"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 6: Create initial audit logs directory
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Create initial audit logs"
 
-LOGS_DIR="${PROJECT_ROOT}/logs"
+LOGS_DIR="${OUTPUT_ROOT}/logs"
 mkdir -p "${LOGS_DIR}"
 
 {
@@ -274,24 +289,24 @@ mkdir -p "${LOGS_DIR}"
 } >> "${LOGS_DIR}/team-coordination.log"
 
 log_success "Audit logging initialized: ${LOGS_DIR}/team-coordination.log"
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # STEP 7: Verification
 # ============================================================================
 
-((step_count++))
+step_count+=1
 log_info "STEP $step_count: Verification"
 
 CONFIG_FILES=$(find "${COORDINATION_CONFIG_DIR}" -type f 2>/dev/null | wc -l)
-SOURCE_FILES=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" -name "*orchestrator*" -o -name "*coordination*" 2>/dev/null | wc -l)
-SCHEMA_FILES=$(find "${SCHEMA_DIR}" -name "*coordination*" -type f 2>/dev/null | wc -l)
+SOURCE_FILES=$(find "${PROJECT_ROOT}/apps/extensions/team-hub/src" \( -name "*orchestrator*" -o -name "*coordination*" \) -type f 2>/dev/null | wc -l)
+SCHEMA_FILES=$(find "${SCHEMA_DIR}" -type f \( -name "*coordination*" -o -name "*audit*" \) 2>/dev/null | wc -l)
 
 log_info "  ✓ Configuration files: ${CONFIG_FILES}"
 log_info "  ✓ Source files: ${SOURCE_FILES}"
 log_info "  ✓ Schema files: ${SCHEMA_FILES}"
 
-((step_ok++))
+step_ok+=1
 
 # ============================================================================
 # Summary
@@ -319,4 +334,8 @@ log_info ""
 log_info "Configuration Files:"
 log_info "  - config/team-coordination/coordination-config.json"
 log_info "  - config/team-coordination/notification-templates.json"
+log_info "Environment File:"
+log_info "  - ${OUTPUT_ROOT}/.env.team-coordination"
+log_info "Schema File:"
+log_info "  - ${SCHEMA_DIR}/team-coordination-audit-schema.json"
 log_info ""

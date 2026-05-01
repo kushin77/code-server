@@ -181,21 +181,21 @@ TESTS_FAILED=0
 
 # Run recovery tests
 if test_postgres_recovery; then
-  ((TESTS_PASSED++))
+  TESTS_PASSED+=1
 else
-  ((TESTS_FAILED++))
+  TESTS_FAILED+=1
 fi
 
 if test_redis_recovery; then
-  ((TESTS_PASSED++))
+  TESTS_PASSED+=1
 else
-  ((TESTS_FAILED++))
+  TESTS_FAILED+=1
 fi
 
 if test_volume_recovery; then
-  ((TESTS_PASSED++))
+  TESTS_PASSED+=1
 else
-  ((TESTS_FAILED++))
+  TESTS_FAILED+=1
 fi
 
 # Print summary

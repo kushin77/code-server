@@ -40,17 +40,17 @@ validate_docker_compose() {
   
   if [[ ! -f "$compose_file" ]]; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Docker Compose file not found: $compose_file"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
   if ! docker-compose -f "$compose_file" config > /dev/null 2>&1; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Invalid Docker Compose syntax: $compose_file"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -61,7 +61,7 @@ validate_all_docker_compose_files() {
   for file in $pattern; do
     [[ -f "$file" ]] || continue
     if ! validate_docker_compose "$file" true; then
-      ((failed++))
+      failed+=1
     fi
   done
   
@@ -87,11 +87,11 @@ validate_service_health() {
   
   if ! timeout "$timeout" curl -sf "$health_endpoint" > /dev/null 2>&1; then
     echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} Service unreachable: $service_name at $health_endpoint"
-    ((VALIDATION_WARNINGS++))
+    VALIDATION_WARNINGS+=1
     return 1
   fi
   
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -100,7 +100,7 @@ validate_docker_container_health() {
   
   if ! docker inspect "$container_name" > /dev/null 2>&1; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Container not found: $container_name"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
@@ -109,22 +109,22 @@ validate_docker_container_health() {
   case "$health_status" in
     healthy)
       echo -e "${COLOR_SUCCESS}[Validator]${COLOR_RESET} Container healthy: $container_name"
-      ((VALIDATION_PASSED++))
+      VALIDATION_PASSED+=1
       return 0
       ;;
     unhealthy)
       echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Container unhealthy: $container_name"
-      ((VALIDATION_FAILED++))
+      VALIDATION_FAILED+=1
       return 1
       ;;
     starting)
       echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} Container starting: $container_name"
-      ((VALIDATION_WARNINGS++))
+      VALIDATION_WARNINGS+=1
       return 1
       ;;
     *)
       echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} Container status unknown: $container_name ($health_status)"
-      ((VALIDATION_WARNINGS++))
+      VALIDATION_WARNINGS+=1
       return 0
       ;;
   esac
@@ -142,12 +142,12 @@ validate_disk_space() {
   
   if [[ $available -lt $min_mb ]]; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Insufficient disk space at $path: ${available}MB < ${min_mb}MB required"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
   echo -e "${COLOR_SUCCESS}[Validator]${COLOR_RESET} Disk space available at $path: ${available}MB"
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -158,12 +158,12 @@ validate_memory_available() {
   
   if [[ $available -lt $min_mb ]]; then
     echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} Low memory available: ${available}MB < ${min_mb}MB recommended"
-    ((VALIDATION_WARNINGS++))
+    VALIDATION_WARNINGS+=1
     return 1
   fi
   
   echo -e "${COLOR_SUCCESS}[Validator]${COLOR_RESET} Memory available: ${available}MB"
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -176,17 +176,17 @@ validate_script_syntax() {
   
   if [[ ! -f "$script_file" ]]; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Script not found: $script_file"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
   if ! bash -n "$script_file" 2>/dev/null; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Script syntax error: $script_file"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -195,11 +195,11 @@ validate_ssot_compliance() {
   
   if ! grep -q "source.*init.sh" "$script_file" 2>/dev/null; then
     echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} SSOT compliance warning: $script_file does not source init.sh"
-    ((VALIDATION_WARNINGS++))
+    VALIDATION_WARNINGS+=1
     return 1
   fi
   
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -208,11 +208,11 @@ validate_image_pinning() {
   
   if ! grep -q "sha256:" "$compose_file" 2>/dev/null; then
     echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} Image pinning warning: $compose_file lacks sha256 digests"
-    ((VALIDATION_WARNINGS++))
+    VALIDATION_WARNINGS+=1
     return 1
   fi
   
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -223,12 +223,12 @@ validate_image_pinning() {
 validate_git_clean() {
   if ! git diff --quiet 2>/dev/null; then
     echo -e "${COLOR_ERROR}[Validator]${COLOR_RESET} Git repository has uncommitted changes"
-    ((VALIDATION_FAILED++))
+    VALIDATION_FAILED+=1
     return 1
   fi
   
   echo -e "${COLOR_SUCCESS}[Validator]${COLOR_RESET} Git repository clean"
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -238,11 +238,11 @@ validate_git_branch() {
   
   if [[ "$current_branch" != "$required_branch" ]]; then
     echo -e "${COLOR_WARN}[Validator]${COLOR_RESET} Branch warning: on $current_branch, expected $required_branch"
-    ((VALIDATION_WARNINGS++))
+    VALIDATION_WARNINGS+=1
     return 1
   fi
   
-  ((VALIDATION_PASSED++))
+  VALIDATION_PASSED+=1
   return 0
 }
 
@@ -288,26 +288,26 @@ validate_deployment_readiness() {
   
   # Docker Compose validation
   if validate_all_docker_compose_files; then
-    ((checks_passed++))
+    checks_passed+=1
   fi
   
   # Git validation
   if validate_git_clean; then
-    ((checks_passed++))
+    checks_passed+=1
   fi
   
   if validate_git_branch "main"; then
-    ((checks_passed++))
+    checks_passed+=1
   fi
   
   # Disk space check
   if validate_disk_space 1000; then
-    ((checks_passed++))
+    checks_passed+=1
   fi
   
   # Memory check
   if validate_memory_available 1000; then
-    ((checks_passed++))
+    checks_passed+=1
   fi
   
   get_validation_summary

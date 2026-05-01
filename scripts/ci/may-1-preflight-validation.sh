@@ -19,11 +19,11 @@ trap 'log_info "Cleaning up temporary files..."; rm -f /tmp/may1_validate_*.tmp 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 REPORT_FILE="may1_preflight_validation_${TIMESTAMP}.log"
 
-# Color codes
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+# Color codes (only set when init.sh has not already defined them)
+if ! declare -p GREEN >/dev/null 2>&1; then GREEN='\033[0;32m'; fi
+if ! declare -p RED >/dev/null 2>&1; then RED='\033[0;31m'; fi
+if ! declare -p YELLOW >/dev/null 2>&1; then YELLOW='\033[1;33m'; fi
+if ! declare -p NC >/dev/null 2>&1; then NC='\033[0m'; fi
 
 # Counters
 CHECKS_PASSED=0
@@ -56,12 +56,12 @@ log_check() {
 
 log_pass() {
     echo -e "${GREEN}✅ PASS${NC}: $1"
-    ((CHECKS_PASSED++))
+    ((++CHECKS_PASSED))
 }
 
 log_fail() {
     echo -e "${RED}❌ FAIL${NC}: $1"
-    ((CHECKS_FAILED++))
+    ((++CHECKS_FAILED))
 }
 
 ################################################################################
@@ -70,7 +70,7 @@ log_fail() {
 
 check_primary_containers() {
     log_check 1 "Primary Host Container Count"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     count=$(ssh on-prem-primary "docker ps -q | wc -l" 2>/dev/null || echo "0")
     
@@ -83,7 +83,7 @@ check_primary_containers() {
 
 check_critical_services() {
     log_check 2 "Critical Services Health"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     # Check each critical service
     services=("appsmith" "nginx" "postgres" "gitlab")
@@ -92,7 +92,7 @@ check_critical_services() {
     for service in "${services[@]}"; do
         status=$(ssh on-prem-primary "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -i $service | head -1 | awk '{print \$NF}'" 2>/dev/null || echo "unhealthy")
         if echo "$status" | grep -q "healthy\|Up"; then
-            ((healthy_count++))
+            ((++healthy_count))
         fi
     done
     
@@ -105,7 +105,7 @@ check_critical_services() {
 
 check_memory_available() {
     log_check 3 "Memory Availability"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     mem=$(ssh on-prem-primary "free -h | grep Mem | awk '{print \$7}'" 2>/dev/null || echo "unknown")
     
@@ -114,7 +114,7 @@ check_memory_available() {
 
 check_storage_available() {
     log_check 4 "Storage Availability"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     disk=$(ssh on-prem-primary "df -h /home | tail -1 | awk '{print \$4}'" 2>/dev/null || echo "unknown")
     
@@ -123,7 +123,7 @@ check_storage_available() {
 
 check_secondary_status() {
     log_check 5 "Secondary Host Status"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     count=$(ssh on-prem-secondary "docker ps -q | wc -l" 2>/dev/null || echo "0")
     
@@ -136,7 +136,7 @@ check_secondary_status() {
 
 check_dns_resolution() {
     log_check 6 "DNS Resolution"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     ip=$(dig kushnir.cloud +short 2>/dev/null || echo "failed")
     
@@ -149,7 +149,7 @@ check_dns_resolution() {
 
 check_port_443() {
     log_check 7 "Port 443 Connectivity"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     if timeout 5 bash -c "echo > /dev/tcp/kushnir.cloud/443" 2>/dev/null; then
         log_pass "Port 443 accessible"
@@ -160,17 +160,21 @@ check_port_443() {
 
 check_certificate_status() {
     log_check 8 "Current Certificate Status"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
-    subject=$(openssl s_client -connect kushnir.cloud:443 -servername kushnir.cloud </dev/null 2>/dev/null | grep "subject=" | cut -d= -f2)
-    
-    log_pass "Current certificate: $subject"
+    subject=$(openssl s_client -connect kushnir.cloud:443 -servername kushnir.cloud </dev/null 2>/dev/null | grep "subject=" | cut -d= -f2 || true)
+
+    if [ -n "$subject" ]; then
+        log_pass "Current certificate: $subject"
+    else
+        log_info "Certificate subject unavailable in this environment"
+    fi
     log_info "Note: Self-signed cert expected (will upgrade to kushnir.cloud cert)"
 }
 
 check_network_latency() {
     log_check 9 "Network Latency (Primary ↔ Replica)"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     ping_result=$(ssh on-prem-primary "ping -c 1 192.168.168.42 2>/dev/null | grep 'time=' | awk -F'time=' '{print \$2}'" 2>/dev/null || echo "unknown")
     
@@ -183,7 +187,7 @@ check_network_latency() {
 
 check_git_status() {
     log_check 10 "Git Repository Status"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     status=$(git status --short 2>/dev/null | wc -l)
@@ -197,13 +201,13 @@ check_git_status() {
 
 check_documentation() {
     log_check 11 "Documentation Availability"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     docs=0
-    [ -f "PHASE_5_TEAM_EXECUTION_ACTION_PLAN.md" ] && ((docs++))
-    [ -f "PHASE_4_SSL_CERTIFICATE_UPGRADE.md" ] && ((docs++))
-    [ -f "FINAL_OPERATIONAL_HANDOFF_CHECKLIST.md" ] && ((docs++))
-    [ -f "MAY_1_PREFLIGHT_CHECKLIST.md" ] && ((docs++))
+    [ -f "PHASE_5_TEAM_EXECUTION_ACTION_PLAN.md" ] && ((++docs))
+    [ -f "PHASE_4_SSL_CERTIFICATE_UPGRADE.md" ] && ((++docs))
+    [ -f "FINAL_OPERATIONAL_HANDOFF_CHECKLIST.md" ] && ((++docs))
+    [ -f "MAY_1_PREFLIGHT_CHECKLIST.md" ] && ((++docs))
     
     if [ "$docs" -ge 3 ]; then
         log_pass "Documentation files: $docs/4 available"
@@ -214,7 +218,7 @@ check_documentation() {
 
 check_team_readiness() {
     log_check 12 "Team Contacts & Contacts"
-    ((CHECKS_TOTAL++))
+    ((++CHECKS_TOTAL))
     
     log_pass "DevOps Lead: [ ] Briefed on SSL procedures"
     log_pass "Operations Lead: [ ] Briefed on testing procedures"
@@ -229,7 +233,7 @@ check_team_readiness() {
 main() {
     log_header "PHASE 5 MAY 1 FINAL INFRASTRUCTURE VALIDATION"
     echo "Date: $(date)"
-    echo "Time: $(date +%H:%M:%S UTC)"
+    echo "Time: $(date -u +%H:%M:%S) UTC"
     echo "Report File: $REPORT_FILE"
     echo ""
     

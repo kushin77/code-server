@@ -22,36 +22,34 @@ trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 NAMESPACE="${1:-code-server-enterprise}"
-BLUE='\033[0;34m'
-NC='\033[0m'
 
 PASSED=0
 FAILED=0
 WARNINGS=0
 
 check_pass() {
-    echo -e "${GREEN}✓${NC} $1"
-    ((PASSED++))
+    echo -e "${GREEN}✓${RESET} $1"
+    PASSED+=1
 }
 
 check_fail() {
-    echo -e "${RED}✗${NC} $1"
-    ((FAILED++))
+    echo -e "${RED}✗${RESET} $1"
+    FAILED+=1
 }
 
 check_warn() {
-    echo -e "${YELLOW}⚠${NC} $1"
-    ((WARNINGS++))
+    echo -e "${YELLOW}⚠${RESET} $1"
+    WARNINGS+=1
 }
 
-echo -e "${BLUE}=== Production Readiness Check ===${NC}"
+echo -e "${BLUE}=== Production Readiness Check ===${RESET}"
 echo "Namespace: $NAMESPACE"
 echo ""
 
 # ============================================================================
 # 1. CLUSTER INFRASTRUCTURE
 # ============================================================================
-echo -e "${BLUE}[1. Cluster Infrastructure]${NC}"
+echo -e "${BLUE}[1. Cluster Infrastructure]${RESET}"
 
 # Cluster connectivity
 if kubectl cluster-info &>/dev/null; then
@@ -88,7 +86,7 @@ echo ""
 # ============================================================================
 # 2. NAMESPACE & CONFIGURATION
 # ============================================================================
-echo -e "${BLUE}[2. Namespace & Configuration]${NC}"
+echo -e "${BLUE}[2. Namespace & Configuration]${RESET}"
 
 # Namespace exists
 if kubectl get namespace "$NAMESPACE" &>/dev/null; then
@@ -127,7 +125,7 @@ echo ""
 # ============================================================================
 # 3. WORKLOAD STATUS
 # ============================================================================
-echo -e "${BLUE}[3. Workload Status]${NC}"
+echo -e "${BLUE}[3. Workload Status]${RESET}"
 
 # Deployments
 DEPLOYMENTS=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)
@@ -173,7 +171,7 @@ echo ""
 # ============================================================================
 # 4. SERVICES & NETWORKING
 # ============================================================================
-echo -e "${BLUE}[4. Services & Networking]${NC}"
+echo -e "${BLUE}[4. Services & Networking]${RESET}"
 
 # Services
 SERVICES=$(kubectl get svc -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)
@@ -212,7 +210,7 @@ echo ""
 # ============================================================================
 # 5. STORAGE & PERSISTENCE
 # ============================================================================
-echo -e "${BLUE}[5. Storage & Persistence]${NC}"
+echo -e "${BLUE}[5. Storage & Persistence]${RESET}"
 
 # Persistent volumes
 PVS=$(kubectl get pv --no-headers 2>/dev/null | wc -l)
@@ -243,7 +241,7 @@ echo ""
 # ============================================================================
 # 6. OBSERVABILITY & MONITORING
 # ============================================================================
-echo -e "${BLUE}[6. Observability & Monitoring]${NC}"
+echo -e "${BLUE}[6. Observability & Monitoring]${RESET}"
 
 # Prometheus
 if kubectl get deployment prometheus-operator -n monitoring &>/dev/null 2>&1; then
@@ -283,7 +281,7 @@ echo ""
 # ============================================================================
 # 7. HIGH AVAILABILITY
 # ============================================================================
-echo -e "${BLUE}[7. High Availability]${NC}"
+echo -e "${BLUE}[7. High Availability]${RESET}"
 
 # Replica count
 MIN_REPLICAS=$(kubectl get deployments -n "$NAMESPACE" -o jsonpath='{.items[*].spec.replicas}' | tr ' ' '\n' | sort -n | head -1)
@@ -321,7 +319,7 @@ echo ""
 # ============================================================================
 # 8. AUTOSCALING
 # ============================================================================
-echo -e "${BLUE}[8. Autoscaling]${NC}"
+echo -e "${BLUE}[8. Autoscaling]${RESET}"
 
 # HPA configured
 HPAS=$(kubectl get hpa -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)
@@ -343,7 +341,7 @@ echo ""
 # ============================================================================
 # 9. SECURITY
 # ============================================================================
-echo -e "${BLUE}[9. Security]${NC}"
+echo -e "${BLUE}[9. Security]${RESET}"
 
 # mTLS enabled
 if kubectl get peerauthentication -n "$NAMESPACE" &>/dev/null 2>&1; then
@@ -379,7 +377,7 @@ echo ""
 # ============================================================================
 # 10. DATA & BACKUPS
 # ============================================================================
-echo -e "${BLUE}[10. Data & Backups]${NC}"
+echo -e "${BLUE}[10. Data & Backups]${RESET}"
 
 # Database connectivity test
 DB_POD=$(kubectl get pod -n "$NAMESPACE" -l app=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
@@ -406,7 +404,7 @@ echo ""
 # ============================================================================
 # 11. PERFORMANCE BASELINE
 # ============================================================================
-echo -e "${BLUE}[11. Performance Baseline]${NC}"
+echo -e "${BLUE}[11. Performance Baseline]${RESET}"
 
 # Resource usage
 CPU_USAGE=$(kubectl top pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{sum+=$2} END {print sum}' || echo "0")
@@ -437,13 +435,13 @@ echo ""
 TOTAL=$((PASSED + FAILED + WARNINGS))
 PASS_PCT=$((PASSED * 100 / TOTAL))
 
-echo -e "${BLUE}=== Production Readiness Summary ===${NC}"
+echo -e "${BLUE}=== Production Readiness Summary ===${RESET}"
 echo "Passed: $PASSED | Failed: $FAILED | Warnings: $WARNINGS | Total: $TOTAL"
 echo "Score: ${PASS_PCT}%"
 echo ""
 
 if [ "$FAILED" -eq 0 ] && [ "$PASS_PCT" -ge 90 ]; then
-    echo -e "${GREEN}✓ READY FOR PRODUCTION${NC}"
+    echo -e "${GREEN}✓ READY FOR PRODUCTION${RESET}"
     echo ""
     echo "Next steps:"
     echo "1. Conduct load testing (./scripts/k8s/load-test.sh)"
@@ -453,12 +451,12 @@ if [ "$FAILED" -eq 0 ] && [ "$PASS_PCT" -ge 90 ]; then
     echo "5. Execute traffic migration"
     exit 0
 elif [ "$FAILED" -eq 0 ] && [ "$PASS_PCT" -ge 75 ]; then
-    echo -e "${YELLOW}⚠ CONDITIONAL READY (with review)${NC}"
+    echo -e "${YELLOW}⚠ CONDITIONAL READY (with review)${RESET}"
     echo ""
     echo "Address warnings above before production deployment"
     exit 1
 else
-    echo -e "${RED}✗ NOT READY FOR PRODUCTION${NC}"
+    echo -e "${RED}✗ NOT READY FOR PRODUCTION${RESET}"
     echo ""
     echo "Fix critical failures before proceeding"
     exit 1

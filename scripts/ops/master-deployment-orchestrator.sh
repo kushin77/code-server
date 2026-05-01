@@ -131,7 +131,7 @@ validate_deployment_readiness() {
     local scripts_valid=0
     for script in "${REPO_ROOT}"/scripts/ops/*deploy*.sh; do
         if bash -n "$script" 2> /dev/null; then
-            ((scripts_valid++))
+            scripts_valid+=1
         fi
     done
     log_success "✓ $scripts_valid deployment scripts validated"

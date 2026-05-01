@@ -43,13 +43,13 @@ add_trap_handlers() {
   
   # Check if script already has trap handlers
   if grep -q "trap.*ERR\|trap.*EXIT" "$script_path"; then
-    ((SKIPPED++))
+    SKIPPED+=1
     return 0
   fi
   
   # Don't add to non-executable or non-bash scripts
   if ! head -1 "$script_path" | grep -q "bash"; then
-    ((SKIPPED++))
+    SKIPPED+=1
     return 0
   fi
   
@@ -57,7 +57,7 @@ add_trap_handlers() {
   local line_num=$(grep -n "^set -euo pipefail\|^set -e\|^[^#]" "$script_path" | head -1 | cut -d: -f1)
   
   if [ -z "$line_num" ]; then
-    ((FAILED++))
+    FAILED+=1
     log_error "Could not find insertion point in $script_path"
     return 1
   fi
@@ -81,11 +81,11 @@ add_trap_handlers() {
   
   # Replace original with new version
   if mv "$temp_file" "$script_path"; then
-    ((UPDATED++))
+    UPDATED+=1
     log_success "Added trap handlers to $script_path"
     return 0
   else
-    ((FAILED++))
+    FAILED+=1
     log_error "Failed to update $script_path"
     rm -f "$temp_file"
     return 1

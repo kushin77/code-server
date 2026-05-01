@@ -228,7 +228,7 @@ evaluate_compliance() {
   # Code quality
   local syntax_errors=0
   while IFS= read -r script; do
-    bash -n "$script" 2>/dev/null || ((syntax_errors++))
+    bash -n "$script" 2>/dev/null || syntax_errors+=1
   done < <(find scripts -name "*.sh" -type f | head -10)
   local quality_score=$([ ${syntax_errors} -eq 0 ] && echo 100 || echo 50)
   add_criterion "Compliance" "Code quality" 25 "$([ ${syntax_errors} -eq 0 ] && echo 'PASS' || echo 'WARN')" ${quality_score} "Syntax validation"

@@ -271,7 +271,7 @@ main() {
         if register_agent "$AGENT_ID" "$CONTROL_PLANE" "$LOCATION" "$CAPACITY"; then
             break
         else
-            ((retry_count++))
+            retry_count+=1
             if [ $retry_count -lt $MAX_REGISTRATION_RETRIES ]; then
                 log_info "Retry $retry_count/$MAX_REGISTRATION_RETRIES..."
                 sleep $((2 ** retry_count))  # Exponential backoff

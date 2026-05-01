@@ -73,21 +73,22 @@ def test_profile_span_wraps_async_code() -> None:
 
     assert profile is not None
     assert profile.span_name == "demo.async"
-"""Tests for advanced tracing patterns."""
 
-import pytest
+
+"""Tests for advanced tracing patterns (direct module loader, no pytest)."""
+
 import time
-from apps.shared.trace_patterns import (
-    SamplingStrategy,
-    TraceSamplingConfig,
-    TraceSampler,
-    W3CTraceContext,
-    ContextBaggage,
-    PerformanceProfile,
-    TraceContextManager,
-    get_trace_context_manager,
-    profile_span,
-)
+
+# Export symbols from loaded module
+SamplingStrategy = TRACE_PATTERNS.SamplingStrategy
+TraceSamplingConfig = TRACE_PATTERNS.TraceSamplingConfig
+TraceSampler = TRACE_PATTERNS.TraceSampler
+W3CTraceContext = TRACE_PATTERNS.W3CTraceContext
+ContextBaggage = TRACE_PATTERNS.ContextBaggage
+PerformanceProfile = TRACE_PATTERNS.PerformanceProfile
+TraceContextManager = TRACE_PATTERNS.TraceContextManager
+get_trace_context_manager = TRACE_PATTERNS.get_trace_context_manager
+profile_span = TRACE_PATTERNS.profile_span
 
 
 class TestSamplingStrategy:
@@ -415,24 +416,25 @@ class TestTraceContextManager:
 class TestProfileSpanDecorator:
     """Test profile_span decorator."""
 
-    @pytest.mark.asyncio
-    async def test_profile_async_span(self):
+    def test_profile_async_span_wrapper(self):
         """Test profiling async span."""
+        async def _test():
+            @profile_span("async_test")
+            async def async_function():
+                await asyncio.sleep(0.05)
+                return "result"
 
-        @profile_span("async_test")
-        async def async_function():
-            await pytest.sleep(0.05)
-            return "result"
+            result = await async_function()
 
-        result = await async_function()
+            assert result == "result"
 
-        assert result == "result"
+            manager = get_trace_context_manager()
+            profile = manager.get_performance_profile()
 
-        manager = get_trace_context_manager()
-        profile = manager.get_performance_profile()
+            assert profile is not None
+            assert profile.span_name == "async_test"
 
-        assert profile is not None
-        assert profile.span_name == "async_test"
+        asyncio.run(_test())
 
     def test_profile_sync_span(self):
         """Test profiling sync span."""
@@ -453,22 +455,26 @@ class TestProfileSpanDecorator:
         assert profile.span_name == "sync_test"
         assert profile.wall_time_ms >= 50
 
-    @pytest.mark.asyncio
-    async def test_profile_exception_handling(self):
+    def test_profile_exception_handling_wrapper(self):
         """Test profiling with exception."""
+        async def _test():
+            @profile_span("error_test")
+            async def failing_function():
+                raise ValueError("Test error")
 
-        @profile_span("error_test")
-        async def failing_function():
-            raise ValueError("Test error")
+            try:
+                await failing_function()
+                assert False, "Should have raised ValueError"
+            except ValueError:
+                pass
 
-        with pytest.raises(ValueError):
-            await failing_function()
+            manager = get_trace_context_manager()
+            profile = manager.get_performance_profile()
 
-        manager = get_trace_context_manager()
-        profile = manager.get_performance_profile()
+            assert profile is not None
+            assert profile.span_name == "error_test"
 
-        assert profile is not None
-        assert profile.span_name == "error_test"
+        asyncio.run(_test())
 
 
 class TestTracePatternsIntegration:

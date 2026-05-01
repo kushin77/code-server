@@ -1,12 +1,37 @@
-"""Tests for GCP integration service with distributed tracing."""
+"""Tests for GCP integration service with distributed tracing.
 
-import pytest
-from apps.shared.gcp_integration import (
-    GCPIntegration,
-    GCPStorageBucket,
-    GCPBigQueryDataset,
-    get_gcp_integration,
+Direct module loader (no pytest dependency).
+Async test support via asyncio.run() wrappers.
+"""
+
+import asyncio
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+# Create synthetic apps module structure
+ROOT = Path(__file__).parent.parent.parent
+apps_pkg = types.ModuleType("apps")
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+sys.modules["apps.shared"] = shared_pkg
+
+# Load gcp_integration module
+spec = importlib.util.spec_from_file_location(
+    "gcp_integration",
+    ROOT / "shared" / "gcp_integration.py"
 )
+gcp_integration_mod = importlib.util.module_from_spec(spec)
+sys.modules["apps.shared.gcp_integration"] = gcp_integration_mod
+spec.loader.exec_module(gcp_integration_mod)
+
+# Export symbols for tests
+GCPIntegration = gcp_integration_mod.GCPIntegration
+GCPStorageBucket = gcp_integration_mod.GCPStorageBucket
+GCPBigQueryDataset = gcp_integration_mod.GCPBigQueryDataset
+get_gcp_integration = gcp_integration_mod.get_gcp_integration
 
 
 class TestGCPStorageBucket:
@@ -92,82 +117,94 @@ class TestGCPIntegration:
         assert integration.pubsub_tracer is not None
         assert integration.functions_tracer is not None
 
-    @pytest.mark.asyncio
-    async def test_get_storage_bucket(self):
+    def test_get_storage_bucket_async(self):
         """Test getting storage bucket information."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        bucket = await integration.get_storage_bucket("test-bucket")
+            bucket = await integration.get_storage_bucket("test-bucket")
 
-        assert bucket is not None
-        assert bucket.name == "test-bucket"
-        assert bucket.project == "my-project"
-        assert bucket.object_count == 1000
-
-    @pytest.mark.asyncio
-    async def test_list_storage_buckets(self):
-        """Test listing storage buckets."""
-        integration = GCPIntegration(project_id="my-project")
-
-        buckets = await integration.list_storage_buckets()
-
-        assert len(buckets) == 3
-        for i, bucket in enumerate(buckets):
-            assert bucket.name == f"bucket-{i}"
+            assert bucket is not None
+            assert bucket.name == "test-bucket"
             assert bucket.project == "my-project"
+            assert bucket.object_count == 1000
 
-    @pytest.mark.asyncio
-    async def test_create_bigquery_dataset(self):
+        asyncio.run(_test())
+
+    def test_list_storage_buckets_async(self):
+        """Test listing storage buckets."""
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
+
+            buckets = await integration.list_storage_buckets()
+
+            assert len(buckets) == 3
+            for i, bucket in enumerate(buckets):
+                assert bucket.name == f"bucket-{i}"
+                assert bucket.project == "my-project"
+
+        asyncio.run(_test())
+
+    def test_create_bigquery_dataset_async(self):
         """Test creating BigQuery dataset."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        dataset = await integration.create_bigquery_dataset(
-            dataset_id="test_dataset",
-            description="Test dataset for Phase 11",
-        )
+            dataset = await integration.create_bigquery_dataset(
+                dataset_id="test_dataset",
+                description="Test dataset for Phase 11",
+            )
 
-        assert dataset is not None
-        assert dataset.dataset_id == "test_dataset"
-        assert dataset.project == "my-project"
-        assert dataset.description == "Test dataset for Phase 11"
+            assert dataset is not None
+            assert dataset.dataset_id == "test_dataset"
+            assert dataset.project == "my-project"
+            assert dataset.description == "Test dataset for Phase 11"
 
-    @pytest.mark.asyncio
-    async def test_get_bigquery_dataset(self):
+        asyncio.run(_test())
+
+    def test_get_bigquery_dataset_async(self):
         """Test getting BigQuery dataset information."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        dataset = await integration.get_bigquery_dataset("test_dataset")
+            dataset = await integration.get_bigquery_dataset("test_dataset")
 
-        assert dataset is not None
-        assert dataset.dataset_id == "test_dataset"
-        assert dataset.table_count == 5
+            assert dataset is not None
+            assert dataset.dataset_id == "test_dataset"
+            assert dataset.table_count == 5
 
-    @pytest.mark.asyncio
-    async def test_publish_message(self):
+        asyncio.run(_test())
+
+    def test_publish_message_async(self):
         """Test publishing to Pub/Sub topic."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        success = await integration.publish_message(
-            topic_name="test-topic",
-            message="Hello, Pub/Sub!",
-            attributes={"source": "phase-11"},
-        )
+            success = await integration.publish_message(
+                topic_name="test-topic",
+                message="Hello, Pub/Sub!",
+                attributes={"source": "phase-11"},
+            )
 
-        assert success is True
+            assert success is True
 
-    @pytest.mark.asyncio
-    async def test_invoke_function(self):
+        asyncio.run(_test())
+
+    def test_invoke_function_async(self):
         """Test invoking Cloud Function."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        result = await integration.invoke_function(
-            function_name="test-function",
-            data={"name": "world"},
-            region="us-central1",
-        )
+            result = await integration.invoke_function(
+                function_name="test-function",
+                data={"name": "world"},
+                region="us-central1",
+            )
 
-        assert result is not None
-        assert result["result"] == "Function executed successfully"
+            assert result is not None
+            assert result["result"] == "Function executed successfully"
+
+        asyncio.run(_test())
 
     def test_gcp_get_all_traces(self):
         """Test getting all recorded traces."""
@@ -204,53 +241,59 @@ class TestGCPIntegrationSingleton:
         # Should be same instance
         assert integration1 is integration2
 
-    @pytest.mark.asyncio
-    async def test_gcp_integration_multi_service_tracing(self):
+    def test_gcp_integration_multi_service_tracing_async(self):
         """Test tracing calls across multiple GCP services."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        # Call multiple services
-        bucket = await integration.get_storage_bucket("test-bucket")
-        dataset = await integration.create_bigquery_dataset("test_dataset")
-        success = await integration.publish_message("test-topic", "test")
+            # Call multiple services
+            bucket = await integration.get_storage_bucket("test-bucket")
+            dataset = await integration.create_bigquery_dataset("test_dataset")
+            success = await integration.publish_message("test-topic", "test")
 
-        # All should succeed
-        assert bucket is not None
-        assert dataset is not None
-        assert success is True
+            # All should succeed
+            assert bucket is not None
+            assert dataset is not None
+            assert success is True
 
-        # Get traces from all services
-        traces = integration.get_all_traces()
-        total_traces = sum(len(t) for t in traces.values())
+            # Get traces from all services
+            traces = integration.get_all_traces()
+            total_traces = sum(len(t) for t in traces.values())
 
-        # Should have at least 3 traces (one from each service)
-        assert total_traces >= 3
+            # Should have at least 3 traces (one from each service)
+            assert total_traces >= 3
+
+        asyncio.run(_test())
 
 
 class TestGCPIntegrationErrorHandling:
     """Test GCP integration error handling."""
 
-    @pytest.mark.asyncio
-    async def test_get_nonexistent_bucket_returns_none(self):
+    def test_get_nonexistent_bucket_returns_none_async(self):
         """Test getting nonexistent bucket."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        # Should return None instead of raising
-        bucket = await integration.get_storage_bucket("nonexistent")
-        assert bucket is None
+            # Should return None instead of raising
+            bucket = await integration.get_storage_bucket("nonexistent")
+            assert bucket is None
 
-    @pytest.mark.asyncio
-    async def test_trace_correlation_across_services(self):
+        asyncio.run(_test())
+
+    def test_trace_correlation_across_services_async(self):
         """Test trace correlation across services."""
-        integration = GCPIntegration(project_id="my-project")
+        async def _test():
+            integration = GCPIntegration(project_id="my-project")
 
-        # Make calls to different services
-        await integration.get_storage_bucket("bucket-1")
-        await integration.get_bigquery_dataset("dataset-1")
-        await integration.publish_message("topic-1", "message")
+            # Make calls to different services
+            await integration.get_storage_bucket("bucket-1")
+            await integration.get_bigquery_dataset("dataset-1")
+            await integration.publish_message("topic-1", "message")
 
-        # Each service tracer should have traces
-        traces = integration.get_all_traces()
-        assert len(traces["storage"]) >= 1
-        assert len(traces["bigquery"]) >= 1
-        assert len(traces["pubsub"]) >= 1
+            # Each service tracer should have traces
+            traces = integration.get_all_traces()
+            assert len(traces["storage"]) >= 1
+            assert len(traces["bigquery"]) >= 1
+            assert len(traces["pubsub"]) >= 1
+
+        asyncio.run(_test())

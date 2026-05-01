@@ -1,0 +1,156 @@
+receivers:
+  # ── Pull-mode Prometheus metrics ──────────────────────────────────────────
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "code-server-otel-collector"
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["localhost:8888"]
+
+  # ── OTLP push from application traces/metrics/logs ────────────────────────
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            - "http://localhost:*"
+            - "https://*.code-server.internal"
+
+  # ── Host and container metrics via hostmetrics ────────────────────────────
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+      disk: {}
+      filesystem: {}
+      network:
+        metrics:
+          system.network.io.direction:
+            enabled: true
+      load: {}
+      processes: {}
+
+  # ── Docker container stats ────────────────────────────────────────────────
+  docker_stats:
+    endpoint: "unix:///var/run/docker.sock"
+    collection_interval: 30s
+    timeout: 20s
+    api_version: "1.24"
+
+processors:
+  # Batch for efficiency
+  batch:
+    timeout: 5s
+    send_batch_size: 256
+    send_batch_max_size: 512
+
+  # Drop noisy spans to reduce storage cost
+  filter/drop_health:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["http.route"] == "/health"'
+        - 'attributes["http.route"] == "/metrics"'
+
+  # Resource attributes — label all telemetry with deployment context
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: "production"
+        action: insert
+      - key: service.namespace
+        value: "code-server"
+        action: insert
+      - key: host.arch
+        from_attribute: "os.arch"
+        action: insert
+
+  # Memory limiter — prevent OOM in the collector itself
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  # Tail sampling — keep 100% of errors, 5% of normal spans
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 50000
+    expected_new_traces_per_sec: 100
+    policies:
+      - name: keep-errors
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      - name: sample-normal
+        type: probabilistic
+        probabilistic: { sampling_percentage: 5 }
+
+exporters:
+  # ── Jaeger traces ─────────────────────────────────────────────────────────
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+
+  # ── Prometheus metrics ────────────────────────────────────────────────────
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "code_server"
+    resource_to_telemetry_conversion:
+      enabled: true
+    enable_open_metrics: true
+
+  # ── Loki logs ─────────────────────────────────────────────────────────────
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+    labels:
+      resource:
+        service.name: "service"
+        deployment.environment: "environment"
+
+  # ── Debug (stdout) — disable in production ───────────────────────────────
+  # debug:
+  #   verbosity: detailed
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+  pprof:
+    endpoint: "0.0.0.0:1888"
+  zpages:
+    endpoint: "0.0.0.0:55679"
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/drop_health, resource, tail_sampling, batch]
+      exporters: [otlp/jaeger]
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics, docker_stats]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [loki]
+  telemetry:
+    logs:
+      level: "info"
+    metrics:
+      address: "0.0.0.0:8888"

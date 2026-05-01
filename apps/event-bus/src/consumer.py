@@ -5,7 +5,10 @@
 # @governance GOV-003 - Event schema enforcement and audit trails
 
 import json
-import logging
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from log import get_logger
 from typing import Any, Callable, Dict, List, Optional
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
@@ -16,7 +19,7 @@ except ImportError:
     Consumer = None
     KafkaError = None
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EventConsumer(ABC):

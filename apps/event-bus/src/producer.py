@@ -10,14 +10,17 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-import logging
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from log import get_logger
 
 try:
     from confluent_kafka import Producer
 except ImportError:
     Producer = None
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

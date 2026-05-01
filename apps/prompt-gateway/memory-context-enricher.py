@@ -4,12 +4,15 @@
 @governance GOV-002
 """
 
-import logging
+import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
+from log import get_logger
 from typing import List, Dict, Optional
 import requests
 import json
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MemoryContextEnricher:

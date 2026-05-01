@@ -22,7 +22,14 @@ except ImportError:
     from policy_propagator import PolicyPropagator
     from compliance_reporter import ComplianceReporter
 
-logging.basicConfig(level=logging.INFO)
+# SLOG: structured JSON logging (GOV-002 compliant)
+class _JsonFmt(logging.Formatter):
+    def format(self, r):
+        import json, sys
+        return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
+_h = logging.StreamHandler()
+_h.setFormatter(_JsonFmt())
+logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(

@@ -567,55 +567,6 @@ services:
           cpus: "0.25"
           memory: 128m
 
-  alert-relay:
-    image: ghcr.io/kubernetes-sigs/prometheus-alert-relay:v0.0.1@sha256:abc123def456
-    container_name: code-server-alert-relay
-    user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
-    command:
-      - "--config.file=/etc/alert-relay/relay-config.yml"
-      - "--web.listen-address=0.0.0.0:8080"
-      - "--log.level=info"
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./config/monitoring/alert-relay-config.yml:/etc/alert-relay/relay-config.yml:ro
-    environment:
-      - SLACK_WEBHOOK=${SLACK_WEBHOOK:-https://hooks.slack.com/services/PLACEHOLDER}
-      - SMTP_HOST=${SMTP_HOST:-smtp.kushnir.cloud}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USER=${SMTP_USER:-alertmanager@kushnir.cloud}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - SMTP_FROM=${SMTP_FROM:-alertmanager@kushnir.cloud}
-      - PAGERDUTY_KEY=${PAGERDUTY_KEY:-}
-      - CUSTOM_WEBHOOK_URL=${CUSTOM_WEBHOOK_URL:-}
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - "curl -f http://localhost:8080/health || exit 1"
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
-    networks:
-      - services
-    depends_on:
-      alertmanager:
-        condition: service_started
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256m
-        reservations:
-          cpus: "0.25"
-          memory: 128m
-
   # ========================================================================
   # VECTOR DATABASE & SEARCH
   # ========================================================================
@@ -749,7 +700,7 @@ services:
       ollama:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://multimodal-ai:${MULTIMODAL_AI_PORT}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${MULTIMODAL_AI_PORT:-8040}/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -885,14 +836,13 @@ services:
     volumes:
       - ./apps/env-provisioner:/app
       - ./config:/app/config:ro
-      - ./artifacts:/app/artifacts
       - ./docker-compose.yml:/app/docker-compose.yml:ro
     healthcheck:
       test:
         - CMD
         - curl
         - "-f"
-        - "http://env-provisioner:${CONTROL_PLANE_PORT}/health"
+        - "http://localhost:${CONTROL_PLANE_PORT}/health"
       interval: 30s
       timeout: 10s
       retries: 3
@@ -938,7 +888,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://activity-feed:${MODEL_SERVER_PORT}/health"
+        - "http://localhost:${MODEL_SERVER_PORT}/health"
       interval: 30s
       timeout: 10s
       retries: 3

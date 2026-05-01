@@ -259,3 +259,42 @@ def log_debug(message: str, **kwargs) -> None:
     """Log debug message using global logger."""
     if _global_logger:
         _global_logger.debug(message, **kwargs)
+
+
+class _JsonFormatter(logging.Formatter):
+    """JSON log formatter for structured log output (SLOG compliance)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict = {
+            "timestamp": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "service": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False)
+
+
+def setup_logging(service: str = "code-server") -> logging.Logger:
+    """
+    Configure root logger with JSON structured output (SLOG).
+
+    Call once at application startup:
+        from apps._shared.python.logging import setup_logging
+        logger = setup_logging("my-service")
+
+    Respects LOG_LEVEL env var (default: INFO).
+    Output is newline-delimited JSON suitable for Loki/OTel ingestion.
+    """
+    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(_JsonFormatter())
+
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.handlers = [handler]
+
+    return logging.getLogger(service)

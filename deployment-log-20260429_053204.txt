@@ -1,6 +1,0 @@
-🚀 INFRASTRUCTURE AS CODE DEPLOYMENT
-=====================================
-
-📋 Step 1: Validating prerequisites...
-❌ Ansible not found. Install with:
-   sudo apt-get install -y ansible

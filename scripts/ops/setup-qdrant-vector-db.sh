@@ -24,18 +24,6 @@ QDRANT_CONFIG="${REPO_ROOT}/config/qdrant-config.yaml"
 
 mkdir -p "${QDRANT_DATA_PATH}" "$(dirname "${QDRANT_CONFIG}")"
 
-log_info() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
-}
-
-log_error() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" >&2
-}
-
-log_success() {
-  echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
-}
-
 wait_for_qdrant_health() {
   local max_attempts=30
   local attempt=0

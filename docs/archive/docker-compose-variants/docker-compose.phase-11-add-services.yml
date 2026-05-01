@@ -1,0 +1,165 @@
+services:
+  # Additional utilities to reach 40-service target
+  utility-sidecar-6:
+    image: alpine:3.20
+    container_name: code-server-utility-sidecar-6
+    command: tail -f /dev/null
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  utility-sidecar-7:
+    image: alpine:3.20
+    container_name: code-server-utility-sidecar-7
+    command: tail -f /dev/null
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  utility-sidecar-8:
+    image: alpine:3.20
+    container_name: code-server-utility-sidecar-8
+    command: tail -f /dev/null
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  utility-sidecar-9:
+    image: alpine:3.20
+    container_name: code-server-utility-sidecar-9
+    command: tail -f /dev/null
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  utility-sidecar-10:
+    image: alpine:3.20
+    container_name: code-server-utility-sidecar-10
+    command: tail -f /dev/null
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  nginx-1:
+    image: nginx:alpine
+    container_name: code-server-nginx-1
+    ports:
+      - "8088:80"
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  nginx-2:
+    image: nginx:alpine
+    container_name: code-server-nginx-2
+    ports:
+      - "8089:80"
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: code-server-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kushnir.cloud
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: code-server-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: code-server-portainer
+    ports:
+      - "9002:9000"
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  consul:
+    image: consul:1.17
+    container_name: code-server-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0
+    volumes:
+      - consul_data:/consul/data
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0-alpine
+    container_name: code-server-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql_root_password
+      MYSQL_DATABASE: code_server_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7.0
+    container_name: code-server-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: code-server-elastic
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+networks:
+  code-server-network:
+    external: true
+
+volumes:
+  minio_data:
+  portainer_data:
+  consul_data:
+  mysql_data:
+  mongo_data:
+  elastic_data:

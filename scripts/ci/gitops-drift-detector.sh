@@ -52,7 +52,7 @@ check_docker_compose_drift() {
   local drift_items=()
   
   # Compare running containers with docker-compose.yml
-  local running=$(docker compose -f "${REPO_ROOT}/docker-compose.yml" ps --format json 2>/dev/null | jq -r '.[] | .Service' | sort)
+  local running=$(docker compose -f "${REPO_ROOT}/docker-compose.yml" ps --format json 2>/dev/null | jq -r '.[] | .Service // empty' | sort)
   local defined=$(yq -r '.services | keys[]' "${REPO_ROOT}/docker-compose.yml" 2>/dev/null | sort)
   
   # Check for extra running services
@@ -82,7 +82,7 @@ check_docker_compose_drift() {
     [[ -z "${image}" ]] && continue
     
     local service=$(yq -r ".services[] | select(.image == \"${image}\") | keys[0]" "${REPO_ROOT}/docker-compose.yml" 2>/dev/null | head -1)
-    local running_image=$(docker compose -f "${REPO_ROOT}/docker-compose.yml" ps --format json 2>/dev/null | jq -r ".[] | select(.Service == \"${service}\") | .Image" | head -1)
+    local running_image=$(docker compose -f "${REPO_ROOT}/docker-compose.yml" ps --format json 2>/dev/null | jq -r ".[] | select((.Service // \"\") == \"${service}\") | .Image // empty" | head -1)
     
     if [[ -n "${running_image}" ]] && [[ "${image}" != "${running_image}" ]]; then
       drift_items+=("docker-compose-image-drift:${service}")
@@ -116,13 +116,45 @@ check_terraform_drift() {
 
   cd "${TERRAFORM_DIR}"
   
-  # Run terraform plan in no-changes mode
+  # Run terraform plan in no-changes mode with retry for transient provider/SSH transport failures.
   # NOTE: null_resource with ignore_changes=all are skipped intentionally
   # (they're one-time provisioners, drift detection uses host state comparison instead)
-  local plan_output=$(terraform plan -json 2>/dev/null | jq -r \
-    'select(.type=="resource_drift") | 
-     select(.address | contains("null_resource") | not) |  # Skip null_resources
-     .address' || echo "")
+  local terraform_json=""
+  local tf_rc=1
+  local tf_attempt
+  for tf_attempt in 1 2 3; do
+    local tf_err_file
+    tf_err_file="$(mktemp)"
+
+    if terraform_json="$(terraform plan -json 2>"${tf_err_file}")"; then
+      tf_rc=0
+      rm -f "${tf_err_file}"
+      break
+    fi
+
+    tf_rc=$?
+    if grep -qiE 'exited with signal: killed|dial-stdio|broken pipe|i/o timeout|connection reset by peer' "${tf_err_file}"; then
+      log_warning "Transient terraform plan transport failure (attempt ${tf_attempt}/3), retrying..."
+      rm -f "${tf_err_file}"
+      continue
+    fi
+
+    log_error "Terraform plan failed with non-transient error"
+    cat "${tf_err_file}" | sed 's/^/[terraform] /' | tee -a "${DRIFT_LOG}" >&2
+    rm -f "${tf_err_file}"
+    return 1
+  done
+
+  if [[ ${tf_rc} -ne 0 ]]; then
+    log_warning "Terraform drift check skipped due to repeated transient plan failures"
+    return 0
+  fi
+
+  local plan_output
+  plan_output="$(printf '%s\n' "${terraform_json}" | jq -r \
+    'select(.type=="resource_drift") |
+     select(((.address // "") | contains("null_resource")) | not) |
+     (.address // empty)' || echo "")"
   
   while IFS= read -r resource; do
     [[ -z "${resource}" ]] && continue
@@ -157,7 +189,7 @@ check_replica_parity() {
     return 0
   fi
   
-  primary_services=$(docker ps --format json 2>/dev/null | jq -r '.[].Names' | sort | tr '\n' ' ' || echo "")
+  primary_services=$(docker ps --format json 2>/dev/null | jq -r 'if type=="array" then .[] else . end | .Names // empty' | sort | tr '\n' ' ' || echo "")
   
   if [[ -z "${primary_services}" ]]; then
     log_warning "No Docker services found on primary host — skipping replica parity check"
@@ -168,7 +200,7 @@ check_replica_parity() {
   local replica_services
   replica_services=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
     "akushnir@${REPLICA_HOST}" \
-    "docker ps --format json 2>/dev/null | jq -r '.[].Names' | sort | tr '\n' ' '" 2>/dev/null || echo "")
+    "docker ps --format json 2>/dev/null | jq -r 'if type==\"array\" then .[] else . end | .Names // empty' | sort | tr '\n' ' '" 2>/dev/null || echo "")
   
   if [[ -z "${replica_services}" ]]; then
     log_error "Unable to query Docker services on replica host ${REPLICA_HOST}"

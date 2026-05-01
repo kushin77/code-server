@@ -18,10 +18,10 @@ trap 'log_info "Cleaning up temporary files..."; cleanup' EXIT
 # Configuration & Defaults
 # ============================================================================
 
-REPO_ROOT="${1:-.}"
+WORKSPACE_ROOT="${1:-${REPO_ROOT}}"
 DRY_RUN="${DRY_RUN:-false}"
-DEPLOYMENT_LOG="${REPO_ROOT}/artifacts/deployment-$(date +%Y%m%d_%H%M%S).log"
-RESULTS_FILE="${REPO_ROOT}/artifacts/deployment-results.json"
+DEPLOYMENT_LOG="${WORKSPACE_ROOT}/artifacts/deployment-$(date +%Y%m%d_%H%M%S).log"
+RESULTS_FILE="${WORKSPACE_ROOT}/artifacts/deployment-results.json"
 
 # SSH Configuration from environment
 PRIMARY_HOST="${PRIMARY_HOST:-}"
@@ -37,7 +37,7 @@ PROFILES="${PROFILES:-ai governance infrastructure all}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-30}"
 
 # Create artifacts directory
-mkdir -p "${REPO_ROOT}/artifacts"
+mkdir -p "${WORKSPACE_ROOT}/artifacts"
 
 # Colors for output
 RED='\033[0;31m'
@@ -91,16 +91,12 @@ cleanup() {
 # ============================================================================
 
 load_config() {
-    if [[ -f "${REPO_ROOT}/scripts/_common/config.env" ]]; then
-        source "${REPO_ROOT}/scripts/_common/config.env"
+    if [[ -f "${WORKSPACE_ROOT}/scripts/_common/config.env" ]]; then
+        source "${WORKSPACE_ROOT}/scripts/_common/config.env"
         log_success "Loaded config.env"
     else
         log_warning "config.env not found, using environment variables"
     fi
-
-    # Use loaded PRIMARY_HOST and REPLICA_HOST if not already set
-    PRIMARY_HOST="${PRIMARY_HOST:-${PRIMARY_HOST:-}}"
-    REPLICA_HOST="${REPLICA_HOST:-${REPLICA_HOST:-}}"
 }
 
 # ============================================================================
@@ -140,8 +136,8 @@ validate_docker_compose_files() {
     log_section "Docker-Compose Validation"
 
     local compose_files=(
-        "${REPO_ROOT}/docker-compose.yml"
-        "${REPO_ROOT}/docker-compose.override.yml"
+        "${WORKSPACE_ROOT}/docker-compose.yml"
+        "${WORKSPACE_ROOT}/docker-compose.override.yml"
     )
 
     for file in "${compose_files[@]}"; do
@@ -153,7 +149,7 @@ validate_docker_compose_files() {
     done
 
     # Validate docker-compose syntax
-    if ! docker-compose -f "${REPO_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
+    if ! docker-compose -f "${WORKSPACE_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
         log_error "docker-compose.yml has syntax errors"
         exit 1
     fi
@@ -359,7 +355,7 @@ EOJSON
 # Show usage if requested
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     cat << 'HELP'
-Usage: deploy-via-ssh.sh [REPO_ROOT] [OPTIONS]
+Usage: deploy-via-ssh.sh [WORKSPACE_ROOT] [OPTIONS]
 
 Description:
   Deploy Docker Compose services to remote hosts via SSH

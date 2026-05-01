@@ -12,12 +12,12 @@ set -euo pipefail
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 readonly REGISTRY_URL="${REGISTRY_URL:-docker.io}"
 readonly DRY_RUN="${DRY_RUN:-false}"
-readonly LOG_FILE="./artifacts/image-pinning-$(date +%s).log"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/image-pinning-$(date +%s).log"
 
 log() {
   echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $*" | tee -a "$LOG_FILE"

@@ -14,15 +14,13 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CONFIG_DIR="${REPO_DIR}/config"
-LOG_FILE="${REPO_DIR}/logs/rbac-setup.log"
+CONFIG_DIR="${REPO_ROOT}/config"
+LOG_FILE="${REPO_ROOT}/logs/rbac-setup.log"
 
-mkdir -p "${CONFIG_DIR}/rbac" "${REPO_DIR}/logs"
+mkdir -p "${CONFIG_DIR}/rbac" "${REPO_ROOT}/logs"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"

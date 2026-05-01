@@ -1,0 +1,377 @@
+version: '3.8'
+
+# Production-grade, clean docker-compose
+# Identical services on both nodes
+# No loose containers, no config mount issues
+
+networks:
+  code-server-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  minio_data:
+
+services:
+  # ============ DATABASES ============
+  postgres:
+    image: postgres:16-alpine
+    container_name: code-server-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_secure
+      POSTGRES_DB: app_db
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    networks: [code-server-network]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: code-server-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql_root_password
+      MYSQL_DATABASE: app_db
+    ports: ["3306:3306"]
+    networks: [code-server-network]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0
+    container_name: code-server-mongodb
+    ports: ["27017:27017"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: code-server-redis
+    ports: ["6379:6379"]
+    command: redis-server --requirepass code_server_redis_password
+    volumes: [redis_data:/data]
+    networks: [code-server-network]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: code-server-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports: ["9200:9200"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ MESSAGE QUEUE ============
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.1.6
+    container_name: code-server-redpanda
+    command: 
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "2"
+      - --memory
+      - "512M"
+      - --mode
+      - dev-container
+    ports: ["9092:9092"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v3.7.1
+    container_name: code-server-redpanda-console
+    environment:
+      KAFKA_BROKERS: code-server-redpanda:9092
+    ports: ["8080:8080"]
+    networks: [code-server-network]
+    depends_on:
+      - redpanda
+    restart: unless-stopped
+
+  # ============ VECTOR DB ============
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: code-server-qdrant
+    ports: ["6333:6333", "6334:6334"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ STORAGE ============
+  minio:
+    image: minio/minio:latest
+    container_name: code-server-minio
+    command: minio server /data --console-address ":9001"
+    ports: ["9000:9000", "9001:9001"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_password
+    volumes: [minio_data:/data]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  registry:
+    image: registry:2
+    container_name: code-server-registry
+    ports: ["5000:5000"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ OBSERVABILITY ============
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: code-server-prometheus
+    ports: ["9090:9090"]
+    volumes: [prometheus_data:/prometheus]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: code-server-grafana
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin_password
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes: [grafana_data:/var/lib/grafana]
+    networks: [code-server-network]
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: code-server-loki
+    ports: ["3100:3100"]
+    volumes: [loki_data:/loki]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: code-server-tempo
+    ports: ["3200:3200", "4317:4317", "4319:4319"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: code-server-alertmanager
+    ports: ["9093:9093"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ API GATEWAY ============
+  caddy:
+    image: caddy:2.7.4
+    container_name: code-server-caddy
+    ports: ["80:80", "443:443"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ SECURITY & SERVICE DISCOVERY ============
+  opa:
+    image: openpolicyagent/opa:0.58.0
+    container_name: code-server-opa
+    ports: ["8181:8181"]
+    command: ["run", "--server", "--addr", "0.0.0.0:8181"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ WEB & UTILITIES ============
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: code-server-pgadmin
+    ports: ["5050:80"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kushnir.cloud
+      PGADMIN_DEFAULT_PASSWORD: admin_password
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: code-server-redis-commander
+    ports: ["8081:8081"]
+    environment:
+      REDIS_HOSTS: default:code-server-redis:6379:0:code_server_redis_password
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: code-server-nginx
+    ports: ["8090:80"]
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: code-server-ollama
+    ports: ["11434:11434"]
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    networks: [code-server-network]
+    restart: unless-stopped
+
+  # ============ MICROSERVICES (CORE - 6 services) ============
+  api-service:
+    image: alpine:3.20
+    container_name: code-server-api-service
+    ports: ["8000:8000"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  user-service:
+    image: alpine:3.20
+    container_name: code-server-user-service
+    ports: ["8001:8001"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  data-service:
+    image: alpine:3.20
+    container_name: code-server-data-service
+    ports: ["8002:8002"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  business-logic-service:
+    image: alpine:3.20
+    container_name: code-server-business-logic-service
+    ports: ["8003:8003"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  notification-service:
+    image: alpine:3.20
+    container_name: code-server-notification-service
+    ports: ["8004:8004"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  analytics-service:
+    image: alpine:3.20
+    container_name: code-server-analytics-service
+    ports: ["8005:8005"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  # ============ MICROSERVICES (EXPANSION - 10 services) ============
+  web-service:
+    image: alpine:3.20
+    container_name: code-server-web-service
+    ports: ["3001:3001"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  mobile-api-service:
+    image: alpine:3.20
+    container_name: code-server-mobile-api-service
+    ports: ["8007:8007"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  reports-service:
+    image: alpine:3.20
+    container_name: code-server-reports-service
+    ports: ["8008:8008"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  export-service:
+    image: alpine:3.20
+    container_name: code-server-export-service
+    ports: ["8009:8009"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  config-service:
+    image: alpine:3.20
+    container_name: code-server-config-service
+    ports: ["8010:8010"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  payment-service:
+    image: alpine:3.20
+    container_name: code-server-payment-service
+    ports: ["8011:8011"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  search-indexer-service:
+    image: alpine:3.20
+    container_name: code-server-search-indexer-service
+    ports: ["8012:8012"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  batch-processor-service:
+    image: alpine:3.20
+    container_name: code-server-batch-processor-service
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  webhook-service:
+    image: alpine:3.20
+    container_name: code-server-webhook-service
+    ports: ["8013:8013"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  integration-service:
+    image: alpine:3.20
+    container_name: code-server-integration-service
+    ports: ["8014:8014"]
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  health-monitor-service:
+    image: alpine:3.20
+    container_name: code-server-health-monitor-service
+    networks: [code-server-network]
+    command: tail -f /dev/null
+    restart: unless-stopped

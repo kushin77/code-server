@@ -16,7 +16,6 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
@@ -25,9 +24,7 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 # Configuration
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-ALERTS_DIR="${PROJECT_ROOT}/monitoring/alerts"
+ALERTS_DIR="${REPO_ROOT}/monitoring/alerts"
 PROMETHEUS_RULES="${ALERTS_DIR}/prometheus-rules.yaml"
 GRAFANA_ALERTS="${ALERTS_DIR}/grafana-alerts.json"
 

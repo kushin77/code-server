@@ -17,14 +17,14 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-LOG_FILE="${PROJECT_ROOT}/artifacts/opa-e2e-test.log"
-REPORT_FILE="${PROJECT_ROOT}/artifacts/opa-e2e-test-report.json"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
-source_env_file "${PROJECT_ROOT}/.env.infrastructure"
+LOG_FILE="${REPO_ROOT}/artifacts/opa-e2e-test.log"
+REPORT_FILE="${REPO_ROOT}/artifacts/opa-e2e-test-report.json"
 
-mkdir -p "${PROJECT_ROOT}/artifacts"
+source_env_file "${REPO_ROOT}/.env.infrastructure"
+
+mkdir -p "${REPO_ROOT}/artifacts"
 
 OPA_URL="${OPA_ENDPOINT:-${OPA_URL:-http://localhost:8181}}"
 

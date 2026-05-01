@@ -16,9 +16,7 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 # ============================================================================
 # Configuration
@@ -30,9 +28,9 @@ HEALTH_CHECK_INTERVAL=10
 MAX_HEALTH_CHECK_RETRIES=30
 SLA_MAX_DEPLOYMENT_TIME=300                # 5 minutes
 SLA_MAX_DOWNTIME=30                        # 30 seconds
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
+ARTIFACT_DIR="${REPO_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/deployment-full-redeploy-test-report.json"
-LOG_FILE="${PROJECT_ROOT}/logs/full-redeploy-test.log"
+LOG_FILE="${REPO_ROOT}/logs/full-redeploy-test.log"
 
 mkdir -p "${ARTIFACT_DIR}" "$(dirname "${LOG_FILE}")"
 

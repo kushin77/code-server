@@ -5,12 +5,12 @@
 # @idempotent YES - Checks state before any modifications
 set -euo pipefail
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
 readonly DEPLOYMENT_ID="deployment-$(date +%s)"
-readonly STATE_DIR="./state/deployments"
-readonly LOG_FILE="./artifacts/deploy-${DEPLOYMENT_ID}.log"
+readonly STATE_DIR="${REPO_ROOT}/state/deployments"
+readonly LOG_FILE="${REPO_ROOT}/artifacts/deploy-${DEPLOYMENT_ID}.log"
 
 mkdir -p "$STATE_DIR"
 

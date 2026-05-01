@@ -19,7 +19,7 @@ trap 'log_error "Diagnostic failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Diagnostic cleanup..."; cleanup_diagnostic || true' EXIT
 
 # Configuration
-REPLICA_HOST="192.168.168.42"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
 REPLICA_SSH_PORT="22"
 REPLICA_USER="deployment"
 DIAGNOSTIC_DIR="$REPO_ROOT/artifacts/ha-diagnostics"

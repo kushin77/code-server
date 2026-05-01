@@ -37,4 +37,22 @@ validate_required_env() {
     done
 }
 
+# Safely source KEY=VALUE style env files with optional comments and CRLF endings.
+source_env_file() {
+    local env_file="${1:-}"
+    if [[ -z "${env_file}" || ! -f "${env_file}" ]]; then
+        return 0
+    fi
+
+    # shellcheck disable=SC1090
+    set -a
+    source "${env_file}"
+    set +a
+}
+
+# Auto-source environment variables if available
+if [[ -f "${REPO_ROOT}/.env.deployment" ]]; then
+    source_env_file "${REPO_ROOT}/.env.deployment"
+fi
+
 trap - ERR

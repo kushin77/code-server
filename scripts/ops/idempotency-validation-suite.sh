@@ -19,8 +19,9 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 # CONFIGURATION
 # ============================================================================
 
-readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 readonly LOG_FILE="${REPO_ROOT}/artifacts/idempotency-validation-$(date +%Y%m%d-%H%M%S).log"
 readonly METRICS_FILE="${REPO_ROOT}/artifacts/idempotency-metrics.json"
 

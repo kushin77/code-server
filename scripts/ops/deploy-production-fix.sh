@@ -32,12 +32,12 @@ trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EX
 set -euo pipefail
 
 # Source canonical environment variables (SSOT)
-if [ -f "$PWD/.env.infrastructure" ]; then
+if [ -f "${REPO_ROOT}/.env.infrastructure" ]; then
     set -a
-    source "$PWD/.env.infrastructure"
+    source "${REPO_ROOT}/.env.infrastructure"
     set +a
 else
-    echo "[ERROR] .env.infrastructure not found in $PWD. Aborting." >&2
+    echo "[ERROR] .env.infrastructure not found in ${REPO_ROOT}. Aborting." >&2
     exit 1
 fi
 
@@ -50,7 +50,6 @@ for var in "${required_vars[@]}"; do
     fi
 done
 
-readonly REPO_ROOT="${PWD}"
 readonly DOCKER_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
 readonly LOG_FILE="/tmp/deploy-$(date +%Y%m%d-%H%M%S).log"
 readonly HEALTH_CHECK_RETRIES=30

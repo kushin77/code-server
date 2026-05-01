@@ -18,7 +18,7 @@ trap 'log_info "Cleaning up..."' EXIT
 
 log_step() { printf '%s [STEP] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"; }
 
-PRIMARY_HOST="192.168.168.31"
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
 PRIMARY_USER="akushnir"
 REPORT_FILE="/tmp/performance-baseline-$(date +%s).txt"
 

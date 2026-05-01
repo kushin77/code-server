@@ -1,0 +1,219 @@
+# Docker Compose - Enterprise Services (Simple)
+# Deployable services only: code-server IDE, gitlab, runners, minio, vault
+# Purpose: Complete the enterprise deployment stack as an overlay on core stack
+# Note: This overlay assumes the core stack (postgres, redis, redpanda, etc) is already running.
+
+version: "3.8"
+
+services:
+  # ========================================================================
+  # CODE-SERVER IDE - Web-based VS Code
+  # ========================================================================
+  code-server-ide:
+    image: codercom/code-server:4.19.0
+    container_name: code-server-ide
+    ports:
+      - "8090:8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:-password123}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-password123}
+      - SUDO_PASSWORD_HASH=${CODE_SERVER_PASSWORD_HASH}
+    volumes:
+      - code_server_data:/home/coder
+    networks:
+      - services
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # GITLAB - Source Control & Registry
+  # ========================================================================
+  gitlab:
+    image: gitlab/gitlab-ce:15.11.11-ce.0
+    container_name: code-server-gitlab
+    ports:
+      - "8101:80"
+      - "8444:443"
+      - "2223:22"
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab.kushnir.cloud'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        gitlab_rails['db_adapter'] = 'postgresql'
+        gitlab_rails['db_host'] = 'code-server-postgres'
+        gitlab_rails['db_username'] = '${DB_USER}'
+        gitlab_rails['db_password'] = '${DB_PASSWORD}'
+        gitlab_rails['db_database'] = 'gitlabdb'
+        gitlab_rails['redis_host'] = 'code-server-redis'
+        gitlab_rails['redis_port'] = 6379
+        gitlab_rails['redis_database'] = 2
+        nginx['redirect_http_to_https'] = false
+        puma['worker_processes'] = 2
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab
+    networks:
+      - services
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/help"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  # ========================================================================
+  # GITLAB RUNNER - CI/CD Executor
+  # ========================================================================
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: code-server-gitlab-runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab_runner_data:/home/gitlab-runner
+    environment:
+      - CI_SERVER_URL=http://gitlab:80/
+      - REGISTRATION_TOKEN=${GITLAB_RUNNER_TOKEN:-}
+      - RUNNER_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    networks:
+      - services
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # MINIO - S3-compatible Object Storage
+  # ========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: code-server-minio
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - services
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # VAULT - Secrets Management
+  # ========================================================================
+  vault:
+    image: hashicorp/vault:1.13.0
+    container_name: code-server-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-devtoken}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - services
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8200/v1/sys/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # ARTIFACT REPOSITORY - Build Artifact Storage
+  # ========================================================================
+  artifact-repository:
+    image: sonatype/nexus3:3.68.1
+    container_name: code-server-artifact-repo
+    ports:
+      - "8083:8081"
+    environment:
+      - NEXUS_CONTEXT=nexus
+    volumes:
+      - nexus_data:/nexus-data
+    networks:
+      - services
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/nexus/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+volumes:
+  code_server_data:
+    driver: local
+  gitlab_config:
+    driver: local
+  gitlab_logs:
+    driver: local
+  gitlab_data:
+    driver: local
+  gitlab_runner_data:
+    driver: local
+  minio_data:
+    driver: local
+  nexus_data:
+    driver: local
+
+networks:
+  services:
+    external: true
+    name: services

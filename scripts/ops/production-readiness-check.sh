@@ -21,31 +21,13 @@ trap 'exit 0' INT TERM
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
-log_info() {
-  printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
-}
-
-log_success() {
-  printf '[%s] [✓] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
-}
-
-log_warn() {
-  printf '[%s] [⚠] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
-}
-
-log_error() {
-  printf '[%s] [✗] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
-}
-
 # ============================================================================
 # Configuration
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REPORT_FILE="${PROJECT_ROOT}/artifacts/production-readiness-$(date +%Y%m%d-%H%M%S).json"
+REPORT_FILE="${REPO_ROOT}/artifacts/production-readiness-$(date +%Y%m%d-%H%M%S).json"
 
-mkdir -p "${PROJECT_ROOT}/artifacts"
+mkdir -p "${REPO_ROOT}/artifacts"
 
 declare -i CHECKS_TOTAL=0
 declare -i CHECKS_PASSED=0

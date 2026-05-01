@@ -5,7 +5,7 @@
 # @governance GOV-002: All activity streamed with audit logging
 
 import json
-from fastapi import FastAPI, Query, WebSocket, HTTPException
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -14,7 +14,14 @@ import asyncio
 import logging
 from consumer import ActivityFeedConsumer, ActivityEvent
 
-logging.basicConfig(level=logging.INFO)
+# SLOG: structured JSON logging (GOV-002 compliant)
+class _JsonFmt(logging.Formatter):
+    def format(self, r):
+        import json, sys
+        return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
+_h = logging.StreamHandler()
+_h.setFormatter(_JsonFmt())
+logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Activity Feed", version="1.0")
@@ -166,12 +173,16 @@ async def websocket_activity_stream(websocket: WebSocket):
                         "tags": activity.tags
                     }
                 })
-    
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected")
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        await websocket.close(code=1000, reason=str(e))
-    
-    logger.info(f"WebSocket client disconnected")
+        logger.exception(f"WebSocket error: {e}")
+        try:
+            await websocket.close(code=1011, reason="internal websocket error")
+        except Exception:
+            pass
+    finally:
+        logger.debug("WebSocket stream handler finished")
 
 @app.post("/api/activity/ingest")
 async def ingest_activity(raw_event: dict):
@@ -185,10 +196,19 @@ async def ingest_activity(raw_event: dict):
             consumer.add_activity(activity)
             return {"status": "ingested", "event_id": activity.event_id}
         else:
+            logger.warning(
+                "Ingest rejected: failed to parse event payload (keys=%s)",
+                sorted(raw_event.keys()) if isinstance(raw_event, dict) else type(raw_event).__name__,
+            )
             raise HTTPException(status_code=400, detail="Failed to parse event")
+    except HTTPException:
+        raise
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Ingest validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Ingest error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Ingest error: {e}")
+        raise HTTPException(status_code=500, detail="Activity feed ingest failed")
 
 @app.get("/api/activity/stats")
 async def activity_stats():

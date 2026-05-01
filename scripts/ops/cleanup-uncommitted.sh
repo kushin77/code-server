@@ -10,7 +10,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
@@ -20,22 +19,6 @@ set -euo pipefail
 # ============================================================================
 # Logging Functions
 # ============================================================================
-
-log_info() {
-  printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
-}
-
-log_success() {
-  printf '[%s] [SUCCESS] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
-}
-
-log_warn() {
-  printf '[%s] [WARN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
-}
-
-log_error() {
-  printf '[%s] [ERROR] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
-}
 
 # =============================================================================
 # ERROR HANDLING & CLEANUP
@@ -47,12 +30,10 @@ trap 'log_info "Cleanup complete"; true' EXIT
 # Configuration
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 DRY_RUN="${1:-false}"
 
 log_info "=== Cleanup Uncommitted Changes ==="
-log_info "Project Root: $PROJECT_ROOT"
+log_info "Project Root: $REPO_ROOT"
 log_info "Dry Run: $DRY_RUN"
 log_info ""
 
@@ -61,7 +42,7 @@ log_info ""
 # ============================================================================
 
 log_info "Uncommitted modifications:"
-git -C "${PROJECT_ROOT}" status --short || true
+git -C "${REPO_ROOT}" status --short || true
 
 # ============================================================================
 # Stage 2: Categorize changes
@@ -83,7 +64,7 @@ while IFS= read -r line; do
         NEW_FILES+=("$file")
         log_info "  Untracked: $file"
     fi
-done < <(git -C "${PROJECT_ROOT}" status --short 2>/dev/null || true)
+done < <(git -C "${REPO_ROOT}" status --short 2>/dev/null || true)
 
 # ============================================================================
 # Stage 3: Cleanup strategy
@@ -124,14 +105,14 @@ log_info "Executing cleanup..."
 # Restore modified tracked files (except generated ones)
 for file in "${MODIFIED_FILES[@]}"; do
     if [[ ! "$file" =~ ^artifacts/ ]] && [[ ! "$file" =~ ^logs/ ]]; then
-        git -C "${PROJECT_ROOT}" checkout "${file}" 2>/dev/null && log_success "Restored: $file" || log_error "Failed to restore: $file"
+        git -C "${REPO_ROOT}" checkout "${file}" 2>/dev/null && log_success "Restored: $file" || log_error "Failed to restore: $file"
     fi
 done
 
 # Remove generated artifacts and logs
 for file in "${NEW_FILES[@]}"; do
     if [[ "$file" =~ ^artifacts/ ]] || [[ "$file" =~ ^logs/ ]] || [[ "$file" =~ ^scripts/.*\.sh$ ]]; then
-        rm -f "${PROJECT_ROOT}/${file}" && log_success "Deleted: $file" || log_error "Failed to delete: $file"
+        rm -f "${REPO_ROOT}/${file}" && log_success "Deleted: $file" || log_error "Failed to delete: $file"
     fi
 done
 
@@ -140,7 +121,7 @@ done
 # ============================================================================
 
 log_info ""
-REMAINING=$(git -C "${PROJECT_ROOT}" status --short 2>/dev/null | grep -v "^??" | wc -l || echo 0)
+REMAINING=$(git -C "${REPO_ROOT}" status --short 2>/dev/null | grep -v "^??" | wc -l || echo 0)
 
 if (( REMAINING == 0 )); then
     log_success "✅ Repository cleaned successfully"
@@ -148,4 +129,4 @@ else
     log_warn "⚠️  $REMAINING files still uncommitted"
 fi
 
-git -C "${PROJECT_ROOT}" status --short 2>/dev/null || true
+git -C "${REPO_ROOT}" status --short 2>/dev/null || true

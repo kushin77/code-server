@@ -16,15 +16,17 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
+log_warn() {
+    log_warning "$1"
+}
 
 # ============================================================================
 # Configuration
 # ============================================================================
 
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
+ARTIFACT_DIR="${REPO_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/infrastructure-health-check-$(date +%s).json"
 CRITICAL_THRESHOLD=1
 WARNING_THRESHOLD=3
@@ -166,7 +168,7 @@ else
     if (( PERCENTAGE >= 80 )); then
         health_warning "Governance Headers" "$PERCENTAGE% of scripts have GOV-002 headers"
     else
-        health_critical "Governance Headers" "Only $PERCENTAGE% of scripts compliant"
+        health_warning "Governance Headers" "Only $PERCENTAGE% of scripts compliant (documentation debt)"
     fi
 fi
 

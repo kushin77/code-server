@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # HashiCorp Vault - Centralized Secrets Management
+  vault:
+    image: vault:latest
+    container_name: vault
+    hostname: vault
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_ROOT_TOKEN:-root-token-dev}"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      VAULT_API_ADDR: "http://vault:8200"
+    ports:
+      - "8200:8200"  # Vault API
+    volumes:
+      - vault-data:/vault/file
+      - ./config/vault-config.hcl:/vault/config/vault-config.hcl:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8200/v1/sys/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+
+  # Vault UI - Web interface for secrets management
+  vault-ui:
+    image: vault:latest
+    container_name: vault-ui
+    hostname: vault-ui
+    ports:
+      - "8250:8200"
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_ROOT_TOKEN:-root-token-dev}"
+    depends_on:
+      - vault
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  # Vault Agent - Auto-authentication and secret injection
+  vault-agent:
+    image: vault:latest
+    container_name: vault-agent
+    hostname: vault-agent
+    volumes:
+      - ./config/vault-agent-config.hcl:/vault/config/agent.hcl:ro
+      - /var/run/secrets:/vault/secrets
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_ROOT_TOKEN:-root-token-dev}"
+    depends_on:
+      - vault
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5 &&
+      vault agent -config=/vault/config/agent.hcl
+      "
+
+networks:
+  code-server-network:
+    driver: bridge
+
+volumes:
+  vault-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/akushnir/code-server/.vault/data

@@ -1,20 +1,9 @@
-# @file docker-compose.override.yml
-# @module infrastructure
-# @description Local development overrides for Docker Compose services
-# @governance GOV-002 - Production-grade service configurations
-# @note This file is managed by Terraform and should not be edited manually
+# Docker Compose Override Configuration
+# Local environment overrides for development/private deployments
+# This file is auto-managed by Terraform and should not be edited directly
+
+version: '3.9'
 
 services:
-  ollama:
-    user: "0:0"
-    environment:
-      - HOME=/root
-      - OLLAMA_MODELS=/root/.ollama/models
-    volumes:
-      - ollama_models:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "--version"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # Override section for local development customizations
+  # Add service-specific overrides here as needed

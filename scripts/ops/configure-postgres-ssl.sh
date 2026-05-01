@@ -14,18 +14,15 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CERT_DIR="${REPO_DIR}/vault-tls/postgres"
-CONFIG_DIR="${REPO_DIR}/config/postgres"
-LOG_FILE="${REPO_DIR}/logs/postgres-ssl-config.log"
+CERT_DIR="${REPO_ROOT}/vault-tls/postgres"
+CONFIG_DIR="${REPO_ROOT}/config/postgres"
+LOG_FILE="${REPO_ROOT}/logs/postgres-ssl-config.log"
 
-mkdir -p "${CONFIG_DIR}" "${REPO_DIR}/logs"
+mkdir -p "${CONFIG_DIR}" "${REPO_ROOT}/logs"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"

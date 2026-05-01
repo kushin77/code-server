@@ -16,7 +16,6 @@ trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source canonical configuration (SSOT)
 source "${SCRIPT_DIR}/../_common/init.sh"
@@ -47,12 +46,10 @@ log_error() {
 # Configuration
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REPORT_DIR="${PROJECT_ROOT}/artifacts"
+REPORT_DIR="${REPO_ROOT}/artifacts"
 REPORT_FILE="${REPORT_DIR}/sla-metrics-$(date +%Y%m%d-%H%M%S).json"
 
-source "${PROJECT_ROOT}/.env.infrastructure"
+source "${REPO_ROOT}/.env.infrastructure"
 
 mkdir -p "${REPORT_DIR}"
 

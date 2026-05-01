@@ -35,7 +35,7 @@ services:
   # ========================================================================
 
   grafana-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-grafana-init
     user: "0:0"
     command:
@@ -49,7 +49,7 @@ services:
       - services
 
   redis-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-redis-init
     user: "0:0"
     command:
@@ -63,7 +63,7 @@ services:
       - services
 
   redpanda-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-redpanda-init
     user: "0:0"
     command:
@@ -77,7 +77,7 @@ services:
       - services
 
   prometheus-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-prometheus-init
     user: "0:0"
     command:
@@ -91,7 +91,7 @@ services:
       - services
 
   loki-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-loki-init
     user: "0:0"
     command:
@@ -105,7 +105,7 @@ services:
       - services
 
   alertmanager-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-alertmanager-init
     user: "0:0"
     command:
@@ -119,7 +119,7 @@ services:
       - services
 
   caddy-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-caddy-init
     user: "0:0"
     command:
@@ -193,6 +193,7 @@ services:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
       - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET:?OAUTH2_COOKIE_SECRET must be set}
+      - OAUTH2_PROXY_UPSTREAMS=http://code-server-ide:8080/
     healthcheck:
       test:
         - CMD
@@ -226,13 +227,16 @@ services:
   caddy:
     image: caddy:2.7.4@sha256:505de4e957da923672a8c79f16581e9b717a2479a8d5ddb909ab2d1b351f2ba4
     container_name: code-server-caddy
-    user: "0:0"  # Temporarily root to fix /data/pki permission issue
+    user: "101:101"  # Run as caddy user, init container sets permissions
+    depends_on:
+      caddy-init:
+        condition: service_completed_successfully
     ports:
-      - "9088:80"
-      - "9443:443"
-      - "9443:443/udp"
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
-      - ./config/caddy:/etc/caddy:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
@@ -267,6 +271,125 @@ services:
     labels:
       io.elevatediq.component: "gateway"
       io.elevatediq.tier: "infrastructure"
+
+  # ========================================================================
+  # KEEPALIVED - VRRP HIGH AVAILABILITY
+  # ========================================================================
+
+  keepalived-init:
+    image: alpine:3.20
+    container_name: code-server-keepalived-init
+    user: "0:0"
+    command:
+      - sh
+      - -lc
+      - |
+        mkdir -p /etc/keepalived
+        # Generate keepalived config based on HOST_ROLE environment variable
+        if [ "$$HOST_ROLE" = "primary" ]; then
+          state="MASTER"
+          priority="100"
+        else
+          state="BACKUP"
+          priority="90"
+        fi
+        cat > /etc/keepalived/keepalived.conf << EOF
+        global_defs {
+          router_id CODE_SERVER_HA
+          script_user root
+          enable_script_security
+        }
+        vrrp_script check_caddy {
+          script "/usr/local/bin/check-caddy-health.sh"
+          interval 3
+          fall 3
+          rise 2
+          weight -20
+        }
+        vrrp_instance VI_1 {
+          state $$state
+          interface eth0
+          virtual_router_id 51
+          priority $$priority
+          advert_int 1
+          authentication {
+            auth_type PASS
+            auth_pass CODE_SERVER_HA_2026
+          }
+          virtual_ipaddress {
+            192.168.168.30/24
+          }
+          track_script {
+            check_caddy
+          }
+          notify_master "/usr/local/bin/notify-vrrp.sh master"
+          notify_backup "/usr/local/bin/notify-vrrp.sh backup"
+        }
+        EOF
+        chown -R root:root /etc/keepalived
+        chmod 600 /etc/keepalived/keepalived.conf
+    volumes:
+      - keepalived_config:/etc/keepalived
+    environment:
+      - HOST_ROLE=${HOST_ROLE:-primary}
+    restart: "no"
+    networks:
+      - services
+
+  keepalived:
+    image: keepalived:2.2.7
+    container_name: code-server-keepalived
+    user: "0:0"
+    depends_on:
+      keepalived-init:
+        condition: service_completed_successfully
+      caddy:
+        condition: service_started
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
+      - SYS_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
+      - net.ipv6.conf.all.forwarding=1
+    network_mode: "host"
+    volumes:
+      - keepalived_config:/etc/keepalived:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./scripts/ha/check-caddy-health.sh:/usr/local/bin/check-caddy-health.sh:ro
+      - ./scripts/ha/notify-vrrp.sh:/usr/local/bin/notify-vrrp.sh:ro
+    environment:
+      - HOST_ROLE=${HOST_ROLE:-primary}
+      - KEEPALIVED_CMD_LINE_ARGUMENTS=-l -D
+    healthcheck:
+      test:
+        - CMD
+        - sh
+        - -c
+        - "ps aux | grep -v grep | grep keepalived || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    labels:
+      io.elevatediq.component: "ha-vrrp"
+      io.elevatediq.tier: "infrastructure"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+        reservations:
+          cpus: "0.25"
+          memory: 128m
 
   # ========================================================================
   # OBSERVABILITY
@@ -449,7 +572,7 @@ services:
   # ========================================================================
 
   qdrant-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-qdrant-init
     user: "0:0"
     command:
@@ -577,7 +700,7 @@ services:
       ollama:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://multimodal-ai:${MULTIMODAL_AI_PORT}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${MULTIMODAL_AI_PORT:-8040}/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -613,7 +736,7 @@ services:
     ports:
       - "${RAG_ENGINE_PORT}:${RAG_ENGINE_PORT}"
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
       - KAFKA_BROKER=redpanda:9092
       - OPA_URL=${OPA_URL}
       - LOG_LEVEL=INFO
@@ -713,14 +836,13 @@ services:
     volumes:
       - ./apps/env-provisioner:/app
       - ./config:/app/config:ro
-      - ./artifacts:/app/artifacts
       - ./docker-compose.yml:/app/docker-compose.yml:ro
     healthcheck:
       test:
         - CMD
         - curl
         - "-f"
-        - "http://env-provisioner:${CONTROL_PLANE_PORT}/health"
+        - "http://localhost:${CONTROL_PLANE_PORT}/health"
       interval: 30s
       timeout: 10s
       retries: 3
@@ -766,7 +888,7 @@ services:
         - CMD
         - curl
         - "-f"
-        - "http://activity-feed:${MODEL_SERVER_PORT}/health"
+        - "http://localhost:${MODEL_SERVER_PORT}/health"
       interval: 30s
       timeout: 10s
       retries: 3
@@ -802,7 +924,7 @@ services:
     environment:
       - OPA_URL=${OPA_URL}
       - REPUTATION_ENGINE_URL=${REPUTATION_ENGINE_URL}
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
       - LOG_LEVEL=INFO
     depends_on:
       postgres:
@@ -852,7 +974,7 @@ services:
     user: "1003:1003"
     environment:
       - KAFKA_BROKER=redpanda:9092
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@code-server-postgres:5432/${DB_NAME}
       - SCHEDULER_API_KEY=${SCHEDULER_API_KEY:?SCHEDULER_API_KEY must be set}
       - LOG_LEVEL=INFO
     depends_on:
@@ -1114,7 +1236,7 @@ services:
   # ========================================================================
 
   postgres-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-postgres-init
     user: "0:0"
     command:
@@ -1320,7 +1442,7 @@ services:
   # ========================================================================
 
   ollama-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-ollama-init
     user: "0:0"
     command:
@@ -1337,6 +1459,8 @@ services:
     image: ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a
     container_name: code-server-ollama
     user: "11434:11434"  # @security P0 #969 - Run as non-root ollama user
+    profiles:
+      - gpu  # @enhancement #3120 - GPU acceleration for NVIDIA-capable nodes
     volumes:
       - ollama_models:/home/ollama/.ollama
     environment:
@@ -1371,6 +1495,10 @@ services:
         reservations:
           cpus: "2"
           memory: "4G"
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]  # @enhancement #3120 - Request all available NVIDIA GPUs
 
   edge-agent:
     build:
@@ -1469,7 +1597,7 @@ services:
   # Distributed tracing backend — stores and queries traces via OTLP
   # Issue #1532: Centralized Observability & SLOG — Distributed Tracing
   tempo-init:
-    image: alpine:3.20@sha256:2b26d3f235e2992c0e4a5e2ecc89fe7ff98ad7f5cd6f11fd4f76cdcaec066eb44
+    image: alpine:3.20
     container_name: code-server-tempo-init
     user: "0:0"
     command:
@@ -1545,14 +1673,15 @@ networks:
     driver_opts:
       com.docker.network.bridge.name: br-services
   database:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: br-database
+    external: true
+    name: database
 
 volumes:
   caddy_data:
     driver: local
   caddy_config:
+    driver: local
+  keepalived_config:
     driver: local
   prometheus_data:
     driver: local

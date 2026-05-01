@@ -1,0 +1,160 @@
+# Automated Failover Orchestration
+# Implements DNS failover, data migration, state consistency
+
+failover_orchestration:
+  version: "1.0"
+  
+  # Detection and alerting
+  detection:
+    health_check_interval: "10s"
+    failure_threshold: 3  # 30 seconds of failures before triggering failover
+    alert_channels:
+      - type: "pagerduty"
+        severity: "critical"
+        escalation: "immediate"
+      - type: "slack"
+        channels: ["#infrastructure", "#oncall"]
+      - type: "email"
+        recipients: ["ops-team@example.com"]
+    
+    monitoring_targets:
+      - primary_host: "192.168.168.31"
+        check_endpoints:
+          - "http://localhost:8000/health"  # Kong
+          - "http://localhost:5432"          # PostgreSQL
+          - "http://localhost:6379"          # Redis
+        metrics_to_monitor:
+          - "cpu_usage"
+          - "memory_usage"
+          - "disk_usage"
+          - "network_latency"
+          - "database_replication_lag"
+      
+      - replica_host: "192.168.168.42"
+        check_endpoints:
+          - "http://localhost:8000/health"
+          - "http://localhost:5432"
+          - "http://localhost:6379"
+        metrics_to_monitor:
+          - "cpu_usage"
+          - "memory_usage"
+          - "network_latency"
+          - "replication_lag"
+
+  # Failover stages
+  failover_stages:
+    stage_1_detection:
+      duration: "30 seconds"
+      actions:
+        - "Detect primary failure (3 health check failures)"
+        - "Verify secondary is healthy (5 health checks passing)"
+        - "Trigger alerts to on-call team"
+        - "Log failure to audit trail"
+      
+      triggers:
+        - "Primary health endpoint returns 5XX"
+        - "Primary unresponsive for >10 seconds"
+        - "Database replication lag >30 seconds"
+        - "Primary CPU >95% sustained for >5 minutes"
+    
+    stage_2_preparation:
+      duration: "60 seconds"
+      actions:
+        - "Promote replica database (if standby)"
+        - "Verify replica is healthy"
+        - "Acquire distributed lock (prevent split-brain)"
+        - "Back up current state for RCA"
+      
+      prerequisites:
+        - "Replica health check passing"
+        - "Replica can acquire quorum lock"
+        - "Replica replication lag <5 seconds"
+    
+    stage_3_dns_failover:
+      duration: "instantaneous"
+      actions:
+        - "Update DNS A record (primary → replica IP)"
+        - "Update internal service discovery"
+        - "Invalidate HTTP cache"
+        - "Broadcast failover event to services"
+      
+      dns_config:
+        ttl: "5 seconds"  # Low TTL for rapid failover
+        provider: "route53"
+        update_strategy: "immediate"
+      
+      service_discovery:
+        - type: "consul"
+          update: "immediate"
+          broadcast: "all clients"
+        - type: "kubernetes"
+          update: "service endpoint replacement"
+    
+    stage_4_data_migration:
+      duration: "<5 minutes"
+      actions:
+        - "Migrate write lock to replica"
+        - "Verify no writes are in-flight"
+        - "Switch connection strings (application-side)"
+        - "Drain connection pool on clients"
+        - "Establish new connections to replica"
+      
+      precautions:
+        - "Circuit breaker: Stop migration if too many errors"
+        - "Rollback: Revert DNS if migration fails"
+        - "Atomic: All-or-nothing transition"
+    
+    stage_5_post_failover:
+      duration: "ongoing"
+      actions:
+        - "Monitor replica for stability"
+        - "Collect metrics on failover success"
+        - "Schedule RCA meeting"
+        - "Plan primary recovery"
+        - "Document timeline and actions taken"
+
+  # Failback to primary (after recovery)
+  failback:
+    trigger: "primary_recovered and replica_stable for 30 minutes"
+    strategy: "gradual"
+    steps:
+      - "Synchronize primary from replica backups"
+      - "Verify primary replication status"
+      - "Route 10% traffic to primary (canary)"
+      - "Monitor error rates for 5 minutes"
+      - "Route 50% traffic to primary"
+      - "Monitor for another 5 minutes"
+      - "Route 100% traffic to primary"
+      - "Verify all systems stable"
+    
+    abort_conditions:
+      - "Primary health check failures >5%"
+      - "Error rate spike >2x normal"
+      - "Replication lag >30 seconds"
+
+  # Split-brain prevention
+  split_brain_prevention:
+    mechanism: "distributed lock"
+    provider: "etcd"  # or consul, zookeeper
+    lock_strategy: "quorum-based"
+    quorum_size: 3
+    lock_timeout: "30 seconds"
+    action_on_split: "isolate replica and preserve primary"
+
+  # Monitoring and metrics
+  monitoring:
+    metrics_collected:
+      - "failover_detection_time"
+      - "failover_execution_time"
+      - "total_failover_duration"
+      - "data_loss_during_failover"
+      - "dns_propagation_time"
+      - "application_reconnection_time"
+      - "errors_during_failover"
+    
+    success_criteria:
+      - "Failover completes in <5 minutes"
+      - "Zero data loss during failover"
+      - "All applications reconnect automatically"
+      - "No manual intervention required"
+      - "Audit trail complete and accurate"

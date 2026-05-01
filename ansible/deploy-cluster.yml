@@ -1,0 +1,265 @@
+---
+# Infrastructure as Code - Production Cluster Deployment
+# Deploy identical services to both PRIMARY and REPLICA nodes
+# All infrastructure declarative and version-controlled
+
+- name: Deploy Production Cluster (IaC)
+  hosts: all
+  become: yes
+  vars:
+    cluster_name: code-server-enterprise
+    environment: production
+    docker_compose_version: "2.0"
+    compose_dir: "/home/akushnir/code-server-enterprise-ops"
+
+  pre_tasks:
+    - name: Validate prerequisites
+      block:
+        - name: Check Docker availability
+          command: docker --version
+          register: docker_version
+          changed_when: false
+
+        - name: Check Docker Compose availability
+          command: docker-compose --version
+          register: compose_version
+          changed_when: false
+
+        - name: Verify storage space (minimum 50GB)
+          block:
+            - name: Get root filesystem usage
+              shell: df / | awk 'NR==2 {print $4}'
+              register: available_space
+              changed_when: false
+
+            - name: Ensure sufficient space
+              assert:
+                that:
+                  - available_space.stdout | int > 50000000
+                fail_msg: "Insufficient space. Minimum 50GB required, have {{ available_space.stdout | int / 1000000 }}GB"
+
+  tasks:
+    # =========================================================================
+    # STEP 1: INFRASTRUCTURE - NETWORKS AND VOLUMES
+    # =========================================================================
+
+    - name: "Step 1: Create Docker infrastructure"
+      block:
+        - name: Create docker-compose directory
+          file:
+            path: "{{ compose_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: Create config directories
+          file:
+            path: "{{ compose_dir }}/{{ item }}"
+            state: directory
+            mode: '0755'
+          loop:
+            - config
+            - config/prometheus
+            - config/grafana/provisioning
+            - config/grafana/dashboards
+            - config/alertmanager
+            - config/loki
+            - config/tempo
+            - config/caddy
+            - certs
+            - scripts
+
+        - name: Copy docker-compose.yml to remote
+          copy:
+            src: "docker-compose.production-replica.yml"
+            dest: "{{ compose_dir }}/docker-compose.yml"
+            mode: '0644'
+
+        - name: Copy configuration files to remote
+          synchronize:
+            src: "config/"
+            dest: "{{ compose_dir }}/config/"
+            mode: push
+            recursive: yes
+
+        - name: Copy certificates to remote (if exist)
+          synchronize:
+            src: "certs/"
+            dest: "{{ compose_dir }}/certs/"
+            mode: push
+            recursive: yes
+          ignore_errors: yes
+
+    # =========================================================================
+    # STEP 2: SERVICE DEPLOYMENT - START CONTAINERS
+    # =========================================================================
+
+    - name: "Step 2: Deploy Docker containers"
+      block:
+        - name: Pull Docker images
+          shell: |
+            cd {{ compose_dir }}
+            docker-compose pull
+          register: pull_result
+          changed_when: "'Downloaded' in pull_result.stdout"
+          timeout: 600
+
+        - name: Bring up services
+          shell: |
+            cd {{ compose_dir }}
+            docker-compose up -d
+          register: compose_up
+          changed_when: true
+          timeout: 600
+
+        - name: Wait for services to stabilize
+          pause:
+            seconds: 30
+
+    # =========================================================================
+    # STEP 3: DATABASE REPLICATION SETUP
+    # =========================================================================
+
+    - name: "Step 3: Configure database replication"
+      block:
+        - name: Initialize PostgreSQL replication (PRIMARY ONLY)
+          shell: |
+            docker exec {{ cluster_name }}-postgres \
+              psql -U postgres -d postgres -c \
+              "CREATE ROLE replication_user WITH REPLICATION LOGIN PASSWORD 'replication_password_secure';" || true
+          when: inventory_hostname == groups['primary'][0]
+          register: replication_role_result
+          changed_when: "'CREATE ROLE' not in replication_role_result.stdout"
+
+        - name: Verify database connectivity
+          shell: |
+            docker exec {{ cluster_name }}-postgres \
+              pg_isready -U postgres
+          register: db_ready
+          retries: 5
+          delay: 5
+          until: db_ready.rc == 0
+          changed_when: false
+
+    # =========================================================================
+    # STEP 4: VERIFY IDENTICAL DEPLOYMENT
+    # =========================================================================
+
+    - name: "Step 4: Verify service consistency"
+      block:
+        - name: Get service list
+          shell: |
+            cd {{ compose_dir }}
+            docker-compose ps --services | sort
+          register: service_list
+          changed_when: false
+
+        - name: Verify 18 services deployed
+          assert:
+            that:
+              - service_list.stdout_lines | length == 18
+            fail_msg: "Expected 18 services, found {{ service_list.stdout_lines | length }}"
+
+        - name: Save service list for comparison
+          copy:
+            content: "{{ service_list.stdout }}"
+            dest: "/tmp/services-{{ inventory_hostname }}.txt"
+
+        - name: Display deployed services
+          debug:
+            var: service_list.stdout_lines
+
+    # =========================================================================
+    # STEP 5: HEALTH CHECKS
+    # =========================================================================
+
+    - name: "Step 5: Verify service health"
+      block:
+        - name: Check PostgreSQL health
+          shell: |
+            docker exec {{ cluster_name }}-postgres pg_isready -U postgres
+          register: postgres_health
+          retries: 5
+          delay: 5
+          until: postgres_health.rc == 0
+
+        - name: Check Redis health
+          shell: |
+            docker exec {{ cluster_name }}-redis \
+              redis-cli -a code_server_redis_password ping
+          register: redis_health
+          retries: 5
+          delay: 5
+          until: "'PONG' in redis_health.stdout"
+
+        - name: Check MongoDB health
+          shell: |
+            docker exec {{ cluster_name }}-mongodb \
+              mongosh localhost:27017/test --quiet --eval "1"
+          register: mongodb_health
+          retries: 5
+          delay: 5
+          until: mongodb_health.rc == 0
+
+        - name: Check API Gateway health
+          uri:
+            url: "http://localhost/healthz"
+            method: GET
+            status_code: [200, 404]
+          retries: 5
+          delay: 5
+
+        - name: Check Prometheus metrics
+          uri:
+            url: "http://localhost:9090/api/v1/targets"
+            method: GET
+            status_code: 200
+          retries: 5
+          delay: 5
+
+        - name: Display health status
+          debug:
+            msg: "✅ All services healthy on {{ inventory_hostname }}"
+
+  post_tasks:
+    - name: Generate deployment report
+      block:
+        - name: Collect deployment info
+          shell: |
+            cd {{ compose_dir }}
+            echo "Deployment Summary"
+            echo "=================="
+            echo "Hostname: $(hostname)"
+            echo "Cluster: {{ cluster_name }}"
+            echo "Environment: {{ environment }}"
+            echo ""
+            echo "Docker Version: $(docker --version)"
+            echo "Docker Compose Version: $(docker-compose --version)"
+            echo ""
+            echo "Running Containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
+            echo ""
+            echo "Total Containers: $(docker ps | wc -l)"
+            echo "Total Volumes: $(docker volume ls | wc -l)"
+          register: deployment_report
+          changed_when: false
+
+        - name: Save deployment report
+          copy:
+            content: "{{ deployment_report.stdout }}"
+            dest: "/tmp/deployment-report-{{ inventory_hostname }}.txt"
+
+        - name: Display deployment report
+          debug:
+            msg: "{{ deployment_report.stdout }}"
+
+    - name: Verify cluster consistency
+      block:
+        - name: Compare service lists across nodes (PRIMARY only)
+          shell: |
+            if [ -f /tmp/services-{{ inventory_hostname }}.txt ]; then
+              echo "Services on {{ inventory_hostname }}:"
+              cat /tmp/services-{{ inventory_hostname }}.txt
+            fi
+          when: inventory_hostname == groups['primary'][0]
+          changed_when: false
+          register: consistency_check

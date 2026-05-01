@@ -1,0 +1,167 @@
+# Regional Compliance and Data Residency
+# Enforce GDPR, HIPAA, PCI-DSS, and regional regulations
+
+compliance_framework:
+  version: "1.0"
+  
+  # US East Region
+  us_east_region:
+    region_code: "use1"
+    regulations:
+      - "SOC2 Type II"
+      - "HIPAA BAA"
+      - "PCI-DSS Level 1"
+      - "NIST Cybersecurity Framework"
+    
+    data_residency:
+      rule: "All data must reside in US"
+      enforcement: "encryption key management"
+      exceptions: "none"
+    
+    audit_requirements:
+      frequency: "monthly"
+      external_audit: "annual"
+      compliance_score_target: "99%"
+  
+  # US West Region
+  us_west_region:
+    region_code: "usw2"
+    regulations:
+      - "SOC2 Type II"
+      - "HIPAA BAA"
+    
+    data_residency:
+      rule: "Replicated from US East (read-only)"
+      enforcement: "read-only replicas only"
+    
+    audit_requirements:
+      frequency: "quarterly"
+      compliance_check: "replica consistency"
+  
+  # EU West Region
+  eu_west_region:
+    region_code: "euw1"
+    regulations:
+      - "GDPR"
+      - "Data Protection Act 2018"
+      - "SOC2 Type II"
+      - "NIS Directive"
+    
+    data_residency:
+      rule: "Data must reside in EU member state"
+      enforcement:
+        - "Encryption keys in EU-based HSM"
+        - "No export to non-EU countries"
+        - "Separate database instance"
+        - "No replication to US regions"
+      
+      exceptions:
+        - "Anonymized/pseudonymized data may be replicated"
+        - "Aggregate statistics may be exported"
+    
+    gdpr_compliance:
+      data_subject_rights:
+        - name: "Right to access"
+          sla: "30 days"
+          automation: "automated export"
+        
+        - name: "Right to erasure"
+          sla: "30 days"
+          automation: "automated deletion"
+        
+        - name: "Right to portability"
+          sla: "30 days"
+          format: "JSON/CSV export"
+        
+        - name: "Right to rectification"
+          sla: "immediate"
+          method: "user self-service"
+      
+      data_processing:
+        - "Transparency: Clear privacy notices"
+        - "Consent: Explicit opt-in required"
+        - "Legitimacy: Lawful basis documented"
+        - "Minimization: Only necessary data collected"
+        - "Storage limitation: Retention policy enforced"
+      
+      dpia_requirements:
+        - "Data Impact Assessment required"
+        - "Sensitive processing flagged"
+        - "Annual review required"
+    
+    audit_requirements:
+      frequency: "quarterly"
+      external_audit: "annual"
+      compliance_score_target: "100%"
+
+# Cross-region data transfer policies
+data_transfer_policies:
+  prohibited:
+    - "EU → US"
+    - "EU → non-EU countries"
+    - "HIPAA protected → non-HIPAA regions"
+  
+  allowed_with_safeguards:
+    - source: "US East"
+      destination: "US West"
+      method: "encrypted replication"
+      monitor: "continuous"
+    
+    - source: "US"
+      destination: "EU"
+      method: "anonymized only"
+      compliance: "GDPR"
+    
+  approved_transfer_mechanisms:
+    - "encrypted database replication"
+    - "VPN tunnel (AES-256)"
+    - "AWS Direct Connect"
+    - "TLS 1.3+ for all connections"
+
+# Compliance monitoring
+monitoring:
+  continuous_checks:
+    - metric: "data_residency_violation"
+      check_frequency: "1 minute"
+      alert_threshold: "any violation"
+    
+    - metric: "encryption_key_location"
+      check_frequency: "5 minutes"
+      alert_threshold: "key outside approved region"
+    
+    - metric: "audit_log_integrity"
+      check_frequency: "10 minutes"
+      alert_threshold: "any tampering detected"
+    
+    - metric: "access_control_enforcement"
+      check_frequency: "15 minutes"
+      alert_threshold: "unauthorized access attempt"
+
+  compliance_reporting:
+    - report: "GDPR Compliance"
+      frequency: "monthly"
+      recipients: ["DPO", "executive"]
+    
+    - report: "HIPAA Compliance"
+      frequency: "quarterly"
+      recipients: ["compliance_officer", "auditor"]
+    
+    - report: "PCI-DSS Compliance"
+      frequency: "monthly"
+      recipients: ["ciso", "auditor"]
+
+# Emergency procedures
+emergency_procedures:
+  regional_breach:
+    - "Isolate affected region immediately"
+    - "Activate incident response team"
+    - "Notify regulatory authorities (<72 hours for GDPR)"
+    - "Preserve evidence for forensics"
+    - "Begin recovery procedures"
+  
+  data_residency_violation:
+    - "Detect unauthorized data movement"
+    - "Block transfer immediately"
+    - "Log full audit trail"
+    - "Trigger compliance alert"
+    - "Initiate investigation"

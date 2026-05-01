@@ -9,12 +9,6 @@ variable "environment" {
   default     = "production"
 }
 
-variable "aws_region" {
-  type        = string
-  description = "AWS region for provider configuration"
-  default     = "us-east-1"
-}
-
 variable "kubeconfig_path" {
   type        = string
   description = "Path to Kubernetes configuration file"

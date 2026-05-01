@@ -9,6 +9,12 @@ pnpm-debug.log
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+terraform/environments/private/terraform.tfvars
+terraform/environments/*/terraform.tfvars
+terraform/**/*.tfvars
+*.tfvars
+!*.tfvars.example
+!terraform.tfvars.template
 
 # Docker
 .docker/
@@ -44,3 +50,5 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+terraform/environments/private/terraform.tfstate.*.backup
+terraform/environments/private/tfplan-*

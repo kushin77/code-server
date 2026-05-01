@@ -16,8 +16,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
 # Configuration
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+REPLICA_HOST="${REPLICA_HOST:?REPLICA_HOST must be set}"
 REPLICA_USER="${REPLICA_USER:-deployment}"
 CLUSTER_NETWORK="${CLUSTER_NETWORK:-192.168.168.0/24}"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"

@@ -1,0 +1,154 @@
+# Cross-Region Replication Configuration
+# Database and cache replication across multiple regions
+
+replication_config:
+  version: "1.0"
+  
+  # PostgreSQL streaming replication
+  postgresql_replication:
+    topology: "primary → secondary (US West) → tertiary (EU West)"
+    
+    primary_region:
+      region: "us-east-1"
+      role: "primary"
+      connection_string: "postgresql://user:pass@primary.use1.rds.amazonaws.com:5432/code_server"
+      
+      streaming_config:
+        wal_level: "replica"
+        max_wal_senders: 5
+        wal_keep_size: "4GB"
+        hot_standby: true
+    
+    secondary_region:
+      region: "us-west-2"
+      role: "streaming_replica"
+      connection_string: "postgresql://user:pass@replica.usw2.rds.amazonaws.com:5432/code_server"
+      
+      replication_slot: "usw2_replica_slot"
+      streaming_config:
+        primary_conninfo: "host=primary.use1.rds.amazonaws.com user=replication_user password=xxx"
+        recovery_min_apply_delay: "0"  # Real-time replication
+        standby_mode: "on"
+      
+      replication_lag:
+        target_max: "5 seconds"
+        alert_threshold: "10 seconds"
+        critical_threshold: "60 seconds"
+    
+    tertiary_region:
+      region: "eu-west-1"
+      role: "cascading_replica"
+      connection_string: "postgresql://user:pass@replica.euw1.rds.amazonaws.com:5432/code_server"
+      
+      replication_slot: "euw1_replica_slot"
+      replicates_from: "secondary_region"
+      
+      replication_lag:
+        target_max: "30 seconds"
+        alert_threshold: "60 seconds"
+        critical_threshold: "300 seconds"
+      
+      compliance:
+        - "Data must remain in EU"
+        - "No WAL shipping to US"
+        - "Encrypted cross-region link"
+  
+  # Redis replication
+  redis_replication:
+    topology: "Primary (US East) ↔ Replicas (US West, EU West)"
+    
+    primary:
+      region: "us-east-1"
+      instance: "code-server-redis-primary"
+      role: "master"
+      
+    secondaries:
+      - region: "us-west-2"
+        instance: "code-server-redis-secondary"
+        role: "slave"
+        sync_frequency: "continuous"
+        backpressure_handling: "adaptive"
+      
+      - region: "eu-west-1"
+        instance: "code-server-redis-tertiary"
+        role: "slave"
+        sync_frequency: "continuous"
+        backpressure_handling: "adaptive"
+    
+    replication_protocol:
+      version: "PSYNC2"
+      buffer_size: "256MB"
+      timeout: "30s"
+    
+    failover_behavior:
+      if_primary_down:
+        - "Promote US West secondary to primary"
+        - "Redirect all writes to US West"
+        - "Promote EU West to secondary"
+      
+      recovery_strategy: "PSYNC (partial resync when possible)"
+
+  # Vault replication
+  vault_replication:
+    mode: "performance_replication"
+    
+    primary_cluster:
+      region: "us-east-1"
+      role: "primary"
+      license: "performance_replication"
+    
+    secondary_clusters:
+      - region: "us-west-2"
+        role: "performance_replica"
+        path_filter: "allow /"
+        
+      - region: "eu-west-1"
+        role: "performance_replica"
+        path_filter: "allow /"
+
+  # Monitoring replication health
+  replication_monitoring:
+    checks:
+      - name: "replication_lag"
+        interval: "10s"
+        alert_threshold: "30s"
+        
+      - name: "replication_connections"
+        interval: "30s"
+        alert_threshold: "connection_lost"
+        
+      - name: "data_consistency"
+        interval: "1h"
+        method: "checksums"
+        alert_threshold: "mismatch"
+      
+      - name: "failover_readiness"
+        interval: "5m"
+        checks:
+          - "replica can be promoted"
+          - "replica has latest wal"
+          - "replica has sufficient resources"
+    
+    dashboards:
+      - "Replication lag by region"
+      - "Replication throughput (bytes/sec)"
+      - "Active connections by region"
+      - "Failover readiness status"
+
+  # Conflict resolution
+  conflict_resolution:
+    strategy: "last-write-wins"
+    
+    for_postgresql:
+      - "Timestamp-based (compare updated_at)"
+      - "Version column (application-managed)"
+      - "Application-defined conflict handler"
+    
+    for_redis:
+      - "Last operation wins"
+      - "TTL respected during merge"
+    
+    audit_trail:
+      enabled: true
+      log_conflicts: true
+      resolution_method_logged: true

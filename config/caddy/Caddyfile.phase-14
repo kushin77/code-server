@@ -1,0 +1,181 @@
+# Caddy Configuration for Phase 14 Production Deployment
+# Extended routes for expanded application service set
+
+:80 {
+    # Health check endpoint
+    @health path /health
+    handle @health {
+        respond "OK" 200
+    }
+
+    # =========================================================================
+    # PHASE 13-14 APPLICATION SERVICE ROUTES (16 services)
+    # =========================================================================
+
+    # Original 6 Phase 13 services
+    @api path /api/v1*
+    handle @api {
+        uri strip_prefix /api/v1
+        reverse_proxy code-server-api-service:8000
+    }
+
+    @users path /api/users*
+    handle @users {
+        uri strip_prefix /api/users
+        reverse_proxy code-server-user-service:8001
+    }
+
+    @data path /api/data*
+    handle @data {
+        uri strip_prefix /api/data
+        reverse_proxy code-server-data-service:8002
+    }
+
+    @business path /api/business*
+    handle @business {
+        uri strip_prefix /api/business
+        reverse_proxy code-server-business-logic-service:8003
+    }
+
+    @notifications path /api/notifications*
+    handle @notifications {
+        uri strip_prefix /api/notifications
+        reverse_proxy code-server-notification-service:8004
+    }
+
+    @analytics path /api/analytics*
+    handle @analytics {
+        uri strip_prefix /api/analytics
+        reverse_proxy code-server-analytics-service:8005
+    }
+
+    # New 10 Phase 14 expansion services
+    @web path /* {
+        not path /api/* /metrics /grafana/* /prometheus/* /loki/* /tempo/* /redpanda/* /redis/* /pgadmin/*
+    }
+    handle @web {
+        reverse_proxy code-server-web-service:3000
+    }
+
+    @mobile path /mobile*
+    handle @mobile {
+        uri strip_prefix /mobile
+        reverse_proxy code-server-mobile-api-service:8007
+    }
+
+    @reports path /api/reports*
+    handle @reports {
+        uri strip_prefix /api/reports
+        reverse_proxy code-server-reports-service:8008
+    }
+
+    @export path /api/export*
+    handle @export {
+        uri strip_prefix /api/export
+        reverse_proxy code-server-export-service:8009
+    }
+
+    @config path /api/config*
+    handle @config {
+        uri strip_prefix /api/config
+        reverse_proxy code-server-config-service:8010
+    }
+
+    @payment path /api/payment*
+    handle @payment {
+        uri strip_prefix /api/payment
+        reverse_proxy code-server-payment-service:8011
+    }
+
+    @search path /api/search*
+    handle @search {
+        uri strip_prefix /api/search
+        reverse_proxy code-server-search-indexer-service:8012
+    }
+
+    @batch path /api/batch*
+    handle @batch {
+        uri strip_prefix /api/batch
+        reverse_proxy code-server-batch-processor-service:8012
+    }
+
+    @webhook path /api/webhook*
+    handle @webhook {
+        uri strip_prefix /api/webhook
+        reverse_proxy code-server-webhook-service:8013
+    }
+
+    @integration path /api/integration*
+    handle @integration {
+        uri strip_prefix /api/integration
+        reverse_proxy code-server-integration-service:8014
+    }
+
+    @health-monitor path /api/health*
+    handle @health-monitor {
+        uri strip_prefix /api/health
+        reverse_proxy code-server-health-monitor-service:8015
+    }
+
+    # =========================================================================
+    # INFRASTRUCTURE SERVICE ROUTES
+    # =========================================================================
+
+    @metrics path /metrics*
+    handle @metrics {
+        reverse_proxy code-server-prometheus:9090
+    }
+
+    @grafana path /grafana*
+    handle @grafana {
+        uri strip_prefix /grafana
+        reverse_proxy code-server-grafana:3000
+    }
+
+    @prometheus path /prometheus*
+    handle @prometheus {
+        uri strip_prefix /prometheus
+        reverse_proxy code-server-prometheus:9090
+    }
+
+    @loki path /loki*
+    handle @loki {
+        uri strip_prefix /loki
+        reverse_proxy code-server-loki:3100
+    }
+
+    @tempo path /tempo*
+    handle @tempo {
+        uri strip_prefix /tempo
+        reverse_proxy code-server-tempo:3200
+    }
+
+    @redpanda path /redpanda*
+    handle @redpanda {
+        uri strip_prefix /redpanda
+        reverse_proxy code-server-redpanda-console:8082
+    }
+
+    @redis path /redis*
+    handle @redis {
+        uri strip_prefix /redis
+        reverse_proxy code-server-redis-commander:8086
+    }
+
+    @pgadmin path /pgadmin*
+    handle @pgadmin {
+        uri strip_prefix /pgadmin
+        reverse_proxy code-server-pgadmin:5050
+    }
+}
+
+# HTTPS Production Configuration (requires certificates)
+# Use with real domain and certificates:
+#
+# api.kushnir.cloud {
+#     tls /etc/caddy/certs/api.kushnir.cloud.crt /etc/caddy/certs/api.kushnir.cloud.key
+#     
+#     # All routes from above with HTTPS
+#     # Automatic HTTPS redirect
+#     # Security headers (CSP, X-Frame-Options, etc.)
+# }

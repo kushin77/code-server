@@ -1,0 +1,88 @@
+# Prometheus configuration for code-server operational monitoring
+# Scrapes metrics from drift watchdog, SLO tracker, and Docker daemon
+
+global:
+  scrape_interval: 5m  # Same as drift watchdog interval
+  evaluation_interval: 5m
+  external_labels:
+    cluster: 'code-server'
+    environment: 'production'
+
+# Alertmanager configuration (optional - for advanced alerting)
+alerting:
+  alertmanagers: []
+
+# Load rules from files
+rule_files: []
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter on primary host (infrastructure metrics)
+  - job_name: 'node-primary'
+    static_configs:
+      - targets: ['192.168.168.31:9100']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'primary'
+
+  # Node Exporter on replica host
+  - job_name: 'node-replica'
+    static_configs:
+      - targets: ['192.168.168.42:9100']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'replica'
+
+  # cAdvisor for Docker container metrics (primary)
+  - job_name: 'cadvisor-primary'
+    static_configs:
+      - targets: ['192.168.168.31:8080']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'primary'
+
+  # cAdvisor for Docker container metrics (replica)
+  - job_name: 'cadvisor-replica'
+    static_configs:
+      - targets: ['192.168.168.42:8080']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'replica'
+
+  # Custom metrics from drift watchdog and SLO tracker
+  - job_name: 'code-server-ops'
+    scrape_interval: 5m
+    scrape_timeout: 30s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['localhost:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'local'
+
+# Metric relabeling rules
+# These help organize metrics into logical groups
+metric_relabeling:
+  - source_labels: [__name__]
+    regex: 'container_.*'
+    target_label: metric_category
+    replacement: 'containers'
+
+  - source_labels: [__name__]
+    regex: 'node_.*'
+    target_label: metric_category
+    replacement: 'node'
+
+  - source_labels: [__name__]
+    regex: 'code_server_.*'
+    target_label: metric_category
+    replacement: 'application'

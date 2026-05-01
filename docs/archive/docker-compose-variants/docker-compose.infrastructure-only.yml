@@ -1,0 +1,291 @@
+# Infrastructure-only deployment (no custom application builds)
+# This deploys only the core infrastructure services without the 13 custom app services
+version: '3.9'
+
+services:
+  # ============================================================================
+  # INFRASTRUCTURE LAYER - Core services only
+  # ============================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: code-server-postgres
+    user: "999:999"
+    environment:
+      - POSTGRES_USER=code_server_user
+      - POSTGRES_PASSWORD=code_server_password
+      - POSTGRES_DB=code_server_db
+      - POSTGRES_INITDB_ARGS=-c max_connections=200 -c shared_buffers=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U code_server_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-server-network
+
+  postgres-init:
+    image: alpine:3.20
+    container_name: code-server-postgres-init
+    user: "999:999"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: code-server-redis
+    user: "999:999"
+    command: redis-server --requirepass code_server_redis_password --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "code_server_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-server-network
+
+  redis-init:
+    image: alpine:3.20
+    container_name: code-server-redis-init
+    user: "999:999"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  redpanda:
+    image: redpandadata/redpanda:v24.1.1
+    container_name: code-server-redpanda
+    user: "998:998"
+    environment:
+      - REDPANDA_ADVERTISED_KAFKA_API_ADDRESSES=redpanda:9092
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    ports:
+      - "9092:9092"
+      - "8081:8081"
+    networks:
+      - code-server-network
+
+  redpanda-init:
+    image: alpine:3.20
+    container_name: code-server-redpanda-init
+    user: "998:998"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  redpanda-console:
+    image: redpandadata/console:latest
+    container_name: code-server-redpanda-console
+    user: "1001:1001"
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redpanda
+    networks:
+      - code-server-network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: code-server-qdrant
+    user: "1001:1001"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - code-server-network
+
+  qdrant-init:
+    image: alpine:3.20
+    container_name: code-server-qdrant-init
+    user: "1001:1001"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  # ============================================================================
+  # OBSERVABILITY LAYER
+  # ============================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: code-server-prometheus
+    user: "65534:65534"
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - code-server-network
+
+  prometheus-init:
+    image: alpine:3.20
+    container_name: code-server-prometheus-init
+    user: "65534:65534"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: code-server-grafana
+    user: "472:0"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - code-server-network
+
+  grafana-init:
+    image: alpine:3.20
+    container_name: code-server-grafana-init
+    user: "472:0"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  loki:
+    image: grafana/loki:2.9.1
+    container_name: code-server-loki
+    user: "10001:10001"
+    volumes:
+      - ./config/loki:/etc/loki
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - code-server-network
+
+  loki-init:
+    image: alpine:3.20
+    container_name: code-server-loki-init
+    user: "10001:10001"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: code-server-alertmanager
+    user: "65534:65534"
+    volumes:
+      - ./config/alertmanager:/etc/alertmanager
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - code-server-network
+
+  alertmanager-init:
+    image: alpine:3.20
+    container_name: code-server-alertmanager-init
+    user: "65534:65534"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: code-server-tempo
+    user: "10001:10001"
+    volumes:
+      - ./config/tempo:/etc/tempo
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"
+    networks:
+      - code-server-network
+
+  # ============================================================================
+  # GATEWAY LAYER
+  # ============================================================================
+
+  caddy:
+    image: caddy:2.7.4
+    container_name: code-server-caddy
+    user: "101:101"
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - redpanda-console
+    networks:
+      - code-server-network
+
+  caddy-init:
+    image: alpine:3.20
+    container_name: code-server-caddy-init
+    user: "101:101"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  # ============================================================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================================================
+
+  ollama:
+    image: ollama/ollama:0.1.16
+    container_name: code-server-ollama
+    user: "1001:1001"
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - code-server-network
+
+  ollama-init:
+    image: alpine:3.20
+    container_name: code-server-ollama-init
+    user: "1001:1001"
+    entrypoint: /bin/true
+    networks:
+      - code-server-network
+
+  opa:
+    image: openpolicyagent/opa:0.58.0
+    container_name: code-server-opa
+    user: "1001:1001"
+    command: run --server --set system.log.level=info
+    ports:
+      - "8181:8181"
+    networks:
+      - code-server-network
+
+networks:
+  code-server-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  redpanda_data:
+  qdrant_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  alertmanager_data:
+  tempo_data:
+  caddy_data:
+  caddy_config:
+  ollama_data:

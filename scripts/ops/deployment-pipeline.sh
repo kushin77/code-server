@@ -40,11 +40,12 @@ trap 'log_info "Pipeline cleanup..."; true' EXIT
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
 ENVIRONMENT=${1:-production}
 DEPLOYMENT_ID=$(date +%s)
-LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
-ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
+LOG_FILE="${REPO_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
+ARTIFACT_DIR="${REPO_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/deployment-pipeline-${DEPLOYMENT_ID}.json"
 
 # Argument flags
@@ -58,8 +59,12 @@ for arg in "$@"; do
     esac
 done
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
-source_env_file "${PROJECT_ROOT}/.env.infrastructure"
+if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
+    # Load deployment-specific variables without requiring extra helper functions.
+    set -a
+    source "${REPO_ROOT}/.env.infrastructure"
+    set +a
+fi
 
 : "${API_PROTOCOL:=http}"
 : "${API_HOST:=localhost}"
@@ -118,8 +123,12 @@ CURRENT_COMMIT=$(git -C "${PROJECT_ROOT}" rev-parse HEAD)
 CURRENT_BRANCH=$(git -C "${PROJECT_ROOT}" rev-parse --abbrev-ref HEAD)
 
 if [[ "$CURRENT_BRANCH" != "main" ]]; then
-    stage_fail "Not on main branch (currently on $CURRENT_BRANCH)"
-    exit 1
+    if [[ "$FORCE_DEPLOY" != "true" ]]; then
+        stage_fail "Not on main branch (currently on $CURRENT_BRANCH). Use --force-deploy to override."
+        exit 1
+    else
+        log_warn "Not on main branch (currently on $CURRENT_BRANCH); --force-deploy override in effect"
+    fi
 fi
 
 log_info "Branch: $CURRENT_BRANCH | Commit: ${CURRENT_COMMIT:0:7}"

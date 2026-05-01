@@ -1,0 +1,349 @@
+# Caddyfile - API Gateway with TLS/HTTPS
+# Code-Server Enterprise Platform - Phase 14A Production Hardening
+# Configuration: Reverse proxy with TLS, security headers, rate limiting
+
+# Global settings
+{
+  admin 0.0.0.0:2019
+}
+
+# HTTP redirect (redirect all HTTP to HTTPS)
+:80 {
+  redir https://{host}{uri} permanent
+}
+
+# HTTPS configuration with security hardening
+:443 {
+  # TLS certificate configuration
+  # For development/testing: self-signed certificates at /certs/
+  # For production: Configure Let's Encrypt ACME
+  
+  tls /data/cert.pem /data/private.key {
+    protocols tls1.2 tls1.3
+    ciphers TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+  }
+
+  # Security Headers
+  header / {
+    # Prevent MIME type sniffing
+    X-Content-Type-Options "nosniff"
+    
+    # Enable XSS protection
+    X-XSS-Protection "1; mode=block"
+    
+    # Prevent clickjacking
+    X-Frame-Options "SAMEORIGIN"
+    
+    # Content Security Policy
+    Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'"
+    
+    # HSTS (HTTP Strict-Transport-Security)
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    
+    # Referrer Policy
+    Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Permissions Policy
+    Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+  }
+
+  # Application Service Routes - Phase 13 Core Services
+  
+  # API Gateway Entry Point
+  route /api/v1* {
+    uri strip_prefix /api/v1
+    reverse_proxy code-server-api-service:8000 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # User Service
+  route /api/users* {
+    uri strip_prefix /api/users
+    reverse_proxy code-server-user-service:8001 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Data Service
+  route /api/data* {
+    uri strip_prefix /api/data
+    reverse_proxy code-server-data-service:8002 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Business Logic Service
+  route /api/business* {
+    uri strip_prefix /api/business
+    reverse_proxy code-server-business-logic-service:8003 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Notification Service
+  route /api/notifications* {
+    uri strip_prefix /api/notifications
+    reverse_proxy code-server-notification-service:8004 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Analytics Service
+  route /api/analytics* {
+    uri strip_prefix /api/analytics
+    reverse_proxy code-server-analytics-service:8005 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Application Service Routes - Phase 14 Expansion Services
+  
+  # Web Service (Frontend)
+  route /web* {
+    uri strip_prefix /web
+    reverse_proxy code-server-web-service:3000 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Mobile API Service
+  route /mobile* {
+    uri strip_prefix /mobile
+    reverse_proxy code-server-mobile-api-service:8007 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Reports Service
+  route /api/reports* {
+    uri strip_prefix /api/reports
+    reverse_proxy code-server-reports-service:8008 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Export Service
+  route /api/export* {
+    uri strip_prefix /api/export
+    reverse_proxy code-server-export-service:8009 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Config Service
+  route /api/config* {
+    uri strip_prefix /api/config
+    reverse_proxy code-server-config-service:8010 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Payment Service
+  route /api/payment* {
+    uri strip_prefix /api/payment
+    reverse_proxy code-server-payment-service:8011 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Search Indexer Service
+  route /api/search* {
+    uri strip_prefix /api/search
+    reverse_proxy code-server-search-indexer-service:8012 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Batch Processor Service
+  route /api/batch* {
+    uri strip_prefix /api/batch
+    reverse_proxy code-server-batch-processor-service:8016 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Webhook Service
+  route /api/webhook* {
+    uri strip_prefix /api/webhook
+    reverse_proxy code-server-webhook-service:8013 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Integration Service
+  route /api/integration* {
+    uri strip_prefix /api/integration
+    reverse_proxy code-server-integration-service:8014 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Health Monitor Service
+  route /api/health* {
+    uri strip_prefix /api/health
+    reverse_proxy code-server-health-monitor-service:8015 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Infrastructure & Observability Routes
+  
+  # Grafana Dashboard
+  route /grafana* {
+    uri strip_prefix /grafana
+    reverse_proxy code-server-grafana:3000 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Prometheus Metrics
+  route /prometheus* {
+    uri strip_prefix /prometheus
+    reverse_proxy code-server-prometheus:9090 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Loki Logs
+  route /loki* {
+    uri strip_prefix /loki
+    reverse_proxy code-server-loki:3100 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Tempo Traces
+  route /tempo* {
+    uri strip_prefix /tempo
+    reverse_proxy code-server-tempo:3200 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Redpanda Console
+  route /redpanda* {
+    uri strip_prefix /redpanda
+    reverse_proxy code-server-redpanda-console:8080 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Redis Commander
+  route /redis* {
+    uri strip_prefix /redis
+    reverse_proxy code-server-redis-commander:8081 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # PgAdmin Database Admin
+  route /pgadmin* {
+    uri strip_prefix /pgadmin
+    reverse_proxy code-server-pgadmin:80 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+
+  # Health check endpoint
+  route /healthz {
+    respond "✅ Gateway OK" 200
+  }
+
+  # Metrics endpoint
+  route /metrics {
+    respond "✅ Metrics OK" 200
+  }
+
+  # Status page
+  route /status {
+    respond "✅ Platform operational" 200
+  }
+
+  # API documentation
+  route /api/docs {
+    respond "API Documentation:\n/api/v1 - API gateway\n/api/users - User service\n/api/data - Data service\n/api/business - Business logic\n/api/notifications - Notifications\n/api/analytics - Analytics\n/web - Frontend\n/mobile - Mobile API\n/grafana - Grafana dashboard\n/prometheus - Prometheus metrics\n/loki - Logs\n/tempo - Traces"
+  }
+
+  # Default route (catch-all to web frontend)
+  route /* {
+    reverse_proxy code-server-web-service:3000 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto https
+    }
+  }
+}

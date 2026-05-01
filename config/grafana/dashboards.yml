@@ -1,0 +1,258 @@
+# Phase 14B: Grafana Dashboards Configuration
+# JSON files for 4 comprehensive monitoring dashboards
+
+## Dashboard 1: Infrastructure Overview
+dashboards_infrastructure:
+  title: "Infrastructure Overview"
+  description: "Cluster-wide resource utilization and health metrics"
+  tags: ["infrastructure", "cluster", "production"]
+  refresh: "30s"
+  time_range: "1h"
+  
+  panels:
+    - title: "CPU Usage (%)"
+      type: "stat"
+      targets:
+        - expr: 'avg(100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100))'
+      thresholds: [70, 80]
+      unit: "percent"
+      
+    - title: "Memory Usage (%)"
+      type: "stat"
+      targets:
+        - expr: 'avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)'
+      thresholds: [75, 85]
+      unit: "percent"
+      
+    - title: "Network I/O (MB/s)"
+      type: "graph"
+      targets:
+        - expr: 'sum(rate(node_network_transmit_bytes_total[5m])) / 1024 / 1024'
+        - expr: 'sum(rate(node_network_receive_bytes_total[5m])) / 1024 / 1024'
+      
+    - title: "Running Containers"
+      type: "stat"
+      targets:
+        - expr: 'count(up{job="docker"})'
+      
+    - title: "Disk Usage (%)"
+      type: "stat"
+      targets:
+        - expr: '(node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes * 100'
+      thresholds: [80, 90]
+      
+    - title: "Service Uptime"
+      type: "stat"
+      targets:
+        - expr: 'sum(up{job="caddy"}) / count(up{job="caddy"}) * 100'
+      unit: "percent"
+
+## Dashboard 2: Application Services Performance
+dashboards_applications:
+  title: "Application Services"
+  description: "Microservices throughput, latency, and error rates"
+  tags: ["applications", "services", "performance"]
+  refresh: "15s"
+  time_range: "6h"
+  
+  panels:
+    - title: "Request Rate (req/s)"
+      type: "graph"
+      targets:
+        - expr: 'sum(rate(http_requests_total[1m]))'
+      legend: "All services"
+      
+    - title: "Error Rate (%)"
+      type: "graph"
+      targets:
+        - expr: '(sum(rate(http_requests_total{status=~"5.."}[1m])) / sum(rate(http_requests_total[1m]))) * 100'
+      thresholds: [1, 5]
+      
+    - title: "Response Time p50/p95/p99 (ms)"
+      type: "graph"
+      targets:
+        - expr: 'histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m])) * 1000'
+        - expr: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000'
+        - expr: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) * 1000'
+      
+    - title: "Request Volume by Service"
+      type: "table"
+      targets:
+        - expr: 'sum by (service) (rate(http_requests_total[5m]))'
+      
+    - title: "Error Distribution"
+      type: "pie"
+      targets:
+        - expr: 'sum by (status) (rate(http_requests_total[5m]))'
+      
+    - title: "Active Connections"
+      type: "stat"
+      targets:
+        - expr: 'sum(http_active_connections)'
+
+## Dashboard 3: Database Performance
+dashboards_database:
+  title: "Database Performance"
+  description: "PostgreSQL and Redis performance metrics"
+  tags: ["database", "postgresql", "redis"]
+  refresh: "20s"
+  time_range: "6h"
+  
+  panels:
+    - title: "Active Connections"
+      type: "stat"
+      targets:
+        - expr: 'pg_stat_activity_count'
+      thresholds: [50, 100]
+      
+    - title: "Connection Pool Usage (%)"
+      type: "stat"
+      targets:
+        - expr: '(pg_stat_activity_count / 100) * 100'
+      thresholds: [70, 85]
+      
+    - title: "Query Performance (ms)"
+      type: "graph"
+      targets:
+        - expr: 'histogram_quantile(0.50, pg_stat_statements_mean_exec_time)'
+        - expr: 'histogram_quantile(0.95, pg_stat_statements_mean_exec_time)'
+        - expr: 'histogram_quantile(0.99, pg_stat_statements_mean_exec_time)'
+      
+    - title: "Cache Hit Ratio (%)"
+      type: "stat"
+      targets:
+        - expr: '(pg_stat_io_blks_hit / (pg_stat_io_blks_hit + pg_stat_io_blks_read)) * 100'
+      thresholds: [80, 90]
+      
+    - title: "Database Replication Lag (s)"
+      type: "graph"
+      targets:
+        - expr: 'pg_replication_lag'
+      thresholds: [5, 10]
+      
+    - title: "Slow Queries (>100ms)"
+      type: "table"
+      targets:
+        - expr: 'sum by (query) (pg_stat_statements_mean_exec_time) > 0.1'
+
+## Dashboard 4: Business Metrics
+dashboards_business:
+  title: "Business Metrics"
+  description: "Transaction volume, user activity, revenue"
+  tags: ["business", "transactions", "revenue"]
+  refresh: "60s"
+  time_range: "24h"
+  
+  panels:
+    - title: "Transactions (24h)"
+      type: "stat"
+      targets:
+        - expr: 'sum(increase(transactions_total[24h]))'
+      unit: "short"
+      
+    - title: "Transaction Success Rate (%)"
+      type: "stat"
+      targets:
+        - expr: '(sum(transactions_success) / sum(transactions_total)) * 100'
+      thresholds: [99, 99.5]
+      
+    - title: "Active Users"
+      type: "stat"
+      targets:
+        - expr: 'count(distinct(user_id))'
+      
+    - title: "Data Processed (GB)"
+      type: "stat"
+      targets:
+        - expr: 'sum(data_processed_bytes) / 1024 / 1024 / 1024'
+      
+    - title: "Transaction Volume Trend"
+      type: "graph"
+      targets:
+        - expr: 'sum(rate(transactions_total[5m]))'
+      
+    - title: "Revenue Trend (24h)"
+      type: "graph"
+      targets:
+        - expr: 'sum(increase(revenue_total[24h]))'
+
+## Alert Rules Configuration
+alert_rules:
+  # Critical Alerts
+  - alert: "NodeDown"
+    expr: 'up{job="node-exporter"} == 0'
+    for: "2m"
+    severity: "critical"
+    description: "Node {{ $labels.instance }} is down"
+    
+  - alert: "HighErrorRate"
+    expr: '(sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.05'
+    for: "5m"
+    severity: "critical"
+    description: "Error rate above 5% ({{ $value | humanizePercentage }})"
+    
+  - alert: "DatabaseDown"
+    expr: 'pg_up == 0'
+    for: "1m"
+    severity: "critical"
+    description: "PostgreSQL database is down on {{ $labels.instance }}"
+    
+  - alert: "ReplicationLag"
+    expr: 'pg_replication_lag > 10'
+    for: "5m"
+    severity: "critical"
+    description: "Database replication lag above 10 seconds"
+    
+  - alert: "DiskSpaceLow"
+    expr: '(node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1'
+    for: "5m"
+    severity: "critical"
+    description: "Disk space below 10% on {{ $labels.device }}"
+
+  # Warning Alerts
+  - alert: "HighCPUUsage"
+    expr: '100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80'
+    for: "10m"
+    severity: "warning"
+    description: "CPU usage above 80% on {{ $labels.instance }}"
+    
+  - alert: "HighMemoryUsage"
+    expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85'
+    for: "10m"
+    severity: "warning"
+    description: "Memory usage above 85% on {{ $labels.instance }}"
+    
+  - alert: "HighResponseTime"
+    expr: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1'
+    for: "10m"
+    severity: "warning"
+    description: "Response time p95 above 1 second"
+    
+  - alert: "ConnectionPoolNearly Full"
+    expr: '(pg_stat_activity_count / 100) > 0.8'
+    for: "5m"
+    severity: "warning"
+    description: "Database connection pool usage above 80%"
+    
+  - alert: "LowCacheHitRatio"
+    expr: '(pg_stat_io_blks_hit / (pg_stat_io_blks_hit + pg_stat_io_blks_read)) < 0.8'
+    for: "15m"
+    severity: "warning"
+    description: "Cache hit ratio below 80%"
+
+## Notification Channels
+notification_channels:
+  - name: "Slack"
+    type: "slack"
+    settings:
+      url: "${SLACK_WEBHOOK_URL}"
+      
+  - name: "Email"
+    type: "email"
+    settings:
+      addresses: ["ops@kushnir.cloud"]
+      
+  - name: "PagerDuty"
+    type: "pagerduty"
+    settings:
+      integration_key: "${PAGERDUTY_KEY}"

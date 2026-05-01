@@ -1,0 +1,122 @@
+# Ansible Inventory - Cluster Nodes
+# Infrastructure as Code for host management
+
+all:
+  vars:
+    # Global variables
+    ansible_user: akushnir
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    cluster_name: code-server-enterprise
+    environment: production
+
+  children:
+    primary:
+      hosts:
+        primary.code-server:
+          ansible_host: 192.168.168.31
+          ansible_connection: ssh
+          node_role: primary
+          node_name: primary
+          
+      vars:
+        node_type: primary
+        postgresql_role: master
+        service_priority: 1
+
+    replica:
+      hosts:
+        replica.code-server:
+          ansible_host: 192.168.168.42
+          ansible_connection: ssh
+          node_role: replica
+          node_name: replica
+          
+      vars:
+        node_type: replica
+        postgresql_role: standby
+        service_priority: 2
+
+    cluster:
+      children:
+        - primary
+        - replica
+      vars:
+        # Docker configuration
+        docker_compose_dir: /home/akushnir/code-server-enterprise-ops
+        docker_network: code-server-network
+        docker_restart_policy: unless-stopped
+
+        # Database configuration
+        postgres:
+          port: 5432
+          database: app_db
+          user: postgres
+          password: postgres_password_secure
+          replication_user: replication_user
+          replication_password: replication_password_secure
+          max_connections: 200
+          shared_buffers: 256MB
+
+        redis:
+          port: 6379
+          password: code_server_redis_password
+          maxmemory: 1024mb
+          maxmemory_policy: allkeys-lru
+
+        mongodb:
+          port: 27017
+          database: app_db
+          admin_user: mongo_admin
+          admin_password: mongo_password_secure
+
+        elasticsearch:
+          port: 9200
+          heap_size: 512m
+
+        # Monitoring configuration
+        prometheus:
+          port: 9090
+          scrape_interval: 15s
+          evaluation_interval: 15s
+          retention: 30d
+
+        grafana:
+          port: 3000
+          admin_user: admin
+          admin_password: admin
+          anonymous_enabled: false
+
+        loki:
+          port: 3100
+          retention_period: 30d
+
+        tempo:
+          port: 3200
+
+        alertmanager:
+          port: 9093
+
+        # API Gateway
+        caddy:
+          port_http: 80
+          port_https: 443
+          auto_https: "off"  # Using self-signed for now
+
+        # Microservices
+        microservices:
+          api_service:
+            port: 8000
+            replicas: 1
+          web_service:
+            port: 3001
+            replicas: 1
+          user_service:
+            port: 8001
+            replicas: 1
+          data_service:
+            port: 8002
+            replicas: 1
+          analytics_service:
+            port: 8005
+            replicas: 1

@@ -54,7 +54,7 @@
 }
 
 # Development environment (kushnir.local)
-kushnir.local, *.kushnir.local {
+kushnir.local, *.kushnir.local, ${APEX_DOMAIN}, *.${APEX_DOMAIN} {
 	# HTTP → HTTPS redirect
 	# All traffic must use encrypted connection
 	redir http:// https:// permanent
@@ -196,9 +196,84 @@ kushnir.local, *.kushnir.local {
 		}
 	}
 
-	# Public endpoints - no auth required
-	handle / {
-		respond "ElevatedIQ DevOS v1.0" 200
+	# Root domain routes to Appsmith Portal (OAuth protected entry point)
+	# kushnir.cloud → Appsmith Hermes Agent Dashboard
+	handle /, /paperclip, /paperclip/* {
+		# Security headers for dashboard
+		header / {
+			# OAuth2 protection enabled
+			X-OAuth-Protected "true"
+			X-Portal-Type "hermes-agent"
+			# Prevent frame embedding (unless from same origin)
+			X-Frame-Options "SAMEORIGIN"
+		}
+		
+		# Appsmith dashboard with OAuth2 Google integration
+		reverse_proxy http://appsmith:80 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+			header_up X-Forwarded-Prefix {http.request.uri.path_prefix}
+			header_up Host appsmith
+			# Pass OAuth context
+			header_up X-OAuth-Token {http.request.header.Authorization}
+			header_up X-User-Email {http.request.header.X-User-Email}
+			# API backend integration
+			header_up X-API-Gateway "hermes-integration:8000"
+		}
+	}
+
+	# Code-Server IDE access (separate from Appsmith dashboard)
+	# kushnir.cloud/ide → code-server IDE with Hermes Agent integration
+	handle /ide* {
+		# IDE-specific security headers
+		header /ide* {
+			X-Portal-Type "code-server-ide"
+			# Allow frame embedding for IDE functionality
+			X-Frame-Options "SAMEORIGIN"
+		}
+		reverse_proxy http://code-server-ide:8080 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+			# Pass OAuth for IDE authentication
+			header_up X-OAuth-Token {http.request.header.Authorization}
+			header_up X-User-Email {http.request.header.X-User-Email}
+		}
+	}
+
+	# GitLab access
+	# kushnir.cloud/gitlab → GitLab instance
+	handle /gitlab* {
+		header /gitlab* {
+			X-Portal-Type "gitlab"
+		}
+		reverse_proxy http://gitlab:80 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+		}
+	}
+
+	# Hermes Agent API access (REST API)
+	# kushnir.cloud/api/hermes/* → hermes-integration service
+	handle /api/hermes/* {
+		# API-specific security headers
+		header /api/hermes/* {
+			Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+			X-API-Service "hermes-integration"
+		}
+		
+		# OAuth validation for API calls
+		# Strip /api/hermes prefix when forwarding to service
+		reverse_proxy http://hermes-integration:8000 {
+			header_up X-Forwarded-For {http.request.remote}
+			header_up X-Forwarded-Proto {http.request.proto}
+			header_up X-Forwarded-Host {http.request.host}
+			header_up X-OAuth-Token {http.request.header.Authorization}
+			header_up X-User-Email {http.request.header.X-User-Email}
+			header_up Authorization {http.request.header.Authorization}
+		}
 	}
 
 	# Catch-all: deny unknown paths

@@ -8,8 +8,9 @@
 
 import logging
 import asyncio
+import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Query, HTTPException, BackgroundTasks, Body
 from contextlib import asynccontextmanager
 
@@ -19,13 +20,20 @@ from agent import (
 )
 from models import (
     AgentType, AgentExecutionRequest, AgentExecutionResult,
-    AgentHeartbeat, AgentConfiguration
+    AgentHeartbeat, AgentConfiguration, ApprovalStatus
 )
 from paperclip_client import PaperclipClient
 from oidc_client import OIDCClient
 from execution_router import ExecutionRouter, ExecutionDestination
 
-logging.basicConfig(level=logging.INFO)
+# SLOG: structured JSON logging (GOV-002 compliant)
+class _JsonFmt(logging.Formatter):
+    def format(self, r):
+        import json, sys
+        return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
+_h = logging.StreamHandler()
+_h.setFormatter(_JsonFmt())
+logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
 logger = logging.getLogger(__name__)
 
 # Global state
@@ -35,6 +43,30 @@ oidc_client: Optional[OIDCClient] = None
 execution_router = ExecutionRouter()
 start_time = datetime.utcnow()
 execution_count = 0
+execution_failures: List[Dict[str, Any]] = []
+
+
+def record_execution_failure(
+    request: AgentExecutionRequest,
+    destination: ExecutionDestination,
+    error: Exception,
+    execution_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Store structured execution failure evidence for diagnostics."""
+    failure_record = {
+        "execution_id": execution_id or f"exec-failed-{uuid.uuid4().hex[:12]}",
+        "agent_id": request.agent_id,
+        "agent_type": request.agent_type.value,
+        "task_type": request.task_type,
+        "action": request.action,
+        "destination": destination.value,
+        "error_message": str(error),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    execution_failures.append(failure_record)
+    del execution_failures[:-100]
+    return failure_record
 
 
 @asynccontextmanager
@@ -150,8 +182,34 @@ async def execute_agent_task(
         try:
             result = await agent.execute(request)
             logger.info(f"Execution complete: {result.execution_id} -> {result.status}")
+            if result.status != "success":
+                execution_failures.append({
+                    "execution_id": result.execution_id,
+                    "agent_id": result.agent_id,
+                    "agent_type": result.agent_type.value,
+                    "task_type": request.task_type,
+                    "action": request.action,
+                    "destination": result.execution_destination,
+                    "error_message": result.error_message or f"Execution finished with status {result.status}",
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
+                del execution_failures[:-100]
         except Exception as e:
-            logger.error(f"Execution error: {e}")
+            failure_record = record_execution_failure(request, destination, e, getattr(agent, "current_execution_id", None))
+            if failure_record["execution_id"] not in agent.execution_history:
+                agent.execution_history[failure_record["execution_id"]] = AgentExecutionResult(
+                    execution_id=failure_record["execution_id"],
+                    agent_id=request.agent_id,
+                    agent_type=request.agent_type,
+                    status="failure",
+                    approval_status=ApprovalStatus.APPROVED,
+                    start_time=datetime.utcnow(),
+                    end_time=datetime.utcnow(),
+                    duration_seconds=0.0,
+                    error_message=str(e),
+                    execution_destination=destination.value,
+                )
+            logger.exception(f"Execution error: {e}")
     
     background_tasks.add_task(_execute)
     
@@ -259,6 +317,16 @@ async def get_routing_stats():
     """Get execution routing statistics"""
     return {
         "stats": execution_router.get_routing_stats()
+    }
+
+
+@app.get("/diagnostics/executions")
+async def get_execution_diagnostics(limit: int = Query(20, ge=1, le=100)):
+    """Get recent execution failure evidence."""
+    return {
+        "failure_count": len(execution_failures),
+        "recent_failures": execution_failures[-limit:],
+        "agents_tracked": len(agents),
     }
 
 

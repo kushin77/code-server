@@ -3,6 +3,8 @@
 Production-grade self-hosted VSCode in the browser with enterprise
 security, monitoring, and high availability.
 
+**Production status:** All containers healthy | Primary: `192.168.168.31` | Replica: `192.168.168.42` | Domain: `kushnir.cloud`
+
 ## Quick Start
 
 ```bash
@@ -129,10 +131,21 @@ See [ARCHITECTURE.md](docs/status/ARCHITECTURE.md),
 [ADR index](docs/adr/README.md), and
 [Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
 
+## Code Review Compliance
+
+| Standard | Status | Notes |
+|----------|--------|-------|
+| SLOG (structured JSON logging) | ✅ | `apps/_shared/python/logging.py::setup_logging()` + 7 apps |
+| SSOT (single source of truth) | ⚠️ | `.env.*` files have overlap; canonical load order: infra→deploy→cluster→prod |
+| Naming convention `code-server-*` | ✅ | `hermes-integration` removed; all containers follow convention |
+| Image immutability | ✅ | All external images pinned to specific versions; fake SHA placeholder removed |
+| Idempotency | ✅ | `docker compose up -d` is safe to re-run |
+| Health checks | ✅ | All service health checks use `localhost:<port>` (not service names) |
+| Governance (GOV-002) | ✅ | JSON log output for Loki/OTel ingestion |
+
 ## Contributing
 
-See [CONTRIBUTING.md](docs/status/CONTRIBUTING.md) and
-[GitHub Issues](https://github.com/kushin77/code-server/issues).
+See [GitHub Issues](https://github.com/kushin77/code-server/issues).
 
 ## Governance SSOT
 

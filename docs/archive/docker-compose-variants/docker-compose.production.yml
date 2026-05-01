@@ -1,0 +1,627 @@
+version: '3.8'
+
+# Production-grade docker-compose for Code-Server Enterprise Platform
+# Identical services on both primary and replica nodes
+# Only essential, operational services (no loose containers)
+
+networks:
+  code-server-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  minio_data:
+    driver: local
+
+services:
+  # ============================================
+  # CORE DATABASE LAYER (Primary + Replica)
+  # ============================================
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: code-server-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_secure
+      POSTGRES_DB: app_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: code-server-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql_root_password
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3306:3306"
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0
+    container_name: code-server-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: mongo_password
+    ports:
+      - "27017:27017"
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: code-server-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass code_server_redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "code_server_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: code-server-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================
+  # MESSAGE QUEUE & VECTOR DB
+  # ============================================
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.1.6
+    container_name: code-server-redpanda
+    command: |
+      redpanda start
+      --overprovisioned
+      --smp 2
+      --memory 512M
+      --reserve-memory 0M
+      --mode dev-container
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    environment:
+      - REDPANDA_BROKERS=code-server-redpanda:9092
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v3.7.1
+    container_name: code-server-redpanda-console
+    environment:
+      KAFKA_BROKERS: code-server-redpanda:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - code-server-network
+    depends_on:
+      - redpanda
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: code-server-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================
+  # STORAGE & REGISTRY
+  # ============================================
+
+  minio:
+    image: minio/minio:latest
+    container_name: code-server-minio
+    command: minio server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_password
+    volumes:
+      - minio_data:/data
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  registry:
+    image: registry:2
+    container_name: code-server-registry
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/v2/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================
+  # OBSERVABILITY STACK
+  # ============================================
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: code-server-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: code-server-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin_password
+      GF_INSTALL_PLUGINS: 'grafana-piechart-panel'
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - code-server-network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: code-server-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ./config/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: code-server-tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4319:4319"
+    volumes:
+      - ./config/tempo/tempo.yml:/etc/tempo.yaml:ro
+    command: ["-config.file=/etc/tempo.yaml"]
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3200/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: code-server-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9093/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.96.0
+    container_name: code-server-otel-collector
+    ports:
+      - "4318:4318"
+      - "8888:8888"
+      - "9411:9411"
+    volumes:
+      - ./config/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  # ============================================
+  # API GATEWAY & SECURITY
+  # ============================================
+
+  caddy:
+    image: caddy:2.7.4
+    container_name: code-server-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  opa:
+    image: openpolicyagent/opa:0.58.0
+    container_name: code-server-opa
+    ports:
+      - "8181:8181"
+    command: ["run", "--server", "--addr", "0.0.0.0:8181"]
+    volumes:
+      - ./config/opa:/opa/policies:ro
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8181/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================
+  # SERVICE DISCOVERY & UTILITIES
+  # ============================================
+
+  consul:
+    image: consul:1.17
+    container_name: code-server-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8500/v1/status/leader || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: code-server-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kushnir.cloud
+      PGADMIN_DEFAULT_PASSWORD: admin_password
+    networks:
+      - code-server-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: code-server-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: default:code-server-redis:6379:0:code_server_redis_password
+    networks:
+      - code-server-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # ============================================
+  # MICROSERVICES (CORE)
+  # ============================================
+
+  api-service:
+    image: alpine:3.20
+    container_name: code-server-api-service
+    ports:
+      - "8000:8000"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  user-service:
+    image: alpine:3.20
+    container_name: code-server-user-service
+    ports:
+      - "8001:8001"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  data-service:
+    image: alpine:3.20
+    container_name: code-server-data-service
+    ports:
+      - "8002:8002"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  business-logic-service:
+    image: alpine:3.20
+    container_name: code-server-business-logic-service
+    ports:
+      - "8003:8003"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  notification-service:
+    image: alpine:3.20
+    container_name: code-server-notification-service
+    ports:
+      - "8004:8004"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  analytics-service:
+    image: alpine:3.20
+    container_name: code-server-analytics-service
+    ports:
+      - "8005:8005"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  # ============================================
+  # MICROSERVICES (EXPANSION)
+  # ============================================
+
+  web-service:
+    image: alpine:3.20
+    container_name: code-server-web-service
+    ports:
+      - "3000:3000"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  mobile-api-service:
+    image: alpine:3.20
+    container_name: code-server-mobile-api-service
+    ports:
+      - "8007:8007"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  reports-service:
+    image: alpine:3.20
+    container_name: code-server-reports-service
+    ports:
+      - "8008:8008"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  export-service:
+    image: alpine:3.20
+    container_name: code-server-export-service
+    ports:
+      - "8009:8009"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    depends_on:
+      - minio
+    restart: unless-stopped
+
+  config-service:
+    image: alpine:3.20
+    container_name: code-server-config-service
+    ports:
+      - "8010:8010"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  payment-service:
+    image: alpine:3.20
+    container_name: code-server-payment-service
+    ports:
+      - "8011:8011"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  search-indexer-service:
+    image: alpine:3.20
+    container_name: code-server-search-indexer-service
+    ports:
+      - "8012:8012"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+  batch-processor-service:
+    image: alpine:3.20
+    container_name: code-server-batch-processor-service
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    depends_on:
+      - redpanda
+    restart: unless-stopped
+
+  webhook-service:
+    image: alpine:3.20
+    container_name: code-server-webhook-service
+    ports:
+      - "8013:8013"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  integration-service:
+    image: alpine:3.20
+    container_name: code-server-integration-service
+    ports:
+      - "8014:8014"
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  health-monitor-service:
+    image: alpine:3.20
+    container_name: code-server-health-monitor-service
+    networks:
+      - code-server-network
+    command: tail -f /dev/null
+    restart: unless-stopped
+
+  # ============================================
+  # WEB SERVERS & UTILITIES
+  # ============================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: code-server-nginx
+    ports:
+      - "8090:80"
+    networks:
+      - code-server-network
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.1.16
+    container_name: code-server-ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - code-server-network
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    restart: unless-stopped

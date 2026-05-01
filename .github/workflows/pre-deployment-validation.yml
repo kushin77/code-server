@@ -133,7 +133,7 @@ jobs:
 
       - name: Archive validation report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pre-deployment-validation-report
           path: pre-deployment-validation-report.json

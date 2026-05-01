@@ -12,6 +12,13 @@ import config as _svc_config
 from apps.shared.monitoring import ApplicationMetrics, MonitoringConfig, track_metrics
 from apps.shared.tracing import TracingConfig, instrument_app, setup_tracing, trace_operation
 from apps.shared.gcp_integration import get_gcp_integration, GCPService
+from apps.shared.trace_enhancement import (
+    initialize_trace_enhancement,
+    setup_request_sampling,
+    get_outbound_trace_headers,
+    end_request_trace,
+)
+from apps.shared.trace_patterns import TraceSamplingConfig, SamplingStrategy
 
 import os
 
@@ -52,7 +59,42 @@ app = FastAPI(
     version="1.0"
 )
 
+# Initialize advanced tracing with sampling
+sampling_config = TraceSamplingConfig(
+    strategy=SamplingStrategy.UNIFORM,
+    sample_rate=float(os.environ.get("TRACE_SAMPLE_RATE", "0.1")),
+    exclude_paths=["/health", "/metrics"],
+    always_sample_paths=["/gcp/", "/services/"],
+)
+initialize_trace_enhancement(sampling_config)
+
 instrument_app(app, control_plane_tracing)
+
+# ── Advanced Tracing Middleware ───────────────────────────────────────────────
+# Middleware for request-level trace sampling and context management
+@app.middleware("http")
+async def advanced_tracing_middleware(request, call_next):
+    """Middleware for advanced tracing with sampling and context propagation."""
+    # Setup sampling for request
+    should_trace = setup_request_sampling(
+        path=request.url.path,
+        headers=dict(request.headers),
+    )
+    
+    try:
+        # Call endpoint
+        response = await call_next(request)
+        
+        # Add trace headers to response if traced
+        if should_trace:
+            trace_headers = get_outbound_trace_headers()
+            for key, value in trace_headers.items():
+                response.headers[key] = value
+        
+        return response
+    finally:
+        # End trace
+        end_request_trace()
 
 class ServiceStatus(BaseModel):
     service: str

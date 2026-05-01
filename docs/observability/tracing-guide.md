@@ -65,6 +65,24 @@ The GCP integration wrapper in `apps/shared/gcp_integration.py` uses the same he
 for Cloud Storage, BigQuery, Pub/Sub, and Cloud Functions operations. The control-plane
 service shows how those traces can be surfaced alongside application telemetry.
 
+## Advanced Tracing Patterns
+
+The `apps/shared/trace_patterns.py` module adds the Phase 12 tracing primitives:
+
+- Sampling strategies for high-volume workloads
+- W3C Trace Context parsing and header generation
+- Baggage propagation across service boundaries
+- Performance profiling for traced spans
+
+Use these helpers when you need to reduce tracing volume, preserve request context
+through async boundaries, or capture timing evidence for slow operations.
+
+The higher-level `apps/shared/advanced_tracing.py` façade combines those primitives
+into a request-oriented tracer for HTTP handlers and downstream calls.
+
+The `apps/shared/trace_enhancement.py` bridge is what the runtime services use to
+connect advanced sampling and context propagation to existing OpenTelemetry setup.
+
 ## Reference Service
 
 The control-plane service now uses the shared tracing helpers as the Phase 10c

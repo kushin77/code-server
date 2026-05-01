@@ -31,6 +31,13 @@ from health import router as health_router
 from hermes_registration import hermes_client
 from hermes_tracing import setup_tracing, instrument_app
 from apps.shared.github_integration import get_github_integration, GitHubUser, GitHubRepository
+from apps.shared.trace_enhancement import (
+    initialize_trace_enhancement,
+    setup_request_sampling,
+    get_outbound_trace_headers,
+    end_request_trace,
+)
+from apps.shared.trace_patterns import TraceSamplingConfig, SamplingStrategy
 
 # Validate configuration on startup (raises if production secrets missing)
 validate_config()
@@ -75,6 +82,16 @@ def record_execution_failure(
 async def lifespan(app: FastAPI):
     """Application lifecycle"""
     setup_tracing(service_name=os.environ.get("OTEL_SERVICE_NAME", "agent-runtime"))
+    
+    # Initialize advanced tracing with sampling
+    sampling_config = TraceSamplingConfig(
+        strategy=SamplingStrategy.UNIFORM,
+        sample_rate=float(os.environ.get("TRACE_SAMPLE_RATE", "0.1")),
+        exclude_paths=["/health", "/metrics"],
+        always_sample_paths=["/agents/execute", "/approval/request"],
+    )
+    initialize_trace_enhancement(sampling_config)
+    
     log_event(logger, "agent_runtime_startup")
     # Initialize agents based on AGENT_TYPE (each container runs one type)
     agent_type_env = os.environ.get("AGENT_TYPE", "all")
@@ -104,6 +121,33 @@ app.include_router(health_router, prefix="/health", tags=["health"])
 
 # Apply OTEL FastAPI auto-instrumentation (no-op if tracing not initialised)
 instrument_app(app)
+
+
+# ── Advanced Tracing Middleware ───────────────────────────────────────────────
+# Middleware for request-level trace sampling and context management
+@app.middleware("http")
+async def advanced_tracing_middleware(request, call_next):
+    """Middleware for advanced tracing with sampling and context propagation."""
+    # Setup sampling for request
+    should_trace = setup_request_sampling(
+        path=request.url.path,
+        headers=dict(request.headers),
+    )
+    
+    try:
+        # Call endpoint
+        response = await call_next(request)
+        
+        # Add trace headers to response if traced
+        if should_trace:
+            trace_headers = get_outbound_trace_headers()
+            for key, value in trace_headers.items():
+                response.headers[key] = value
+        
+        return response
+    finally:
+        # End trace
+        end_request_trace()
 
 
 # ============================================================================

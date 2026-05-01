@@ -6,7 +6,6 @@
 @governance GOV-002: Deterministic, audited, capability-scoped execution
 """
 
-import logging
 import asyncio
 import uuid
 from datetime import datetime
@@ -25,16 +24,15 @@ from models import (
 from paperclip_client import PaperclipClient
 from oidc_client import OIDCClient
 from execution_router import ExecutionRouter, ExecutionDestination
+from config import PORT, HOST, validate_config
+from log import get_logger, log_event
+from health import router as health_router
 
-# SLOG: structured JSON logging (GOV-002 compliant)
-class _JsonFmt(logging.Formatter):
-    def format(self, r):
-        import json, sys
-        return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
-_h = logging.StreamHandler()
-_h.setFormatter(_JsonFmt())
-logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
-logger = logging.getLogger(__name__)
+# Validate configuration on startup (raises if production secrets missing)
+validate_config()
+
+# Centralized structured logging
+logger = get_logger(__name__)
 
 # Global state
 agents = {}
@@ -72,30 +70,38 @@ def record_execution_failure(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle"""
-    logger.info("Agent Runtime starting...")
+    log_event(logger, "agent_runtime_startup")
     # Initialize agents
     agents["code-reviewer"] = CodeReviewerAgent()
     agents["incident-responder"] = IncidentResponderAgent()
     agents["doc-writer"] = DocWriterAgent()
     agents["test-generator"] = TestGeneratorAgent()
     yield
-    logger.info("Agent Runtime shutting down...")
+    log_event(logger, "agent_runtime_shutdown")
 
 
 app = FastAPI(
     title="Agent Runtime",
     description="Sandboxed agent execution with approval gating and OIDC",
-    version="1.0"
+    version="1.0",
+    lifespan=lifespan
 )
+
+# Register health check router
+app.include_router(health_router, prefix="/health", tags=["health"])
 
 
 # ============================================================================
 # HEALTH & DIAGNOSTICS
 # ============================================================================
 
-@app.get("/health")
-async def health_check():
-    """Service health check"""
+# ============================================================================
+# (Health checks moved to health.py and registered via router)
+# ============================================================================
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus-compatible metrics"""
     uptime = (datetime.utcnow() - start_time).total_seconds()
     
     return {
@@ -105,17 +111,6 @@ async def health_check():
         "agents_available": len(agents),
         "execution_count": execution_count,
         "routing_stats": execution_router.get_routing_stats()
-    }
-
-
-@app.get("/metrics")
-async def metrics():
-    """Prometheus-compatible metrics"""
-    return {
-        "uptime_seconds": (datetime.utcnow() - start_time).total_seconds(),
-        "execution_count": execution_count,
-        "agents_active": sum(1 for a in agents.values() if a.is_running),
-        "agents_total": len(agents)
     }
 
 
@@ -181,7 +176,7 @@ async def execute_agent_task(
     async def _execute():
         try:
             result = await agent.execute(request)
-            logger.info(f"Execution complete: {result.execution_id} -> {result.status}")
+            log_event(logger, "agent_execution_complete", execution_id=result.execution_id, status=result.status)
             if result.status != "success":
                 execution_failures.append({
                     "execution_id": result.execution_id,

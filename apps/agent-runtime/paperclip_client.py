@@ -6,11 +6,11 @@
 
 import asyncio
 import httpx
-import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
+from log import get_logger, log_event
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Map string risk levels to 0-100 integer risk scores
 _RISK_SCORE: Dict[str, int] = {

@@ -4,12 +4,12 @@
 @governance GOV-002: Deterministic routing matrix with cost/latency optimization
 """
 
-import logging
 from typing import Dict, Any, Optional
 from enum import Enum
 from models import AgentExecutionRequest, AgentType, RiskLevel
+from log import get_logger, log_event
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ExecutionDestination(str, Enum):

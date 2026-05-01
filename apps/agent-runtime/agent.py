@@ -9,8 +9,8 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
-import logging
 
+from log import get_logger, log_event
 from models import (
     AgentType, AgentExecutionRequest, AgentExecutionResult, 
     ApprovalStatus, AgentCapabilities,
@@ -19,7 +19,7 @@ from models import (
 )
 from paperclip_client import PaperclipClient
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Approval gate timeouts (seconds) — configurable via env
 APPROVAL_TIMEOUT_ESCALATE = int(os.environ.get("APPROVAL_TIMEOUT_ESCALATE", "300"))   # 5 min
@@ -69,11 +69,11 @@ class BaseAgent(ABC):
         start_time = datetime.utcnow()
 
         try:
-            logger.info(f"[{execution_id}] Agent {self.agent_id} executing: {request.action}")
+            log_event(logger, "agent_execution_start", execution_id=execution_id, agent_id=self.agent_id, action=request.action)
 
             # Step 1: Validate action
             if not self.validate_action(request.action, request.parameters):
-                logger.error(f"[{execution_id}] Action validation failed: {request.action}")
+                log_event(logger, "agent_action_validation_failed", execution_id=execution_id, action=request.action)
                 return AgentExecutionResult(
                     execution_id=execution_id,
                     agent_id=self.agent_id,

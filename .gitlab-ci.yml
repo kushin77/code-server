@@ -347,6 +347,24 @@ test:ci-scripts:
     - changes:
         - scripts/**
 
+test:phase-security-suites:
+  stage: test
+  script:
+    - |
+      echo "── Phase 30 security enforcement tests ──"
+      bash scripts/ci/phase-30-integration-tests.sh 2>&1 | tail -8
+      echo "── Phase 31 compliance gate tests ──"
+      bash scripts/ci/phase-31-integration-tests.sh 2>&1 | tail -8
+      echo "── Phase 32 adaptive security tests ──"
+      bash scripts/ci/phase-32-integration-tests.sh 2>&1 | tail -8
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/ops/phase-3*.sh
+        - scripts/ci/phase-3*.sh
+        - apps/security_ai/**
+
 test:validate-terraform-pins:
   stage: test
   script:

@@ -36,31 +36,61 @@ terraform {
 variable "apex_domain" {
   type        = string
   description = "Primary domain for the deployment"
+
+  validation {
+    condition     = can(regex("^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?$", var.apex_domain))
+    error_message = "apex_domain must be a valid domain name (e.g., kushnir.cloud, internal.local)"
+  }
 }
 
 variable "primary_host" {
   type        = string
-  description = "Primary application host"
+  description = "Primary application host (IPv4 or FQDN)"
+
+  validation {
+    condition     = can(regex("^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?)$", var.primary_host))
+    error_message = "primary_host must be a valid IPv4 address (e.g., 192.168.168.31) or FQDN (e.g., primary.local)"
+  }
 }
 
 variable "replica_host" {
   type        = string
-  description = "Replica application host"
+  description = "Replica application host (IPv4 or FQDN)"
+
+  validation {
+    condition     = can(regex("^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?)$", var.replica_host))
+    error_message = "replica_host must be a valid IPv4 address (e.g., 192.168.168.42) or FQDN (e.g., replica.local)"
+  }
 }
 
 variable "nas_host" {
   type        = string
-  description = "NAS host for persistent data"
+  description = "NAS host for persistent data (IPv4 or FQDN)"
+
+  validation {
+    condition     = can(regex("^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?)$", var.nas_host))
+    error_message = "nas_host must be a valid IPv4 address (e.g., 192.168.168.56) or FQDN (e.g., nas.local)"
+  }
 }
 
 variable "registry_url" {
   type        = string
   description = "Internal registry URL"
+
+  validation {
+    condition     = can(regex("^(https?://)?([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?(:\\d+)?(/.*)?$", var.registry_url))
+    error_message = "registry_url must be a valid URL (e.g., https://registry.local:5000 or registry.local:5000)"
+  }
 }
 
 variable "admin_email" {
   type        = string
   description = "Admin contact email"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.admin_email))
+    error_message = "admin_email must be a valid email address (e.g., admin@kushnir.cloud)"
+  }
 }
 
 variable "deployment_mode" {

@@ -18,7 +18,12 @@ variable "ssh_key" {
 variable "ssh_port" {
   type        = number
   default     = 22
-  description = "SSH port for remote hosts"
+  description = "SSH port for remote hosts (1-65535)"
+
+  validation {
+    condition     = var.ssh_port >= 1 && var.ssh_port <= 65535
+    error_message = "ssh_port must be between 1 and 65535"
+  }
 }
 
 variable "enable_tls" {
@@ -31,6 +36,11 @@ variable "log_level" {
   type        = string
   default     = "info"
   description = "Log level: debug, info, warn, error"
+
+  validation {
+    condition     = contains(["debug", "info", "warn", "error"], lower(var.log_level))
+    error_message = "log_level must be one of: debug, info, warn, error"
+  }
 }
 
 variable "oauth2_cookie_secret" {
@@ -43,7 +53,12 @@ variable "oauth2_cookie_secret" {
 variable "metrics_retention_days" {
   type        = number
   default     = 30
-  description = "Prometheus metrics retention (days)"
+  description = "Prometheus metrics retention (1-365 days)"
+
+  validation {
+    condition     = var.metrics_retention_days >= 1 && var.metrics_retention_days <= 365
+    error_message = "metrics_retention_days must be between 1 and 365"
+  }
 }
 
 # SERVICE VERSIONS (from terraform.tfvars)

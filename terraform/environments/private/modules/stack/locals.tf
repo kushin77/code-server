@@ -69,6 +69,15 @@ locals {
     "max-file" = "5"
   }
 
+  # ── Standard tagging for cost allocation and governance ─────────────────────
+  # These tags are applied to all resources for lifecycle management and billing
+  standard_tags = {
+    Environment = var.deployment_mode
+    ManagedBy   = "terraform-code-server"
+    CreatedDate = timeadd(timestamp(), "0s")
+    Version     = var.app_image_tag
+  }
+
   # ── Service endpoint map (used in container env vars) ────────────────────────
   svc = {
     postgres_url          = "postgresql://${var.db_user}:${urlencode(var.db_password)}@code-server-postgres:5432/${var.db_name}"

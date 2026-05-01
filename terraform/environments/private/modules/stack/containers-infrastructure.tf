@@ -56,6 +56,18 @@ resource "docker_container" "opa" {
   }
 
   labels {
+    label = "Name"
+    value = "code-server-opa"
+  }
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
     label = "io.elevatediq.component"
     value = "policy-engine"
   }
@@ -111,6 +123,27 @@ resource "docker_container" "oauth2_proxy" {
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
   }
+
+  labels {
+    label = "Name"
+    value = "code-server-oauth2-proxy"
+  }
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
+    label = "io.elevatediq.component"
+    value = "identity-proxy"
+  }
+  labels {
+    label = "io.elevatediq.tier"
+    value = "infrastructure"
+  }
 }
 
 # ── Caddy (Reverse Proxy / Gateway) ──────────────────────────────────────────
@@ -164,6 +197,27 @@ resource "docker_container" "caddy" {
 
   lifecycle {
     ignore_changes = [image, network_mode, mounts]
+  }
+
+  labels {
+    label = "Name"
+    value = "code-server-caddy"
+  }
+  labels {
+    label = "Environment"
+    value = local.standard_tags.Environment
+  }
+  labels {
+    label = "ManagedBy"
+    value = local.standard_tags.ManagedBy
+  }
+  labels {
+    label = "io.elevatediq.component"
+    value = "gateway"
+  }
+  labels {
+    label = "io.elevatediq.tier"
+    value = "infrastructure"
   }
 
   labels {

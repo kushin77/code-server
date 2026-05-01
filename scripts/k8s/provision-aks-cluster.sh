@@ -27,19 +27,18 @@ LOCATION="${3:-eastus}"
 NODE_COUNT="${4:-3}"
 VM_SIZE="${5:-Standard_D2s_v3}"
 
-echo -e "${GREEN}=== AKS Cluster Provisioning ===${NC}"
-echo "Resource Group: $RESOURCE_GROUP"
-echo "Cluster Name: $CLUSTER_NAME"
-echo "Location: $LOCATION"
-echo ""
+log_section "AKS Cluster Provisioning"
+log_info "Resource Group: $RESOURCE_GROUP"
+log_info "Cluster Name: $CLUSTER_NAME"
+log_info "Location: $LOCATION"
 
-command -v az &> /dev/null || { echo "Azure CLI not found"; exit 1; }
-command -v kubectl &> /dev/null || { echo "kubectl not found"; exit 1; }
+command -v az &> /dev/null || { log_error "Azure CLI not found"; exit 1; }
+command -v kubectl &> /dev/null || { log_error "kubectl not found"; exit 1; }
 
-echo -e "${YELLOW}Creating resource group...${NC}"
+log_info "Creating resource group..."
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" || true
 
-echo -e "${YELLOW}Creating AKS cluster...${NC}"
+log_info "Creating AKS cluster..."
 az aks create \
     --resource-group "$RESOURCE_GROUP" \
     --name "$CLUSTER_NAME" \
@@ -54,21 +53,21 @@ az aks create \
     --max-count $((NODE_COUNT * 3)) \
     --node-vm-size "$VM_SIZE"
 
-echo -e "${YELLOW}Updating kubeconfig...${NC}"
+log_info "Updating kubeconfig..."
 az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME" --overwrite-existing
 
-echo -e "${YELLOW}Installing Istio...${NC}"
+log_info "Installing Istio..."
 curl -L https://istio.io/downloadIstio | sh -
 export PATH=$PWD/istio-1.18.0/bin:$PATH
 istioctl install --set profile=production -y
 
 kubectl label namespace default istio-injection=enabled --overwrite
 
-echo -e "${YELLOW}Installing monitoring...${NC}"
+log_info "Installing monitoring..."
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
 helm install monitoring prometheus-community/kube-prometheus-stack --namespace monitoring
 
-echo -e "${GREEN}✓ AKS cluster ready!${NC}"
-echo "Next: Deploy Helm chart with: helm install code-server-enterprise ./helm/code-server-enterprise -n code-server-enterprise"
+log_success "AKS cluster ready!"
+log_info "Next: Deploy Helm chart with: helm install code-server-enterprise ./helm/code-server-enterprise -n code-server-enterprise"

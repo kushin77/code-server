@@ -130,20 +130,16 @@ log_success "Ingress configured"
 # ===== PHASE 7: VERIFICATION =====
 log_info "Phase 7: Verifying deployments"
 
-echo ""
-echo -e "${BLUE}=== Pod Status ===${NC}"
+log_section "Pod Status"
 kubectl get pods -n ${NAMESPACE}
 
-echo ""
-echo -e "${BLUE}=== Service Status ===${NC}"
+log_section "Service Status"
 kubectl get svc -n ${NAMESPACE}
 
-echo ""
-echo -e "${BLUE}=== Deployment Status ===${NC}"
+log_section "Deployment Status"
 kubectl get deployments -n ${NAMESPACE}
 
-echo ""
-echo -e "${BLUE}=== StatefulSet Status ===${NC}"
+log_section "StatefulSet Status"
 kubectl get statefulsets -n ${NAMESPACE}
 
 # Count running pods
@@ -182,23 +178,20 @@ fi
 # ===== PHASE 9: RESOURCE MONITORING =====
 log_info "Phase 9: Checking resource usage"
 
-echo ""
-echo -e "${BLUE}=== Node Status ===${NC}"
+log_section "Node Status"
 kubectl top nodes
 
-echo ""
-echo -e "${BLUE}=== Pod Resource Usage ===${NC}"
+log_section "Pod Resource Usage"
 kubectl top pods -n ${NAMESPACE}
 
 # ===== PHASE 10: SUMMARY =====
 log_success "Service deployment complete!"
 
-echo ""
-echo -e "${BLUE}=== DEPLOYMENT SUMMARY ===${NC}"
-echo -e "${GREEN}Environment:${NC} ${ENVIRONMENT}"
-echo -e "${GREEN}Namespace:${NC} ${NAMESPACE}"
-echo -e "${GREEN}Services Deployed:${NC} ${#SERVICES[@]} stateless + ${#DATA_SERVICES[@]} data"
-echo -e "${GREEN}Total Pods Running:${NC} ${RUNNING_PODS}/${TOTAL_PODS}"
+log_section "DEPLOYMENT SUMMARY"
+log_info "Environment: ${ENVIRONMENT}"
+log_info "Namespace: ${NAMESPACE}"
+log_info "Services Deployed: ${#SERVICES[@]} stateless + ${#DATA_SERVICES[@]} data"
+log_info "Total Pods Running: ${RUNNING_PODS}/${TOTAL_PODS}"
 
 echo ""
 echo "Next steps:"

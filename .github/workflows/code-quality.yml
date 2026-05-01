@@ -1,0 +1,52 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**/*.py'
+      - 'scripts/**/*.py'
+      - 'pyproject.toml'
+      - '.github/workflows/code-quality.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/**/*.py'
+      - 'scripts/**/*.py'
+
+permissions:
+  contents: read
+
+jobs:
+  ruff:
+    name: Ruff Lint + Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@0c50fcf487b9e45395f457b55cd37dda4d53a0b3
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install --no-cache-dir ruff==0.4.4
+
+      - name: Lint
+        run: ruff check apps/ scripts/ --output-format=github
+
+      - name: Format check
+        run: ruff format --check apps/ scripts/
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        run: |
+          find scripts/ -name "*.sh" -print0 \
+            | xargs -0 shellcheck --severity=warning --shell=bash

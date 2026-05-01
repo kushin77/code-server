@@ -74,3 +74,26 @@ directory = "htmlcov"
 
 [tool.coverage.json]
 output = ".coverage.json"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["apps/_shared/python/test_utilities.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in default arguments (FastAPI pattern)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps"]

@@ -40,6 +40,40 @@ groups:
           description: "API p95 response time is {{ $value | humanizeDuration }}"
           runbook: "docs/RUNBOOK-API-PERFORMANCE.md"
 
+      # Control Plane Health Checks
+      - alert: ControlPlaneDown
+        expr: up{job="control-plane"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: control-plane
+        annotations:
+          summary: "Control plane service is down"
+          description: "Control plane instance {{ $labels.instance }} is not responding to metrics scrapes"
+          runbook: "docs/RUNBOOK-CONTROL-PLANE-RECOVERY.md"
+
+      - alert: ControlPlaneHighErrorRate
+        expr: rate(control_plane_requests_total{status=~"5.."}[5m]) / clamp_min(rate(control_plane_requests_total[5m]), 1e-9) > 0.05
+        for: 5m
+        labels:
+          severity: high
+          service: control-plane
+        annotations:
+          summary: "Control plane error rate is high (>5%)"
+          description: "Control plane error rate for {{ $labels.instance }} is {{ $value | humanizePercentage }}"
+          runbook: "docs/RUNBOOK-CONTROL-PLANE-ERROR-RATE.md"
+
+      - alert: ControlPlaneLatencyHigh
+        expr: histogram_quantile(0.95, rate(control_plane_request_latency_seconds_bucket[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: control-plane
+        annotations:
+          summary: "Control plane response time is high (>500ms p95)"
+          description: "Control plane p95 response time is {{ $value | humanizeDuration }}"
+          runbook: "docs/RUNBOOK-CONTROL-PLANE-PERFORMANCE.md"
+
   - name: infrastructure_health
     interval: 30s
     rules:

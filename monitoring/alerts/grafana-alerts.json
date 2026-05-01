@@ -89,6 +89,36 @@
         "severity": "critical",
         "component": "filesystem"
       }
+    },
+    {
+      "name": "Control Plane Down",
+      "uid": "control-plane-down-001",
+      "condition": "A",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasourceUid": "prometheus-uid",
+          "expression": "up{job='control-plane'}",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "noDataState": "Alerting",
+      "execErrState": "Alerting",
+      "for": "2m",
+      "annotations": {
+        "summary": "Control plane is unreachable",
+        "description": "Prometheus can no longer scrape the control-plane metrics endpoint"
+      },
+      "labels": {
+        "severity": "critical",
+        "service": "control-plane"
+      }
     }
   ],
   "created": "2026-04-25T00:00:00Z",

@@ -49,6 +49,15 @@ scrape_configs:
           - caddy:2019
     metrics_path: /metrics
 
+  # Control Plane service metrics
+  - job_name: control-plane
+    scrape_interval: 15s
+    scrape_timeout: 5s
+    static_configs:
+      - targets:
+          - control-plane:8082
+    metrics_path: /metrics
+
   # PostgreSQL Database (via postgres_exporter)
   - job_name: postgres
     static_configs:

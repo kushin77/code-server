@@ -27,7 +27,7 @@ REPLICA_HOST="192.168.168.42"
 DEPLOY_DIR="~/code-server-enterprise"
 COMPOSE_FILE="docker-compose.enterprise.yml"
 ENV_FILES=(".env" ".env.production")
-SSH_OPTS="-o BatchMode=yes -o ConnectTimeout=5"
+SSH_OPTS="-o BatchMode=yes -o ConnectTimeout=5 -o LogLevel=ERROR"
 
 # Colors
 RED='\033[0;31m'
@@ -192,7 +192,8 @@ cleanup_stale_containers() {
   local host="$1"
   log "Checking for stale containers on $host..."
 
-  local stale_containers=$(ssh $SSH_OPTS "$host" "cd $DEPLOY_DIR && docker ps -a --format '{{.Names}}' --filter 'status=exited' | grep '^code-server-' | sort" 2>&1)
+  local stale_containers
+  stale_containers=$(ssh $SSH_OPTS "$host" "cd $DEPLOY_DIR && docker ps -a --format '{{.Names}}' --filter 'status=exited' | grep '^code-server-' | sort" 2>/dev/null || true)
 
   if [[ -n "$stale_containers" ]]; then
     if [[ "$MODE" == "dry-run" ]]; then

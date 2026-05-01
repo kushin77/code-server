@@ -252,6 +252,149 @@ pytest tests/test_agent_runtime.py::TestAgents -v
 pytest tests/ --cov=. --cov-report=html
 ```
 
+## Enterprise Patterns
+
+This service implements 5 critical enterprise patterns for production-grade infrastructure:
+
+### 1. **Centralized Configuration (SSOT)**
+**File**: `config.py` — Single Source of Truth for all environment variables
+
+All configuration is read at startup from environment variables with validation:
+```python
+from config import validate_config, PORT, HOST, ENVIRONMENT
+
+# Validate on startup (raises if production missing SECRET_KEY, DATABASE_URL, REDIS_URL)
+validate_config()
+```
+
+**Benefits**:
+- Never hard-code secrets or environment-specific values
+- Startup validation catches configuration errors early
+- All defaults documented in one place
+- Production deployments fail fast if secrets missing
+
+**Configuration Variables**:
+- Server: `AGENT_RUNTIME_PORT` (8020), `AGENT_RUNTIME_HOST` (0.0.0.0), `ENVIRONMENT` (development|production)
+- Auth: `SECRET_KEY` (required in production), `OIDC_CLIENT_ID`, `OIDC_ISSUER`
+- Services: `OPA_URL`, `REPUTATION_ENGINE_URL`, `PAPERCLIP_URL`, `SCHEDULER_URL`
+- Logging: `LOG_LEVEL` (INFO|DEBUG|WARNING|ERROR), `LOG_FORMAT` (json)
+
+### 2. **Structured Logging (SLOG)**
+**File**: `log.py` — Centralized JSON logging factory
+
+All logging uses structured JSON format for machine-readability and observability:
+```python
+from log import get_logger, log_event
+
+logger = get_logger(__name__)
+log_event(logger, "agent_execution_start", execution_id=exec_id, agent_id=agent_id)
+```
+
+**Benefits**:
+- Machine-readable JSON output (parseable by Prometheus, Splunk, etc.)
+- Correlation IDs (execution_id, trace_id) for request tracing
+- Consistent fields: `ts` (timestamp), `svc` (service), `level`, `msg`, `event`
+- Custom fields support via kwargs
+
+**Example Output**:
+```json
+{"ts": "2026-05-01T14:32:15", "svc": "agent_runtime", "level": "INFO", "event": "agent_execution_start", "execution_id": "exec-abc123", "agent_id": "reviewer-01"}
+```
+
+### 3. **FastAPI Application Factory**
+**File**: `app_factory.py` — Modular, testable app initialization
+
+Application is created through factory function, not global state:
+```python
+from app_factory import create_app
+
+app = create_app()
+```
+
+**Benefits**:
+- Idempotent factory pattern enables proper testing
+- Startup/shutdown events managed consistently
+- Router registration centralized
+- Middleware configuration explicit
+
+**Factory Responsibilities**:
+- Create FastAPI instance
+- Register all routers (health, execution, management, metrics)
+- Attach CORS middleware
+- Emit startup/shutdown events
+- Return fully-configured app
+
+### 4. **Health Checks with Readiness**
+**File**: `health.py` — Liveness and readiness probes
+
+Two distinct health endpoints for Kubernetes/Docker orchestration:
+```python
+@app.get("/health")                    # Liveness probe
+@app.get("/health/ready")              # Readiness probe
+```
+
+**Benefits**:
+- Liveness (`/health`): Simple 200 response if service running (fast restart on failure)
+- Readiness (`/health/ready`): 200 only if dependencies healthy (prevents traffic until ready)
+- Dependency health checks: database, redis, OPA, Paperclip
+
+**Usage in Docker**:
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+  interval: 30s
+  timeout: 5s
+  retries: 3
+```
+
+**Usage in Kubernetes**:
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8020
+  initialDelaySeconds: 10
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8020
+  initialDelaySeconds: 5
+```
+
+### 5. **Multi-Stage Docker Build**
+**File**: `Dockerfile` — Optimized production image
+
+Two-stage build for minimal attack surface and fast deployments:
+- **Stage 1 (builder)**: Installs build dependencies (gcc, build-essential), compiles Python packages, creates venv
+- **Stage 2 (runtime)**: Only includes runtime dependencies (curl, ca-certificates), copies venv from builder, runs as non-root
+
+**Benefits**:
+- Reduced image size: ~250MB (vs 1.2GB legacy)
+- Reduced attack surface: No compilers or build tools in production image
+- Faster deployments: Pre-built venv reused across image layers
+- Non-root user (uid 1003): Principle of least privilege
+
+**Image Specifications**:
+- Base: `python:3.11-slim`
+- User: `agent-runtime:agent-runtime` (uid:gid 1003:1003)
+- Exposed Port: 8020
+- HEALTHCHECK: Curl to `/health` every 30s with 5s timeout
+
+**Build**:
+```bash
+docker build -t code-server/agent-runtime:latest apps/agent-runtime/
+```
+
+**Run**:
+```bash
+docker run -it -p 8020:8020 \
+  -e AGENT_RUNTIME_PORT=8020 \
+  -e ENVIRONMENT=development \
+  code-server/agent-runtime:latest
+```
+
+---
+
 ## Troubleshooting
 
 ### Agent Execution Timeout

@@ -781,6 +781,7 @@ services:
     environment:
       - AGENT_RUNTIME_PORT=8020
       - AGENT_RUNTIME_HOST=0.0.0.0
+      - ENVIRONMENT=development
       - LOG_LEVEL=INFO
       - OPA_URL=${OPA_URL}
       - REPUTATION_ENGINE_URL=${REPUTATION_ENGINE_URL}

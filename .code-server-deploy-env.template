@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+################################################################################
+# Code-Server Local Deployment Environment Template
+#
+# Copy this file to: ~/.code-server-deploy-env
+# Then fill in your Azure credentials and run:
+#   source ~/.code-server-deploy-env
+#   cd /home/akushnir/code-server
+#   bash scripts/ops/local-phase-4-7-deploy.sh
+#
+# SECURITY: Keep this file private (chmod 600)
+################################################################################
+
+# ========== AZURE CREDENTIALS ==========
+# Get from: az ad sp create-for-rbac --name code-server-deployment --role Contributor
+
+export AZURE_SUBSCRIPTION_ID="your-subscription-id-here"
+export AZURE_TENANT_ID="your-tenant-id-here"
+export AZURE_CLIENT_ID="your-client-id-here"
+export AZURE_CLIENT_SECRET="your-client-secret-here"
+
+# ========== GITHUB CREDENTIALS (Optional) ==========
+# Get from: GitHub Settings → Developer settings → Personal access tokens
+# Required scopes: repo (to close issues)
+
+export GITHUB_TOKEN=""  # Leave empty to skip issue closure
+
+# ========== DEPLOYMENT SETTINGS ==========
+
+export DEPLOYMENT_ENVIRONMENT="staging"     # staging or production
+export DEPLOYMENT_PHASE="all"               # all, phase4, phase5, phase6, or phase7
+export DEPLOYMENT_DRY_RUN="false"           # true for dry-run, false for live
+export DEPLOYMENT_SKIP_VALIDATION="false"   # Skip pre-flight checks
+export DEPLOYMENT_SKIP_SECRETS="false"      # Skip GitHub token requirement
+
+# ========== AZURE RESOURCE SETTINGS ==========
+
+export AZURE_RESOURCE_GROUP="code-server-rg-${DEPLOYMENT_ENVIRONMENT}"
+export AZURE_CLUSTER_NAME="code-server-${DEPLOYMENT_ENVIRONMENT}"
+export AZURE_LOCATION="eastus"
+export AZURE_NODE_COUNT="3"
+export AZURE_VM_SIZE="Standard_D2s_v3"
+
+# ========== KUBERNETES SETTINGS ==========
+
+export K8S_NAMESPACE="code-server"
+export K8S_RELEASE_NAME="code-server"
+export K8S_CHART_PATH="./helm/code-server-enterprise"
+
+# ========== INGRESS SETTINGS ==========
+
+export INGRESS_DOMAIN="code-server.${DEPLOYMENT_ENVIRONMENT}.internal"
+export INGRESS_CLASS="nginx"
+export INGRESS_TLS_ENABLED="true"
+
+# ========== MONITORING SETTINGS ==========
+
+export MONITORING_ENABLED="true"
+export PROMETHEUS_RETENTION="15d"
+export GRAFANA_ADMIN_PASSWORD="changeme"
+
+# ========== SLACK NOTIFICATIONS (Optional) ==========
+
+export SLACK_WEBHOOK_URL=""      # Leave empty to disable
+export SLACK_CHANNEL="#deployments"
+export SLACK_USERNAME="code-server-deploy"
+
+# ========== DEBUG SETTINGS ==========
+
+export DEBUG_MODE="false"         # Enable verbose logging
+export LOG_LEVEL="info"           # debug, info, warn, error
+
+# ========== DEPLOYMENT TIMEOUTS ==========
+
+export TIMEOUT_CLUSTER_PROVISION="1800"  # 30 minutes
+export TIMEOUT_HELM_DEPLOY="600"         # 10 minutes
+export TIMEOUT_DATA_MIGRATE="300"        # 5 minutes
+export TIMEOUT_POD_READY="600"           # 10 minutes
+
+# ========== DO NOT MODIFY BELOW ==========
+
+# Validate required variables
+if [[ -z "$AZURE_SUBSCRIPTION_ID" || "$AZURE_SUBSCRIPTION_ID" == "your-subscription-id-here" ]]; then
+    echo "❌ Error: AZURE_SUBSCRIPTION_ID not configured"
+    echo "   Fill in ~/.code-server-deploy-env with your Azure credentials"
+    exit 1
+fi
+
+echo "✅ Code-Server deployment environment loaded"
+echo "   Environment: $DEPLOYMENT_ENVIRONMENT"
+echo "   Phase: $DEPLOYMENT_PHASE"
+echo "   Dry-run: $DEPLOYMENT_DRY_RUN"

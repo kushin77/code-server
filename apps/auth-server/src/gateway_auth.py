@@ -5,12 +5,12 @@ Issue #1345 Week 5: API Gateway Integration
 import jwt
 from datetime import datetime
 from typing import Optional, Dict, Any
-import logging
+from log import get_logger
 
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

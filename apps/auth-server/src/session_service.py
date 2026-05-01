@@ -5,11 +5,11 @@ Issue #1345 Week 4: Advanced Authentication Features
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
-import logging
+from log import get_logger
 
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

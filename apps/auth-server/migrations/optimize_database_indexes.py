@@ -6,9 +6,9 @@ import asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-import logging
+from log import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Migration DDL
 OPTIMIZATION_MIGRATION = """

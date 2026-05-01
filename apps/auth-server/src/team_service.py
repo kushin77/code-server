@@ -5,13 +5,13 @@ Issue #1345 Week 3: Team and Organization Management
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
-import logging
+from log import get_logger
 import secrets
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

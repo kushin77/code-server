@@ -7,7 +7,7 @@
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-import logging
+from log import get_logger
 
 from sqlalchemy.orm import Session
 from models import (
@@ -19,7 +19,7 @@ from models import (
     AccessTier,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SignalType(str, Enum):

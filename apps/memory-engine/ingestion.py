@@ -4,11 +4,11 @@
 @governance GOV-002
 """
 
-import logging
+from log import get_logger
 from typing import List, Optional
 from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

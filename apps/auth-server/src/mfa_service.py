@@ -10,12 +10,12 @@ import base64
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from enum import Enum
-import logging
+from log import get_logger
 import pyotp
 
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

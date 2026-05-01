@@ -4,7 +4,7 @@
 # @description REST API and WebSocket endpoints for reputation dashboard
 # @governance GOV-004 - IDE integration API
 
-import logging
+from log import get_logger
 import asyncio
 import json
 from datetime import datetime, timezone, timedelta
@@ -16,7 +16,7 @@ from sqlalchemy import desc, func
 
 from models import ReputationScore, ScoreSignal, ScoreHistory, ActorType, AccessTier
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConnectionManager:

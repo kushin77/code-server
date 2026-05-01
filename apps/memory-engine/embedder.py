@@ -5,12 +5,12 @@
 """
 
 import os
-import logging
+from log import get_logger
 import requests
 from typing import List, Optional
 import time
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class OllamaEmbedder:

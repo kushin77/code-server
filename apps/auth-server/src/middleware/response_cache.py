@@ -6,14 +6,14 @@ from typing import Optional, Any, Dict, Callable
 from functools import wraps
 import hashlib
 import json
-import logging
+from log import get_logger
 import asyncio
 from datetime import timedelta
 from redis import asyncio as aioredis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ResponseCacheManager:

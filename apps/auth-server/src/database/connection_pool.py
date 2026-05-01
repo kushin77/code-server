@@ -2,14 +2,14 @@
 # Week 5 Phase 5.2: Connection Pool Optimization & Metrics Collection
 
 from typing import Optional
-import logging
+from log import get_logger
 from sqlalchemy import event, text
 from sqlalchemy.pool import QueuePool, StaticPool, NullPool
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import time
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConnectionPoolOptimizer:

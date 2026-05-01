@@ -5,7 +5,7 @@
 # @governance GOV-004 - OPA policy engine integration
 
 from typing import Dict, Any, Optional, List
-import logging
+from log import get_logger
 import requests
 from datetime import datetime, timezone
 from threading import Thread, Event, Lock
@@ -16,7 +16,7 @@ from sqlalchemy import desc
 
 from models import ReputationScore, ActorType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class OpaClient:

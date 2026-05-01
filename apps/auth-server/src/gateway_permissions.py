@@ -4,11 +4,11 @@ Issue #1345 Week 5: API Gateway Integration
 """
 from typing import Optional, List, Dict, Any, Callable
 from functools import wraps
-import logging
+from log import get_logger
 
 from fastapi import Request, HTTPException
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

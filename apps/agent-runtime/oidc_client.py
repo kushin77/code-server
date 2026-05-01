@@ -4,12 +4,12 @@
 @governance GOV-002: Deterministic OIDC flow with audit logging
 """
 
-import logging
+from log import get_logger
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

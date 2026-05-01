@@ -4,12 +4,12 @@ Issue #1345 Week 5: API Gateway Integration
 """
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Tuple
-import logging
+from log import get_logger
 
 from fastapi import Request, HTTPException
 import redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

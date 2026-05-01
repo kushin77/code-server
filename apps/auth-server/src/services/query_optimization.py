@@ -7,9 +7,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-import logging
+from log import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class UserQueryOptimization:
@@ -32,7 +32,7 @@ class UserQueryOptimization:
         AFTER (Eager Loading):
         - Single query with JOIN to load all permissions at once
         """
-        from apps.auth_server.models import User, Permission
+        from ..models import User, Permission
         
         # ✅ OPTIMIZED: Use joinedload for eager loading
         query = (
@@ -67,7 +67,7 @@ class UserQueryOptimization:
         AFTER (Eager Loading):
         - Single query with nested JOINs
         """
-        from apps.auth_server.models import Team, User, Permission, Role
+        from ..models import Team, User, Permission, Role
         
         # ✅ OPTIMIZED: Multi-level eager loading
         query = (
@@ -102,7 +102,7 @@ class UserQueryOptimization:
         AFTER (Eager Loading):
         - Single query with JOIN
         """
-        from apps.auth_server.models import Permission, Role
+        from ..models import Permission, Role
         
         # ✅ OPTIMIZED: Use joinedload to fetch roles with permissions
         query = (
@@ -132,7 +132,7 @@ class UserQueryOptimization:
         AFTER (Single IN Query):
         - Query 1: SELECT * FROM roles WHERE team_id = ? AND name IN (...)
         """
-        from apps.auth_server.models import Role
+        from ..models import Role
         
         # ✅ OPTIMIZED: Use IN clause instead of multiple queries
         query = (
@@ -164,7 +164,7 @@ class PermissionQueryOptimization:
         
         Note: This should be cached in Redis to avoid hitting DB on every request
         """
-        from apps.auth_server.models import Permission, Role
+        from ..models import Permission, Role
         
         # ✅ OPTIMIZED: Use IN clause for multiple permissions
         query = (
@@ -196,7 +196,7 @@ class PermissionQueryOptimization:
         BEFORE: N queries (1 per team, then N+1 for permissions)
         AFTER: 2 queries (1 for team, 1 for all permissions)
         """
-        from apps.auth_server.models import Permission, Role
+        from ..models import Permission, Role
         
         # ✅ OPTIMIZED: Single query with eager loading
         query = (
@@ -232,7 +232,7 @@ class SessionQueryOptimization:
         BEFORE: N queries (1 per session for user data)
         AFTER: 1 query with eager loading
         """
-        from apps.auth_server.models import Session, User
+        from ..models import Session, User
         import datetime
         
         now = datetime.datetime.utcnow()

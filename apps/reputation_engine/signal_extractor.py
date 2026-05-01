@@ -6,11 +6,11 @@
 
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-import logging
+from log import get_logger
 
 from score_calculator import SignalType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SignalExtractor:

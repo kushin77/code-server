@@ -6,13 +6,13 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from enum import Enum
-import logging
+from log import get_logger
 
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, validator
 import httpx
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

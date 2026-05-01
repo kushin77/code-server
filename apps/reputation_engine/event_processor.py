@@ -5,7 +5,7 @@
 # @governance GOV-004 - Event-driven reputation calculation
 
 from typing import Dict, Any, Optional, List
-import logging
+from log import get_logger
 import json
 from datetime import datetime, timezone
 from threading import Thread, Event
@@ -17,7 +17,7 @@ from models import ActorType
 from score_calculator import ScoreCalculator
 from signal_extractor import SignalExtractor
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ReputationEventProcessor:

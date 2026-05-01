@@ -6,11 +6,11 @@ import uuid
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-import logging
+from log import get_logger
 
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # ============================================================================

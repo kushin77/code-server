@@ -6,7 +6,7 @@
 
 import os
 import json
-import logging
+from log import get_logger
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -23,7 +23,7 @@ from qdrant_client.http.models import (
     HasIdCondition,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

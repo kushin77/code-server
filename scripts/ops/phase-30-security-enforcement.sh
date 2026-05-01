@@ -84,7 +84,8 @@ _dry_run_guard() {
 
 _init_state() {
   mkdir -p "${STATE_DIR}"
-  [[ -f "${VIOLATIONS_FILE}" ]] || echo '{"violations":[],"last_scan":null}' > "${VIOLATIONS_FILE}"
+  # Always reset violations on each audit run (do not accumulate across runs)
+  echo '{"violations":[],"last_scan":null}' > "${VIOLATIONS_FILE}"
   [[ -f "${REMEDIATIONS_FILE}" ]] || echo '{"remediations":[],"last_run":null}' > "${REMEDIATIONS_FILE}"
   [[ -f "${COMPLIANCE_FILE}" ]] || echo '{"score":0,"frameworks":{},"last_audit":null}' > "${COMPLIANCE_FILE}"
 }

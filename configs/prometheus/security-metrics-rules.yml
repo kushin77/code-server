@@ -1,0 +1,260 @@
+# ============================================================================
+# configs/prometheus/security-metrics-rules.yml
+#
+# Prometheus recording rules and alerting rules for Phase 30 security
+# and compliance metrics emitted by:
+#   - phase-30-security-enforcement.sh  (violations.json → textfile exporter)
+#   - Falco Prometheus exporter         (falco_events_total)
+#   - apps/security_ai/                 (threat detection counts)
+#
+# Requires: Prometheus node_exporter with --collector.textfile enabled
+# Textfile directory: /var/lib/node_exporter/textfile_collector/
+#
+# Integration:
+#   Add to prometheus.yml:
+#     rule_files:
+#       - configs/prometheus/slo-rules.yml
+#       - configs/prometheus/security-metrics-rules.yml
+# ============================================================================
+
+groups:
+
+  # --------------------------------------------------------------------------
+  # Group 1: Security Compliance Recording Rules
+  # Pre-compute frequently queried compliance aggregates.
+  # --------------------------------------------------------------------------
+  - name: code_server_security_compliance
+    interval: 60s
+    rules:
+
+      # Overall compliance score (0-100) from Phase 30 enforcement
+      - record: code_server:security_compliance_score
+        expr: |
+          code_server_compliance_score{job="code-server-security"}
+        labels:
+          team: platform
+
+      # Total open violations across all policies
+      - record: code_server:security_violations_total
+        expr: |
+          sum(code_server_violations_open{job="code-server-security"})
+            by (severity)
+
+      # Critical violations — drives PagerDuty escalation
+      - record: code_server:security_critical_violations
+        expr: |
+          sum(code_server_violations_open{
+            job="code-server-security",
+            severity="CRITICAL"
+          })
+
+      # Policy violation rate (violations per 5m window)
+      - record: code_server:security_violation_rate5m
+        expr: |
+          rate(code_server_violations_detected_total{
+            job="code-server-security"
+          }[5m])
+
+      # Secrets rotation lag — days since last rotation
+      - record: code_server:secrets_rotation_lag_days
+        expr: |
+          (time() - code_server_secrets_last_rotated_timestamp{
+            job="code-server-security"
+          }) / 86400
+
+  # --------------------------------------------------------------------------
+  # Group 2: Falco Runtime Security Recording Rules
+  # Aggregate events from Falco Prometheus exporter.
+  # --------------------------------------------------------------------------
+  - name: code_server_falco_events
+    interval: 30s
+    rules:
+
+      # Critical Falco events rate (container escape, privilege escalation)
+      - record: code_server:falco_critical_rate5m
+        expr: |
+          sum(rate(falco_events_total{
+            priority="CRITICAL",
+            rule=~"code_server_.*"
+          }[5m])) by (rule, container_name)
+
+      # All Falco events for code-server containers
+      - record: code_server:falco_events_rate5m
+        expr: |
+          sum(rate(falco_events_total{
+            rule=~"code_server_.*"
+          }[5m])) by (priority, rule)
+
+      # Privilege escalation attempts in last hour
+      - record: code_server:privilege_escalation_1h
+        expr: |
+          increase(falco_events_total{
+            rule=~"code_server_(privileged_execution|setuid_execution|proc_escape_attempt)",
+          }[1h])
+
+  # --------------------------------------------------------------------------
+  # Group 3: Threat Detection Recording Rules
+  # Metrics from apps/security_ai ThreatDetector outputs.
+  # --------------------------------------------------------------------------
+  - name: code_server_threat_detection
+    interval: 60s
+    rules:
+
+      # Threat detection rate by severity
+      - record: code_server:threats_detected_rate5m
+        expr: |
+          rate(code_server_threats_detected_total{
+            job="code-server-security"
+          }[5m])
+
+      # Active threat count by type
+      - record: code_server:active_threats_by_type
+        expr: |
+          sum(code_server_threats_active{
+            job="code-server-security"
+          }) by (threat_type, severity)
+
+      # Mean time to detect (MTTD) — time from event to threat record
+      - record: code_server:threat_mttd_seconds
+        expr: |
+          histogram_quantile(0.95,
+            rate(code_server_threat_detection_duration_seconds_bucket{
+              job="code-server-security"
+            }[10m])
+          )
+
+  # --------------------------------------------------------------------------
+  # Group 4: Security Alerting Rules
+  # PagerDuty-integrated alerts for critical security events.
+  # --------------------------------------------------------------------------
+  - name: code_server_security_alerts
+    rules:
+
+      # CRITICAL: Compliance score drops below 80
+      - alert: CodeServerComplianceScoreLow
+        expr: code_server:security_compliance_score < 80
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          oncall: true
+        annotations:
+          summary: "code-server compliance score critically low"
+          description: >
+            Compliance score is {{ $value | humanize }}/100 (threshold: 80).
+            Run: bash scripts/ops/phase-30-security-enforcement.sh --mode audit
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/PHASE_29_OPERATIONAL_RUNBOOK.md"
+
+      # CRITICAL: Any CRITICAL Falco rule fired
+      - alert: CodeServerCriticalSecurityEvent
+        expr: |
+          increase(falco_events_total{
+            priority="CRITICAL",
+            rule=~"code_server_.*"
+          }[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+          oncall: true
+          page: true
+        annotations:
+          summary: "CRITICAL security event in code-server fleet"
+          description: >
+            Falco rule {{ $labels.rule }} fired on container
+            {{ $labels.container_name }}.
+            Immediate investigation required.
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/OPERATIONAL_RUNBOOK.md"
+
+      # ERROR: Critical violations detected
+      - alert: CodeServerCriticalViolations
+        expr: code_server:security_critical_violations > 0
+        for: 2m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "code-server has {{ $value }} critical policy violations"
+          description: >
+            Critical violations require immediate remediation.
+            Run: bash scripts/ops/phase-30-security-enforcement.sh --mode enforce
+
+      # WARNING: Privileged container running in fleet
+      - alert: CodeServerPrivilegedContainer
+        expr: |
+          increase(falco_events_total{
+            rule="code_server_privileged_execution"
+          }[5m]) > 0
+        for: 0m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "Privileged code-server container detected"
+          description: >
+            Container {{ $labels.container_name }} is running in privileged mode.
+            This violates policy. Stop immediately.
+
+      # WARNING: Secrets rotation overdue
+      - alert: CodeServerSecretsRotationOverdue
+        expr: code_server:secrets_rotation_lag_days > 90
+        for: 1h
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "code-server secrets not rotated in {{ $value | humanize }} days"
+          description: >
+            Secrets rotation is overdue (>90 days).
+            Run: bash scripts/ops/phase-30-security-enforcement.sh --mode rotate-secrets
+
+      # WARNING: Container escape attempt
+      - alert: CodeServerContainerEscapeAttempt
+        expr: |
+          increase(falco_events_total{
+            rule="code_server_proc_escape_attempt"
+          }[10m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+          oncall: true
+          page: true
+        annotations:
+          summary: "CONTAINER ESCAPE ATTEMPT in code-server fleet"
+          description: >
+            Process in {{ $labels.container_name }} accessed escape-related
+            /proc paths. Isolate container immediately.
+
+      # INFO: Phase 30 enforcement not running (staleness check)
+      - alert: CodeServerSecurityEnforcementStale
+        expr: |
+          (time() - code_server_enforcement_last_run_timestamp{
+            job="code-server-security"
+          }) > 3600
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Phase 30 security enforcement has not run in >1 hour"
+          description: >
+            Expected: enforcement runs every 30 minutes via cron/systemd.
+            Check: systemctl status code-server-phase30-enforcement
+
+      # WARNING: CVE scan found critical image vulnerability
+      - alert: CodeServerCriticalCVEDetected
+        expr: |
+          code_server_image_cve_count{
+            severity="CRITICAL",
+            job="code-server-security"
+          } > 0
+        for: 5m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "Critical CVE in code-server image: {{ $labels.image }}"
+          description: >
+            {{ $value }} CRITICAL CVE(s) found in image {{ $labels.image }}.
+            Run: bash scripts/ops/phase-30-security-enforcement.sh --mode scan-images

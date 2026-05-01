@@ -1,0 +1,297 @@
+# ============================================================================
+# configs/falco/code-server-rules.yaml
+#
+# Falco runtime security rules for the code-server container fleet.
+# Scoped exclusively to code-server-* containers on primary (.31)
+# and replica (.42) hosts.
+#
+# Rule naming convention: code_server_<category>_<policy>
+#
+# Severity levels: CRITICAL > ERROR > WARNING > INFO > DEBUG
+#
+# Usage:
+#   falco -r configs/falco/code-server-rules.yaml
+#   # Or merge into global falco.yaml:
+#   falco --rules-file /etc/falco/falco_rules.yaml \
+#         --rules-file configs/falco/code-server-rules.yaml
+#
+# Tested with Falco >= 0.34.0
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Macros — container scoping helpers
+# ----------------------------------------------------------------------------
+
+- macro: code_server_container
+  condition: >
+    container.name startswith "code-server-"
+
+- macro: code_server_privileged
+  condition: >
+    code_server_container and container.privileged=true
+
+- macro: code_server_init_container
+  condition: >
+    container.name startswith "code-server-init-"
+
+- macro: trusted_code_server_image
+  condition: >
+    (container.image.repository = "codercom/code-server"
+     or container.image.repository = "ghcr.io/coder/code-server"
+     or container.image.repository startswith "localhost/code-server")
+
+# ----------------------------------------------------------------------------
+# Lists — allowlists for expected behavior
+# ----------------------------------------------------------------------------
+
+- list: code_server_allowed_processes
+  items:
+    - code-server
+    - node
+    - dumb-init
+    - sh
+    - bash
+    - python3
+    - git
+    - npm
+    - pnpm
+    - tini
+
+- list: code_server_sensitive_files
+  items:
+    - /etc/shadow
+    - /etc/passwd
+    - /root/.ssh
+    - /var/run/secrets/kubernetes.io
+    - /proc/sysrq-trigger
+
+- list: code_server_allowed_write_dirs
+  items:
+    - /home/coder
+    - /tmp
+    - /var/log/code-server
+    - /workspace
+
+- list: outbound_allowed_ports
+  items: [443, 80, 8080, 3000, 8443, 6060, 9090, 9091, 9411, 4317, 4318, 16686]
+
+# ----------------------------------------------------------------------------
+# Rule 1: Privileged container execution
+# Severity: CRITICAL
+# ----------------------------------------------------------------------------
+
+- rule: code_server_privileged_execution
+  desc: >
+    A code-server container started in privileged mode. This violates
+    the no-privileged-containers policy and grants full host device
+    and capability access.
+  condition: >
+    code_server_container
+    and container.privileged=true
+    and evt.type = container
+  output: >
+    CRITICAL code-server privileged container detected
+    (container=%container.name image=%container.image.repository
+     host=%container.ip user=%user.name)
+  priority: CRITICAL
+  tags: [code-server, privilege-escalation, policy-violation, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 2: Shell spawned inside code-server service containers
+# Severity: WARNING (allowed for init, blocked for service)
+# ----------------------------------------------------------------------------
+
+- rule: code_server_unexpected_shell
+  desc: >
+    A shell was spawned inside a code-server service container that
+    is not an init container. May indicate lateral movement or
+    interactive breakout attempt.
+  condition: >
+    code_server_container
+    and not code_server_init_container
+    and evt.type = execve
+    and (proc.name = bash or proc.name = sh or proc.name = zsh or proc.name = ksh)
+    and not proc.pname in (code_server_allowed_processes)
+  output: >
+    WARNING unexpected shell in code-server service container
+    (container=%container.name proc=%proc.name parent=%proc.pname
+     cmdline=%proc.cmdline user=%user.name)
+  priority: WARNING
+  tags: [code-server, shell-access, lateral-movement, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 3: Sensitive file read
+# Severity: ERROR
+# ----------------------------------------------------------------------------
+
+- rule: code_server_sensitive_file_read
+  desc: >
+    A code-server container process read a sensitive system file
+    such as /etc/shadow or /root/.ssh. Indicates potential credential theft.
+  condition: >
+    code_server_container
+    and evt.type in (open, openat)
+    and evt.is_open_read=true
+    and fd.name in (code_server_sensitive_files)
+  output: >
+    ERROR code-server container read sensitive file
+    (container=%container.name file=%fd.name proc=%proc.name
+     cmdline=%proc.cmdline user=%user.name)
+  priority: ERROR
+  tags: [code-server, credential-access, sensitive-data, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 4: Unexpected outbound network connection
+# Severity: WARNING
+# ----------------------------------------------------------------------------
+
+- rule: code_server_unexpected_outbound
+  desc: >
+    A code-server container made an outbound TCP connection to a port
+    not in the expected outbound allowlist. Could indicate C2 beacon or
+    data exfiltration.
+  condition: >
+    code_server_container
+    and evt.type = connect
+    and fd.typechar = 4
+    and fd.sport in (outbound_allowed_ports)
+    and not (fd.dport in (outbound_allowed_ports))
+  output: >
+    WARNING code-server unexpected outbound connection
+    (container=%container.name dest=%fd.rip:%fd.rport
+     proc=%proc.name user=%user.name)
+  priority: WARNING
+  tags: [code-server, network, data-exfiltration, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 5: Write to unexpected directory
+# Severity: WARNING
+# ----------------------------------------------------------------------------
+
+- rule: code_server_unexpected_write
+  desc: >
+    A code-server container wrote to a directory outside the expected
+    writable set. May indicate container escape preparation or log tampering.
+  condition: >
+    code_server_container
+    and evt.type in (open, openat, creat)
+    and evt.is_open_write=true
+    and not fd.name startswith "/home/coder"
+    and not fd.name startswith "/tmp"
+    and not fd.name startswith "/var/log/code-server"
+    and not fd.name startswith "/workspace"
+    and not fd.name startswith "/proc/self"
+    and not fd.name = "/dev/null"
+    and not fd.name startswith "/dev/pts"
+  output: >
+    WARNING code-server unexpected write outside allowed dirs
+    (container=%container.name path=%fd.name proc=%proc.name
+     cmdline=%proc.cmdline user=%user.name)
+  priority: WARNING
+  tags: [code-server, file-system, tamper, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 6: Capability modification (setuid/setgid)
+# Severity: ERROR
+# ----------------------------------------------------------------------------
+
+- rule: code_server_setuid_execution
+  desc: >
+    A setuid or setgid binary was executed inside a code-server container.
+    This could be used for local privilege escalation within the container.
+  condition: >
+    code_server_container
+    and evt.type = execve
+    and (proc.is_suid=true or proc.is_sgid=true)
+  output: >
+    ERROR setuid/setgid binary executed in code-server container
+    (container=%container.name proc=%proc.name exe=%proc.exe
+     user=%user.name uid=%user.uid)
+  priority: ERROR
+  tags: [code-server, privilege-escalation, suid, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 7: Unexpected image — untrusted registry
+# Severity: ERROR
+# ----------------------------------------------------------------------------
+
+- rule: code_server_untrusted_image
+  desc: >
+    A code-server container started from an untrusted image registry.
+    Only images from approved registries are permitted in production.
+  condition: >
+    code_server_container
+    and evt.type = container
+    and not trusted_code_server_image
+  output: >
+    ERROR code-server container started from untrusted image
+    (container=%container.name image=%container.image.repository
+     digest=%container.image.digest)
+  priority: ERROR
+  tags: [code-server, supply-chain, image-integrity, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 8: Proc filesystem access (container escape indicator)
+# Severity: CRITICAL
+# ----------------------------------------------------------------------------
+
+- rule: code_server_proc_escape_attempt
+  desc: >
+    A code-server container accessed sensitive /proc paths that are
+    commonly used in container escape techniques (e.g., cgroup release_agent).
+  condition: >
+    code_server_container
+    and evt.type in (open, openat)
+    and (fd.name = "/proc/sysrq-trigger"
+         or fd.name startswith "/proc/sys/kernel"
+         or fd.name = "/proc/1/mem"
+         or fd.name startswith "/proc/1/root")
+  output: >
+    CRITICAL container escape attempt from code-server container
+    (container=%container.name path=%fd.name proc=%proc.name
+     cmdline=%proc.cmdline user=%user.name)
+  priority: CRITICAL
+  tags: [code-server, container-escape, privilege-escalation, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 9: Crypto mining process indicators
+# Severity: ERROR
+# ----------------------------------------------------------------------------
+
+- rule: code_server_crypto_mining
+  desc: >
+    Process name or arguments consistent with cryptocurrency mining
+    detected inside a code-server container. Indicates compromise.
+  condition: >
+    code_server_container
+    and evt.type = execve
+    and (proc.name in (xmrig, minerd, cpuminer, bfgminer, cgminer)
+         or proc.cmdline contains "--stratum"
+         or proc.cmdline contains "stratum+tcp"
+         or proc.cmdline contains "pool.minexmr")
+  output: >
+    ERROR crypto mining process detected in code-server container
+    (container=%container.name proc=%proc.name cmdline=%proc.cmdline
+     user=%user.name)
+  priority: ERROR
+  tags: [code-server, crypto-mining, compromise, phase30]
+
+# ----------------------------------------------------------------------------
+# Rule 10: Phase 30 audit trail — enforcement script activity
+# Severity: INFO (audit log only)
+# ----------------------------------------------------------------------------
+
+- rule: code_server_phase30_audit_marker
+  desc: >
+    Records when the Phase 30 enforcement script runs, creating an
+    auditable trail of security enforcement activity.
+  condition: >
+    evt.type = execve
+    and proc.name = bash
+    and proc.cmdline contains "phase-30-security-enforcement.sh"
+  output: >
+    INFO Phase 30 security enforcement script executed
+    (proc=%proc.name cmdline=%proc.cmdline user=%user.name
+     host=%container.ip)
+  priority: INFORMATIONAL
+  tags: [code-server, phase30, audit-trail, enforcement]

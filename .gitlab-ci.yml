@@ -556,6 +556,33 @@ plan:helm-lint:
     - changes:
         - helm/**
 
+plan:compliance-gate:
+  stage: plan
+  script:
+    - |
+      echo "── Phase 31 GitOps Compliance Gate ──"
+      export MIN_SCORE="${COMPLIANCE_MIN_SCORE:-80}"
+      export DRY_RUN=true
+      if [ -f scripts/ops/phase-31-gitops-compliance-gate.sh ]; then
+        bash scripts/ops/phase-31-gitops-compliance-gate.sh \
+          --mode check --dry-run --min-score "${MIN_SCORE}" 2>&1
+      else
+        echo "⚠️  phase-31-gitops-compliance-gate.sh not found"
+      fi
+  artifacts:
+    paths:
+      - artifacts/phase31/gate-report.json
+    when: always
+    expire_in: 2 weeks
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - changes:
+        - scripts/ops/phase-30-security-enforcement.sh
+        - scripts/ops/phase-31-gitops-compliance-gate.sh
+        - apps/security_ai/**
+        - policies/**
+
 # ═════════════════════════════════════════════════════════════════════════════
 # STAGE: deploy
 # ═════════════════════════════════════════════════════════════════════════════

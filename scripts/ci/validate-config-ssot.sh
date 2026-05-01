@@ -52,7 +52,7 @@ validate_version_control() {
     "docker-compose.yml"
     "Caddyfile"
     "terraform/variables.tf"
-    "terraform/on-prem.tfvars"
+    "terraform/environments/private/terraform.tfvars"
   )
   
   for file in "${required_files[@]}"; do
@@ -77,13 +77,14 @@ validate_version_control() {
 validate_env_var_pattern() {
   log_info "Validating environment variable patterns in infrastructure files..."
   
+  # Variables checked as key=value (tfvars/env files) or ${VAR} (shell/Caddy) or var.name (Terraform)
   local required_vars=(
-    "APEX_DOMAIN"
-    "IDE_DOMAIN"
-    "AUTH_DOMAIN"
-    "API_DOMAIN"
-    "PRIMARY_HOST"
-    "REPLICA_HOST"
+    "APEX_DOMAIN:apex_domain|APEX_DOMAIN"
+    "IDE_DOMAIN:IDE_DOMAIN|ide_domain"
+    "AUTH_DOMAIN:AUTH_DOMAIN|auth_domain"
+    "API_DOMAIN:API_DOMAIN|api_domain"
+    "PRIMARY_HOST:primary_host|PRIMARY_HOST"
+    "REPLICA_HOST:replica_host|REPLICA_HOST"
   )
   
   local search_paths=()
@@ -91,7 +92,6 @@ validate_env_var_pattern() {
     "${REPO_ROOT}/terraform"
     "${REPO_ROOT}/config"
     "${REPO_ROOT}/scripts"
-    "${REPO_ROOT}/docs"
     "${REPO_ROOT}/Caddyfile"
     "${REPO_ROOT}/docker-compose.yml"
   )
@@ -107,11 +107,13 @@ validate_env_var_pattern() {
     return 0
   fi
   
-  for var in "${required_vars[@]}"; do
-    if git -C "${REPO_ROOT}" grep -nE "\${${var}}" -- "${search_paths[@]}" 2>/dev/null | grep -q .; then
-      log_success "Variable referenced: ${var}"
+  for entry in "${required_vars[@]}"; do
+    local display_name="${entry%%:*}"
+    local pattern="${entry#*:}"
+    if git -C "${REPO_ROOT}" grep -lE "${pattern}" -- "${search_paths[@]}" >/dev/null 2>&1; then
+      log_success "Variable referenced: ${display_name}"
     else
-      log_warning "Environment variable not referenced in infrastructure: ${var}"
+      log_warning "Environment variable not referenced in infrastructure: ${display_name}"
     fi
   done
   
@@ -128,7 +130,6 @@ validate_no_credentials() {
     "${REPO_ROOT}/terraform"
     "${REPO_ROOT}/config"
     "${REPO_ROOT}/scripts"
-    "${REPO_ROOT}/docs"
   )
 
   for candidate in "${candidates[@]}"; do

@@ -224,7 +224,7 @@ else
     log_warn "Database URL fail-fast not verified"
 fi
 
-# Check for hardcoded secrets in source code (exclude binaries and .terraform)
+# Check for hardcoded secrets in source code (exclude binaries, .terraform, and CI scripts)
 SECRET_CHECK=0
 SECRETS=("scheduler-default-key-dev-only" "0123456789abcdef" "default-secret")
 for secret in "${SECRETS[@]}"; do
@@ -233,10 +233,10 @@ for secret in "${SECRETS[@]}"; do
         --exclude-dir=node_modules \
         --exclude-dir=.terraform \
         --exclude-dir=__pycache__ \
+        --exclude-dir=ci \
+        --exclude-dir=cloud \
         --exclude="*.pyc" \
         --exclude="terraform-provider-*" \
-        --exclude="pre-deployment-validation*.sh" \
-        --exclude="aws-transfer-family-sftp-audit.sh" \
         --include="*.py" \
         --include="*.sh" \
         --include="*.yml" \

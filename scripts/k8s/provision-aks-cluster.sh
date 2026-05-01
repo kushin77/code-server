@@ -18,6 +18,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../_common/init.sh"
 
+DRY_RUN=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+    DRY_RUN=true
+    shift
+fi
+
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
@@ -27,19 +33,32 @@ LOCATION="${3:-eastus}"
 NODE_COUNT="${4:-3}"
 VM_SIZE="${5:-Standard_D2s_v3}"
 
+run_or_log() {
+    if [[ "$DRY_RUN" == true ]]; then
+        log_info "[DRY-RUN] $*"
+    else
+        "$@"
+    fi
+}
+
 log_section "AKS Cluster Provisioning"
 log_info "Resource Group: $RESOURCE_GROUP"
 log_info "Cluster Name: $CLUSTER_NAME"
 log_info "Location: $LOCATION"
 
-command -v az &> /dev/null || { log_error "Azure CLI not found"; exit 1; }
-command -v kubectl &> /dev/null || { log_error "kubectl not found"; exit 1; }
+if [[ "$DRY_RUN" == false ]]; then
+    command -v az &> /dev/null || { log_error "Azure CLI not found"; exit 1; }
+    command -v kubectl &> /dev/null || { log_error "kubectl not found"; exit 1; }
+    command -v helm &> /dev/null || { log_error "helm not found"; exit 1; }
+else
+    log_info "[DRY-RUN] Skipping az/kubectl/helm availability checks"
+fi
 
 log_info "Creating resource group..."
-az group create --name "$RESOURCE_GROUP" --location "$LOCATION" || true
+run_or_log az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
 
 log_info "Creating AKS cluster..."
-az aks create \
+run_or_log az aks create \
     --resource-group "$RESOURCE_GROUP" \
     --name "$CLUSTER_NAME" \
     --node-count "$NODE_COUNT" \
@@ -54,20 +73,28 @@ az aks create \
     --node-vm-size "$VM_SIZE"
 
 log_info "Updating kubeconfig..."
-az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME" --overwrite-existing
+run_or_log az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME" --overwrite-existing
 
 log_info "Installing Istio..."
-curl -L https://istio.io/downloadIstio | sh -
-export PATH=$PWD/istio-1.18.0/bin:$PATH
-istioctl install --set profile=production -y
+if [[ "$DRY_RUN" == true ]]; then
+    log_info "[DRY-RUN] Would extract and install Istio production profile"
+else
+    curl -L https://istio.io/downloadIstio | sh -
+    export PATH=$PWD/istio-1.18.0/bin:$PATH
+    istioctl install --set profile=production -y
+fi
 
-kubectl label namespace default istio-injection=enabled --overwrite
+run_or_log kubectl label namespace default istio-injection=enabled --overwrite
 
 log_info "Installing monitoring..."
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-helm install monitoring prometheus-community/kube-prometheus-stack --namespace monitoring
+run_or_log helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+run_or_log helm repo update
+if [[ "$DRY_RUN" == true ]]; then
+    log_info "[DRY-RUN] Would create monitoring namespace and install kube-prometheus-stack"
+else
+    kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+    helm install monitoring prometheus-community/kube-prometheus-stack --namespace monitoring
+fi
 
 log_success "AKS cluster ready!"
 log_info "Next: Deploy Helm chart with: helm install code-server-enterprise ./helm/code-server-enterprise -n code-server-enterprise"

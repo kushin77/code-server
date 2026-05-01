@@ -54,12 +54,10 @@ export_terraform_variables() {
 
   export_tf_var TF_VAR_apex_domain APEX_DOMAIN
   export_tf_var TF_VAR_primary_host PRIMARY_HOST
-  export_tf_var TF_VAR_admin_email ADMIN_EMAIL
 
   export_tf_var TF_VAR_replica_host REPLICA_HOST
   export_tf_var TF_VAR_nas_host NAS_HOST
   export_tf_var TF_VAR_registry_domain REGISTRY_DOMAIN "registry.${APEX_DOMAIN}"
-  export_tf_var TF_VAR_enable_tls ENABLE_TLS "false"
   export_tf_var TF_VAR_metrics_retention_days PROMETHEUS_RETENTION_DAYS "30"
   
   log_success "✅ Terraform variables exported"

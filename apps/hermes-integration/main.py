@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, APIRouter
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 from agent_registry import registry, AgentStatus
 from agent_orchestrator import orchestrator
 import config as _cfg

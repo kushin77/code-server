@@ -6,7 +6,6 @@
 @governance GOV-002: All API operations logged and version-controlled
 """
 
-import logging
 import os
 from datetime import datetime
 from pathlib import Path

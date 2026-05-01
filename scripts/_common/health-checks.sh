@@ -3,7 +3,7 @@
 # SHARED HEALTH CHECK FUNCTIONS
 # ==============================================================================
 # This file consolidates health check logic that was previously duplicated
-# across scripts/ops/deploy-idempotent.sh, scripts/ops/rollback-idempotent.sh,
+# across scripts/ops/deploy.sh, scripts/ops/rollback-safe.sh,
 # scripts/test-e2e-load.sh, tests/chaos/chaos-test.sh
 #
 # Usage: source scripts/_common/health-checks.sh

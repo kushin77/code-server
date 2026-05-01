@@ -378,7 +378,7 @@ log_info "STEP 7: Commit to git"
 
 cd /home/akushnir/code-server
 
-git add scripts/strategic-phase-1c-tracing.sh 2>/dev/null || true
+git add scripts/ops/setup-distributed-tracing.sh 2>/dev/null || true
 
 git commit -m "Strategic Phase 1D: Redis High Availability with Sentinel
 

@@ -182,13 +182,13 @@ log_info ""
 log_info "SECTION 7: Audit & Compliance"
 log_info "---"
 
-AUDIT_SCRIPT=$([ -f /home/akushnir/code-server/scripts/strategic-phase-1b-opa-audit.sh ] && echo "pass" || echo "fail")
+AUDIT_SCRIPT=$([ -f /home/akushnir/code-server/scripts/ops/audit-opa-policies.sh ] && echo "pass" || echo "fail")
 check_item "OPA audit logging configured" "$AUDIT_SCRIPT"
 
-TRACING_SCRIPT=$([ -f /home/akushnir/code-server/scripts/strategic-phase-1c-tracing.sh ] && echo "pass" || echo "fail")
+TRACING_SCRIPT=$([ -f /home/akushnir/code-server/scripts/ops/setup-distributed-tracing.sh ] && echo "pass" || echo "fail")
 check_item "Distributed tracing configured" "$TRACING_SCRIPT"
 
-REDIS_HA_SCRIPT=$([ -f /home/akushnir/code-server/scripts/strategic-phase-1d-redis-ha.sh ] && echo "pass" || echo "fail")
+REDIS_HA_SCRIPT=$([ -f /home/akushnir/code-server/scripts/ops/setup-redis-ha.sh ] && echo "pass" || echo "fail")
 check_item "Redis HA with Sentinel configured" "$REDIS_HA_SCRIPT"
 
 # =========================================================================
@@ -273,10 +273,10 @@ TESTING & VALIDATION:
 
 DELIVERABLES:
 1. Scripts (4 major)
-   - strategic-phase-1a-db-ha.sh (PostgreSQL)
-   - strategic-phase-1b-opa-audit.sh (OPA audit)
-   - strategic-phase-1c-tracing.sh (Distributed tracing)
-   - strategic-phase-1d-redis-ha.sh (Redis HA)
+   - setup-database-ha.sh (PostgreSQL)
+   - audit-opa-policies.sh (OPA audit)
+   - setup-distributed-tracing.sh (Distributed tracing)
+   - setup-redis-ha.sh (Redis HA)
 
 2. Configuration (3 environments)
    - .env.production (6 new credentials)

@@ -201,7 +201,7 @@ evidence_3105="## 🔄 STATUS UPDATE: Transitioning to CI/CD Execution
 ### Blocker Resolution
 - **Problem**: Local environment lacks npm/pnpm binaries
 - **Solution**: CI/CD environment (GitHub Actions) has full npm/pnpm access
-- **Workflow**: \`phase-7-extension.yml\` includes npm audit scanning and remediation
+- **Workflow**: \`ide-extension-delivery.yml\` includes npm audit scanning and remediation
 
 ### Next Steps (CI/CD Execution)
 1. Configure GitHub Actions workflow with npm audit
@@ -217,7 +217,7 @@ evidence_3105="## 🔄 STATUS UPDATE: Transitioning to CI/CD Execution
 - \`braces\` - Version conflict
 
 ### Remediation Strategy
-The \`phase-7-extension.yml\` workflow includes:
+The \`ide-extension-delivery.yml\` workflow includes:
 - npm audit scanning (security-scan job)
 - Dependency updates (build job)
 - Snyk vulnerability assessment
@@ -250,7 +250,7 @@ if [ "$closed_count" -eq 3 ]; then
     log_info ""
     log_info "Next steps:"
     log_info "1. Configure GitHub Actions secrets"
-    log_info "2. Trigger phase-4-7-orchestration.yml workflow"
+    log_info "2. Trigger deployment-orchestration.yml workflow"
     log_info "3. Monitor deployment progress"
     exit 0
 else

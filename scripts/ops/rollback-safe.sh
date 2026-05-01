@@ -1,5 +1,5 @@
 #!/bin/bash
-# @file rollback-idempotent.sh
+# @file rollback-safe.sh
 # @module infrastructure
 # @description Idempotent rollback - safe to call multiple times
 # @idempotent YES - Idempotent state checking before rollback

@@ -329,7 +329,7 @@ log_info "STEP 7: Commit changes"
 
 cd /home/akushnir/code-server
 
-git add scripts/strategic-phase-1b-opa-audit.sh 2>/dev/null || true
+git add scripts/ops/audit-opa-policies.sh 2>/dev/null || true
 
 git commit -m "Strategic Phase 1C: Distributed Tracing Integration
 

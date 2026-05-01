@@ -210,7 +210,7 @@ phase_5_validation() {
   
   if [ "${DRY_RUN}" == "false" ]; then
     log_step "Running service health checks..."
-    bash scripts/ci/quick-health-check.sh 2>&1 | tail -10 || true
+    bash scripts/ci/health-check.sh 2>&1 | tail -10 || true
     log_success "✓ Health checks complete"
     
     log_step "Verifying data persistence..."

@@ -276,7 +276,7 @@ Pre-deployment validation script verifies documentation existence at runtime —
 `npm` / `pnpm` not available in the local development environment on this host. All npm work must run via GitHub Actions.
 
 ### What's Ready
-- `phase-7-extension.yml` workflow includes npm audit scanning, `npm update`, Snyk assessment, and lock-file commit
+- `ide-extension-delivery.yml` workflow includes npm audit scanning, `npm update`, Snyk assessment, and lock-file commit
 - Workflow syntax validated: **28/28 GitHub Actions workflows pass YAML validation** (fixed this session)
 - `pnpm-lock.yaml` is committed and tracked
 
@@ -289,7 +289,7 @@ Pre-deployment validation script verifies documentation existence at runtime —
 ### To Execute
 Once `GITHUB_TOKEN` / Actions billing is available:
 1. Push to origin/main
-2. Trigger `phase-7-extension.yml` manually via `workflow_dispatch`
+2. Trigger `ide-extension-delivery.yml` manually via `workflow_dispatch`
 3. The `security-scan` job will run `npm audit` and open remediation PRs automatically
 
 ### Vulnerable Packages (identified previously)
@@ -317,7 +317,7 @@ Once `GITHUB_TOKEN` / Actions billing is available:
         print()
         log_info("Issues closed: #3102 (DR Failover), #3103 (Phase 5), #3107 (Docs)")
         log_info("Issue updated: #3105 (npm audit — awaiting CI/CD trigger)")
-        log_info("Next: push to origin/main and trigger phase-4-7-orchestration.yml")
+        log_info("Next: push to origin/main and trigger deployment-orchestration.yml")
         return 0
     else:
         log_error("⚠️  Some issues could not be processed. Check logs above.")

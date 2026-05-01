@@ -14,7 +14,7 @@ trap 'log_info "Light load test process finished."' EXIT
 
 PRIMARY_HOST="${PRIMARY_HOST:?PRIMARY_HOST must be set}"
 PRIMARY_PORT="${PRIMARY_PORT:-80}"
-PYTHON_SCRIPT="${SCRIPT_DIR}/phase5-light-load-test.py"
+PYTHON_SCRIPT="${SCRIPT_DIR}/perf/light-load-test.py"
 
 log_info "Starting light load test against ${PRIMARY_HOST}..."
 export PRIMARY_HOST

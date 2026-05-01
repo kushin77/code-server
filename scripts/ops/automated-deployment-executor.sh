@@ -207,7 +207,7 @@ stage_backup() {
   # Backup 3: Configuration
   log_info "Backing up configuration files..."
   cp docker-compose.yml "$BACKUP_DIR/docker-compose.yml"
-  cp primary_compose_full.yml "$BACKUP_DIR/primary_compose_full.yml"
+  cp docker-compose.primary.yml "$BACKUP_DIR/docker-compose.primary.yml"
   git rev-parse HEAD > "$BACKUP_DIR/git-commit-hash"
   log_success "Configuration backed up"
   

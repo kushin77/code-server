@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# @file scripts/ci/quick-health-check.sh
+# @file scripts/ci/health-check.sh
 # @module ci/health-checking
 # @description Rapid health check for critical services before deployment
 # @governance GOV-002: Fast validation to catch critical issues early
-# @usage quick-health-check.sh [--services service1,service2] [--timeout 30]
+# @usage health-check.sh [--services service1,service2] [--timeout 30]
 
 set -euo pipefail
 

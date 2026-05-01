@@ -35,9 +35,9 @@ echo ""
 # List of critical scripts that MUST have trap handlers
 declare -a CRITICAL_SCRIPTS=(
   "scripts/ops/deploy-production-fix.sh"
-  "scripts/ops/deploy-idempotent.sh"
+  "scripts/ops/deploy.sh"
   "scripts/ops/deployment-pipeline.sh"
-  "scripts/ops/backup-idempotent.sh"
+  "scripts/ops/backup.sh"
   "scripts/ops/health-check-and-rollback.sh"
   "scripts/ops/test-rollback-procedures.sh"
   "scripts/ops/automated-rollback.sh"

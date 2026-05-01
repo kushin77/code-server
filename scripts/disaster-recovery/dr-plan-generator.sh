@@ -311,7 +311,7 @@ bash scripts/ops/deployment-coordinator.sh --recover --phase 5
 bash scripts/observability/infrastructure-monitor.sh
 
 # Verify health
-bash scripts/ci/quick-health-check.sh
+bash scripts/ci/health-check.sh
 ```
 
 ---

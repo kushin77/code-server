@@ -7,7 +7,7 @@ on:
       - 'scripts/ops/check-gitlab-compose-parity.sh'
       - 'scripts/ops/full-deployment-test.sh'
       - 'docker-compose.enterprise.yml'
-      - '.github/workflows/phase-2b-validation.yml'
+      - '.github/workflows/pre-deployment-validation.yml'
   pull_request:
     branches: [main]
     paths:
@@ -112,10 +112,10 @@ jobs:
 
       - name: Generate validation report
         run: |
-          cat > phase-2b-validation-report.json << 'EOF'
+          cat > pre-deployment-validation-report.json << 'EOF'
           {
             "timestamp": "${{ env.RUN_DATE }}",
-            "workflow": "phase-2b-validation",
+            "workflow": "pre-deployment-validation",
             "git_sha": "${{ github.sha }}",
             "git_branch": "${{ github.ref }}",
             "validation_results": {
@@ -129,14 +129,14 @@ jobs:
             "phase_2b_status": "production_ready"
           }
           EOF
-          cat phase-2b-validation-report.json
+          cat pre-deployment-validation-report.json
 
       - name: Archive validation report
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: phase-2b-validation-report
-          path: phase-2b-validation-report.json
+          name: pre-deployment-validation-report
+          path: pre-deployment-validation-report.json
           retention-days: 30
 
       - name: Report validation status

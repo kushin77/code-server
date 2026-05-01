@@ -1,5 +1,5 @@
 #!/bin/bash
-# @file health-check-idempotent.sh
+# @file health-check.sh
 # @module infrastructure
 # @description Idempotent health checks - can be called continuously
 # @idempotent YES - State-based checking without side effects

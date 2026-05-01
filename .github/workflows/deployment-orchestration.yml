@@ -109,7 +109,7 @@ jobs:
     name: Phase 4 - Kubernetes Migration
     needs: pre-deployment
     if: contains(github.event.inputs.deployment_phase, 'phase4') || github.event.inputs.deployment_phase == 'all'
-    uses: ./.github/workflows/phase-4-k8s-deployment.yml
+    uses: ./.github/workflows/kubernetes-deployment.yml
     with:
       environment: ${{ github.event.inputs.environment }}
       cluster_name: 'code-server-enterprise-${{ github.event.inputs.environment }}'
@@ -149,7 +149,7 @@ jobs:
     name: Phase 6-7 - Collaboration & Intelligence
     needs: pre-deployment
     if: contains(github.event.inputs.deployment_phase, 'phase6-7') || github.event.inputs.deployment_phase == 'all'
-    uses: ./.github/workflows/phase-7-extension.yml
+    uses: ./.github/workflows/ide-extension-delivery.yml
     with:
       publish_marketplace: ${{ github.event.inputs.publish_marketplace || 'false' }}
     secrets: inherit

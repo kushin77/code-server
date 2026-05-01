@@ -19,19 +19,9 @@ from provisioner import EnvProvisioner
 from apps._shared.python.config import Config
 import config as _svc_config
 
-# SLOG: structured JSON logging (GOV-002 compliant)
-import json as _json_
-_config = Config(validate_required=False)
-log_level = _svc_config.LOG_LEVEL
-class _JsonFmt(logging.Formatter):
-    def format(self, r):
-        d = {"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()}
-        if r.exc_info: d["exc"] = self.formatException(r.exc_info)
-        return _json_.dumps(d)
-_sh_ = logging.StreamHandler()
-_sh_.setFormatter(_JsonFmt())
-logging.basicConfig(level=log_level, handlers=[_sh_], force=True)
-logger = logging.getLogger(__name__)
+from log import get_logger
+
+logger = get_logger(__name__)
 
 # FastAPI app
 app = FastAPI(

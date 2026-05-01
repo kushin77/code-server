@@ -1,5 +1,5 @@
 #!/bin/bash
-# @file infrastructure-hardening-phase1.sh
+# @file infrastructure-hardening.sh
 # @module infrastructure
 # @description Master orchestrator for Tier 1 critical infrastructure hardening fixes
 # @governance GOV-002 - All fixes must be production-safe and reversible
@@ -154,10 +154,10 @@ fix_idempotency() {
     
     # Verify all idempotent scripts created
     local scripts_created=0
-    [[ -x ./scripts/ops/deploy-idempotent.sh ]] && scripts_created+=1
-    [[ -x ./scripts/ops/rollback-idempotent.sh ]] && scripts_created+=1
-    [[ -x ./scripts/ops/backup-idempotent.sh ]] && scripts_created+=1
-    [[ -x ./scripts/ops/health-check-idempotent.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/deploy.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/rollback-safe.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/backup.sh ]] && scripts_created+=1
+    [[ -x ./scripts/ops/health-check.sh ]] && scripts_created+=1
     
     if [[ $scripts_created -eq 4 ]]; then
       success "All idempotent scripts created"
@@ -273,10 +273,10 @@ generate_report() {
 - **Status:** Scripts Created
 - **Changes:** 4 idempotent operation templates created
 - **Files:**
-  - scripts/ops/deploy-idempotent.sh
-  - scripts/ops/rollback-idempotent.sh
-  - scripts/ops/backup-idempotent.sh
-  - scripts/ops/health-check-idempotent.sh
+  - scripts/ops/deploy.sh
+  - scripts/ops/rollback-safe.sh
+  - scripts/ops/backup.sh
+  - scripts/ops/health-check.sh
 - **Impact:** Safe to re-run all operations
 
 ### ✅ Fix 4: TLS Backup Automation

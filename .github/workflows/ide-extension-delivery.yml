@@ -23,7 +23,7 @@ on:
       - main
     paths:
       - 'apps/extensions/team-hub/**'
-      - '.github/workflows/phase-7-extension.yml'
+      - '.github/workflows/ide-extension-delivery.yml'
 
 env:
   EXTENSION_NAME: team-hub

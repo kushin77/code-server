@@ -4,7 +4,6 @@
 # @description Main reputation engine service
 # @governance GOV-004 - Reputation engine service lifecycle
 
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
@@ -24,17 +23,9 @@ try:
 except ModuleNotFoundError:
     ReputationEventProcessor = None
 
-# SLOG: structured JSON logging (GOV-002 compliant)
-import json as _json_
-class _JsonFmt(logging.Formatter):
-    def format(self, r):
-        d = {"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()}
-        if r.exc_info: d["exc"] = self.formatException(r.exc_info)
-        return _json_.dumps(d)
-_sh_ = logging.StreamHandler()
-_sh_.setFormatter(_JsonFmt())
-logging.basicConfig(level=logging.INFO, handlers=[_sh_], force=True)
-logger = logging.getLogger(__name__)
+from log import get_logger
+
+logger = get_logger(__name__)
 
 config = get_config(validate_required=False)
 

@@ -42,9 +42,9 @@ success() {
 phase_infrastructure_hardening() {
   section "PHASE 1: Infrastructure Hardening"
   
-  if [[ -x scripts/ops/infrastructure-hardening-phase1.sh ]]; then
+  if [[ -x scripts/ops/infrastructure-hardening.sh ]]; then
     log "Executing infrastructure hardening..."
-    bash scripts/ops/infrastructure-hardening-phase1.sh 2>&1 | tee -a "${LOG_DIR}/phase1.log" || true
+    bash scripts/ops/infrastructure-hardening.sh 2>&1 | tee -a "${LOG_DIR}/phase1.log" || true
     success "Phase 1 complete"
   else
     log "Phase 1 script not found"
@@ -153,14 +153,14 @@ Comprehensive autonomous operations hardening executed across 4 major phases:
    - Content-addressable deployment model
 
 ### Scripts Created (9 Total)
-- infrastructure-hardening-phase1.sh - Master orchestrator
+- infrastructure-hardening.sh - Master orchestrator
 - pin-docker-images.sh - Image digest pinning
 - enforce-resource-limits.sh - Resource configuration
 - idempotency-enforcer.sh - State-based operations
-- deploy-idempotent.sh - Safe deployment
-- rollback-idempotent.sh - Safe rollback
-- backup-idempotent.sh - Smart backup scheduling
-- health-check-idempotent.sh - Health monitoring
+- deploy.sh - Safe deployment
+- rollback-safe.sh - Safe rollback
+- backup.sh - Smart backup scheduling
+- health-check.sh - Health monitoring
 - tls-backup-automation.sh - Certificate backup
 
 ---
@@ -294,14 +294,14 @@ Production Readiness: 92%
 ## Deliverables
 
 ### Scripts Created (14 Total)
-1. infrastructure-hardening-phase1.sh
+1. infrastructure-hardening.sh
 2. pin-docker-images.sh
 3. enforce-resource-limits.sh
 4. idempotency-enforcer.sh
-5. deploy-idempotent.sh
-6. rollback-idempotent.sh
-7. backup-idempotent.sh
-8. health-check-idempotent.sh
+5. deploy.sh
+6. rollback-safe.sh
+7. backup.sh
+8. health-check.sh
 9. tls-backup-automation.sh
 10. validate-resource-limits.sh
 11. drift-detection-and-remediation.sh

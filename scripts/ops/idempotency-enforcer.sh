@@ -71,9 +71,9 @@ is_operation_idempotent() {
 
 # Create idempotent deployment template
 create_deployment_template() {
-  cat > ./scripts/ops/deploy-idempotent.sh << 'DEPLOY_EOF'
+  cat > ./scripts/ops/deploy.sh << 'DEPLOY_EOF'
 #!/bin/bash
-# @file deploy-idempotent.sh
+# @file deploy.sh
 # @module infrastructure
 # @description Idempotent deployment script - safe to run multiple times
 # @idempotent YES - Checks state before any modifications
@@ -187,15 +187,15 @@ main() {
 main "$@"
 DEPLOY_EOF
 
-  chmod +x ./scripts/ops/deploy-idempotent.sh
+  chmod +x ./scripts/ops/deploy.sh
   log "Created idempotent deployment script"
 }
 
 # Create idempotent rollback template
 create_rollback_template() {
-  cat > ./scripts/ops/rollback-idempotent.sh << 'ROLLBACK_EOF'
+  cat > ./scripts/ops/rollback-safe.sh << 'ROLLBACK_EOF'
 #!/bin/bash
-# @file rollback-idempotent.sh
+# @file rollback-safe.sh
 # @module infrastructure
 # @description Idempotent rollback - safe to call multiple times
 # @idempotent YES - Idempotent state checking before rollback
@@ -292,15 +292,15 @@ main() {
 main "$@"
 ROLLBACK_EOF
 
-  chmod +x ./scripts/ops/rollback-idempotent.sh
+  chmod +x ./scripts/ops/rollback-safe.sh
   log "Created idempotent rollback script"
 }
 
 # Create configuration backup automation
 create_backup_template() {
-  cat > ./scripts/ops/backup-idempotent.sh << 'BACKUP_EOF'
+  cat > ./scripts/ops/backup.sh << 'BACKUP_EOF'
 #!/bin/bash
-# @file backup-idempotent.sh
+# @file backup.sh
 # @module infrastructure
 # @description Idempotent backup - skip if already backed up in this period
 # @idempotent YES - Checks backup age before creating new backup
@@ -362,15 +362,15 @@ main() {
 main "$@"
 BACKUP_EOF
 
-  chmod +x ./scripts/ops/backup-idempotent.sh
+  chmod +x ./scripts/ops/backup.sh
   log "Created idempotent backup script"
 }
 
 # Create health check idempotency enforcement
 create_health_check_template() {
-  cat > ./scripts/ops/health-check-idempotent.sh << 'HEALTH_EOF'
+  cat > ./scripts/ops/health-check.sh << 'HEALTH_EOF'
 #!/bin/bash
-# @file health-check-idempotent.sh
+# @file health-check.sh
 # @module infrastructure
 # @description Idempotent health checks - can be called continuously
 # @idempotent YES - State-based checking without side effects
@@ -422,7 +422,7 @@ main() {
 main "$@"
 HEALTH_EOF
 
-  chmod +x ./scripts/ops/health-check-idempotent.sh
+  chmod +x ./scripts/ops/health-check.sh
   log "Created idempotent health check script"
 }
 
@@ -443,10 +443,10 @@ main() {
   log "=========================================="
   log "Idempotency enforcement complete"
   log "Created scripts:"
-  log "  - deploy-idempotent.sh"
-  log "  - rollback-idempotent.sh"
-  log "  - backup-idempotent.sh"
-  log "  - health-check-idempotent.sh"
+  log "  - deploy.sh"
+  log "  - rollback-safe.sh"
+  log "  - backup.sh"
+  log "  - health-check.sh"
   log "=========================================="
 }
 

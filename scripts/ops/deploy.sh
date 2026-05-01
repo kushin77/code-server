@@ -1,5 +1,5 @@
 #!/bin/bash
-# @file deploy-idempotent.sh
+# @file deploy.sh
 # @module infrastructure
 # @description Idempotent deployment script - safe to run multiple times
 # @idempotent YES - Checks state before any modifications

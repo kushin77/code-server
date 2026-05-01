@@ -4,7 +4,6 @@
 # @description P3-1561 Phase 2+: FastAPI scheduler with Kafka, persistence, auth
 # @governance GOV-002: Event-driven, deterministic routing, audit-logged
 
-import logging
 import os
 from fastapi import FastAPI, Query, HTTPException, Header, Depends
 from pydantic import BaseModel
@@ -18,18 +17,10 @@ from events import SchedulerEventPublisher
 from persistence import SchedulerDatabase, TaskStatus, ScheduledTask
 from auth import SchedulerAuth
 import config
-
-# SLOG: structured JSON logging (GOV-002 compliant)
-class _JsonFmt(logging.Formatter):
-    def format(self, r):
-        import json, sys
-        return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
-_h = logging.StreamHandler()
-_h.setFormatter(_JsonFmt())
-logging.basicConfig(level=config.LOG_LEVEL, handlers=[_h], force=True)
-logger = logging.getLogger(__name__)
+from log import get_logger
 
 config.validate_config()
+logger = get_logger(__name__)
 
 app = FastAPI(title="Execution Scheduler", version="1.0")
 

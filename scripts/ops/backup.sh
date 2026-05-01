@@ -1,5 +1,5 @@
 #!/bin/bash
-# @file backup-idempotent.sh
+# @file backup.sh
 # @module infrastructure
 # @description Idempotent backup - skip if already backed up in this period
 # @idempotent YES - Checks backup age before creating new backup

@@ -44,7 +44,7 @@ on:
       - 'kubernetes/**'
       - 'helm/code-server-enterprise/**'
       - 'scripts/k8s/**'
-      - '.github/workflows/phase-4-k8s-deployment.yml'
+      - '.github/workflows/kubernetes-deployment.yml'
 
 env:
   REGISTRY: ghcr.io
@@ -80,7 +80,7 @@ jobs:
       - name: Lint Helm chart
         run: |
           helm lint ./helm/code-server-enterprise \
-            --values ./helm/code-server-enterprise/values.phase4-k8s.yaml
+            --values ./helm/code-server-enterprise/values-kubernetes.yaml
 
   provision-cluster:
     name: Provision AKS Cluster
@@ -169,7 +169,7 @@ jobs:
           
           helm install code-server-enterprise ./helm/code-server-enterprise \
             --namespace code-server-enterprise \
-            --values helm/code-server-enterprise/values.phase4-k8s.yaml \
+            --values helm/code-server-enterprise/values-kubernetes.yaml \
             --timeout 10m \
             --wait
 

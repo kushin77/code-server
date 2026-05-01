@@ -23,7 +23,7 @@ SCRIPTS_TO_MIGRATE=(
     "scripts/ops/postgres-backup.sh"
     "scripts/ops/failover-drill.sh"
     "scripts/ci/expand-drift-detector-scope.sh"
-    "scripts/ci/quick-health-check.sh"
+    "scripts/ci/health-check.sh"
     "scripts/ci/setup-gitops-workflow.sh"
 )
 

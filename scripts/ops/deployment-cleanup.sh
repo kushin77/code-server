@@ -38,7 +38,7 @@ sleep 30
 ssh akushnir@192.168.168.42 'cd ~/code-server-enterprise && docker-compose -f docker-compose.enterprise.yml up -d'
 
 # 4. Verify cluster
-./scripts/final-validation.sh
+./scripts/ci/post-deployment-validation.sh
 ```
 
 ## Health Checks After Startup
@@ -818,12 +818,12 @@ Code-Server Enterprise platform successfully transformed from high-risk (single 
 
 #### Strategic Phase Scripts (scripts/)
 - **strategic-phase-1a-db-ha.sh**: PostgreSQL HA configuration
-- **strategic-phase-1b-opa-audit.sh**: OPA audit logging setup
-- **strategic-phase-1c-tracing.sh**: Distributed tracing configuration
-- **strategic-phase-1d-redis-ha.sh**: Redis Sentinel setup
+- **audit-opa-policies.sh**: OPA audit logging setup
+- **setup-distributed-tracing.sh**: Distributed tracing configuration
+- **setup-redis-ha.sh**: Redis Sentinel setup
 
 #### Validation Script
-- **final-validation.sh**: 14-point validation checklist
+- **post-deployment-validation.sh**: 14-point validation checklist
 
 ### Code Consolidation
 
@@ -930,8 +930,8 @@ All documents stored in `/home/akushnir/code-server/`:
 - docs/runbooks/01-*.md through 06-*.md
 - docs/reports/*.md
 - docs/archive/: Old configurations and documents
-- scripts/strategic-phase-*.sh
-- scripts/final-validation.sh
+- scripts/ops/setup-*.sh
+- scripts/ci/post-deployment-validation.sh
 
 ---
 

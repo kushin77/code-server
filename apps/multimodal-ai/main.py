@@ -5,7 +5,6 @@
 # @governance  GOV-002: Immutable, deterministic, no hardcoded secrets
 """Unified multimodal FastAPI service for voice, diagram generation, and image analysis."""
 
-import logging
 from typing import Optional
 
 import uvicorn
@@ -15,12 +14,9 @@ from pydantic import BaseModel
 from diagrams import DiagramGenerator
 from image_analysis import ImageAnalyzer
 from voice import VoiceProcessor
+from log import get_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 app = FastAPI(
     title="Multimodal AI",

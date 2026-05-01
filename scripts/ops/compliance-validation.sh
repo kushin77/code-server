@@ -150,22 +150,22 @@ check_idempotency() {
   local score=0
   
   # Check idempotent scripts
-  if [[ -x scripts/ops/deploy-idempotent.sh ]]; then
+  if [[ -x scripts/ops/deploy.sh ]]; then
     pass "Idempotent deployment script exists"
     ((score+=20))
   fi
   
-  if [[ -x scripts/ops/rollback-idempotent.sh ]]; then
+  if [[ -x scripts/ops/rollback-safe.sh ]]; then
     pass "Idempotent rollback script exists"
     ((score+=20))
   fi
   
-  if [[ -x scripts/ops/backup-idempotent.sh ]]; then
+  if [[ -x scripts/ops/backup.sh ]]; then
     pass "Idempotent backup script exists"
     ((score+=20))
   fi
   
-  if [[ -x scripts/ops/health-check-idempotent.sh ]]; then
+  if [[ -x scripts/ops/health-check.sh ]]; then
     pass "Idempotent health check script exists"
     ((score+=20))
   fi

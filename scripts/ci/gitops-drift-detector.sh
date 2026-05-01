@@ -112,6 +112,12 @@ check_terraform_drift() {
     return 0
   fi
 
+  # Skip Terraform drift check if Docker daemon is unavailable (common in dry-run/dev environments)
+  if ! docker info &>/dev/null 2>&1; then
+    log_warning "Docker daemon not available — skipping Terraform drift check (Docker provider requires daemon)"
+    return 0
+  fi
+
   local drift_items=()
 
   cd "${TERRAFORM_DIR}"

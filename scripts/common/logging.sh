@@ -8,15 +8,17 @@
 set -e
 trap 'return 1' ERR
 
-# Color codes for terminal output
-readonly RED='\033[91m'
-readonly GREEN='\033[92m'
-readonly YELLOW='\033[93m'
-readonly BLUE='\033[94m'
-readonly CYAN='\033[96m'
-readonly GRAY='\033[90m'
-readonly BOLD='\033[1m'
-readonly RESET='\033[0m'
+# Color codes for terminal output (only define if not already set)
+if [[ -z "${RED:-}" ]]; then
+  readonly RED='\033[91m'
+  readonly GREEN='\033[92m'
+  readonly YELLOW='\033[93m'
+  readonly BLUE='\033[94m'
+  readonly CYAN='\033[96m'
+  readonly GRAY='\033[90m'
+  readonly BOLD='\033[1m'
+  readonly RESET='\033[0m'
+fi
 
 # Log level configuration (can be overridden via LOG_LEVEL env var)
 LOG_LEVEL="${LOG_LEVEL:-INFO}"

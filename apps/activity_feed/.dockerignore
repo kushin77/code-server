@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.pyc
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Dev/Test
+tests/
+*.test.py
+*_test.py
+test_*.py
+.env
+.env.*
+!.env.example
+
+# VCS
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docs
+*.md
+docs/
+
+# Logs
+*.log
+logs/

@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship
 
 from apps._shared.python.config import get_config
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

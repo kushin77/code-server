@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

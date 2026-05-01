@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 
 from jsonschema import Draft7Validator
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

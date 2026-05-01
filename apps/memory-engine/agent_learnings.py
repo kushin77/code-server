@@ -11,7 +11,7 @@ from typing import Dict, Any, List
 from pathlib import Path
 import hashlib
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

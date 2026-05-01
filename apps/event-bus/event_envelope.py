@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, asdict
 import jsonschema
 
-from apps._shared.python.logging import get_logger
+from log import get_logger
 
 logger = get_logger(__name__)
 

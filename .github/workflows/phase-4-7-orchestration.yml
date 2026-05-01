@@ -21,6 +21,14 @@ on:
         options:
           - staging
           - production
+      publish_marketplace:
+        description: 'Publish Phase 7 extension to the VS Code Marketplace'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 env:
   REGISTRY: ghcr.io
@@ -142,6 +150,8 @@ jobs:
     needs: pre-deployment
     if: contains(github.event.inputs.deployment_phase, 'phase6-7') || github.event.inputs.deployment_phase == 'all'
     uses: ./.github/workflows/phase-7-extension.yml
+    with:
+      publish_marketplace: ${{ github.event.inputs.publish_marketplace || 'false' }}
     secrets: inherit
 
   traffic-migration:
@@ -214,7 +224,7 @@ jobs:
   post-deployment:
     name: Post-Deployment Validation
     runs-on: ubuntu-latest
-    needs: [phase-4-k8s, phase-6-7-intelligence]
+    needs: [phase-4-k8s, phase-5-security, phase-6-7-intelligence]
     if: always()
     steps:
       - uses: actions/checkout@v4

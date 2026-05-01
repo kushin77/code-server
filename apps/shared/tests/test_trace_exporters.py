@@ -1,17 +1,42 @@
 """Tests for trace exporters."""
 
-import pytest
+import importlib.util
+import sys
+import types
 import json
-from apps.shared.trace_exporters import (
-    ExportFormat,
-    ExportedSpan,
-    ExportedTrace,
-    JSONExporter,
-    JaegerExporter,
-    ZipkinExporter,
-    OTLPExporter,
-    ExporterFactory,
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+TRACE_EXPORTERS = _load_module("apps.shared.trace_exporters", "trace_exporters.py")
+
+ExportFormat = TRACE_EXPORTERS.ExportFormat
+ExportedSpan = TRACE_EXPORTERS.ExportedSpan
+ExportedTrace = TRACE_EXPORTERS.ExportedTrace
+JSONExporter = TRACE_EXPORTERS.JSONExporter
+JaegerExporter = TRACE_EXPORTERS.JaegerExporter
+ZipkinExporter = TRACE_EXPORTERS.ZipkinExporter
+OTLPExporter = TRACE_EXPORTERS.OTLPExporter
+ExporterFactory = TRACE_EXPORTERS.ExporterFactory
 
 
 class TestExportedSpan:

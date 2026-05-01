@@ -5,9 +5,15 @@
 
 variable "environment" {
   type        = string
-  description = "Deployment environment"
+  description = "Deployment environment (production/staging/development)"
   default     = "production"
+  
+  validation {
+    condition     = contains(["production", "staging", "development"], var.environment)
+    error_message = "Environment must be production, staging, or development."
+  }
 }
+
 
 variable "kubeconfig_path" {
   type        = string

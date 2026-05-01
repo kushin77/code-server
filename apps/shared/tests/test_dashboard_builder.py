@@ -2,15 +2,51 @@
 Tests for dashboard builder and visualization system.
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 import json
 from datetime import datetime
-from apps.shared.dashboard_builder import (
-    DashboardLayout, WidgetType, ThemeMode, DataSource, MetricQuery,
-    WidgetThreshold, WidgetOptions, DashboardWidget, DashboardVariable,
-    DashboardAnnotation, Dashboard, DashboardBuilder, DashboardManager,
-    DashboardTemplate, VisualizationExporter
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+DASHBOARD_BUILDER = _load_module("apps.shared.dashboard_builder", "dashboard_builder.py")
+
+DashboardLayout = DASHBOARD_BUILDER.DashboardLayout
+WidgetType = DASHBOARD_BUILDER.WidgetType
+ThemeMode = DASHBOARD_BUILDER.ThemeMode
+DataSource = DASHBOARD_BUILDER.DataSource
+MetricQuery = DASHBOARD_BUILDER.MetricQuery
+WidgetThreshold = DASHBOARD_BUILDER.WidgetThreshold
+WidgetOptions = DASHBOARD_BUILDER.WidgetOptions
+DashboardWidget = DASHBOARD_BUILDER.DashboardWidget
+DashboardVariable = DASHBOARD_BUILDER.DashboardVariable
+DashboardAnnotation = DASHBOARD_BUILDER.DashboardAnnotation
+Dashboard = DASHBOARD_BUILDER.Dashboard
+DashboardBuilder = DASHBOARD_BUILDER.DashboardBuilder
+DashboardManager = DASHBOARD_BUILDER.DashboardManager
+DashboardTemplate = DASHBOARD_BUILDER.DashboardTemplate
+VisualizationExporter = DASHBOARD_BUILDER.VisualizationExporter
 
 
 class TestDataSource:

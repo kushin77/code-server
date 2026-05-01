@@ -1,20 +1,6 @@
 # Infrastructure as Code - Cluster Deployment
 # Root module for complete production deployment
-
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = ">= 3.0, < 4.0"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = ">= 2.0, < 3.0"
-    }
-  }
-
-  required_version = ">= 1.0, < 2.0"
-}
+# Provider configuration and versions defined in versions.tf
 
 # ============================================================================
 # MODULES
@@ -25,16 +11,6 @@ module "infrastructure" {
 
   cluster_name = var.cluster_name
   environment  = var.environment
-}
-
-module "database" {
-  source = "./modules/database"
-
-  cluster_name = var.cluster_name
-  environment  = var.environment
-  network_id   = module.infrastructure.network_id
-  
-  depends_on = [module.infrastructure]
 }
 
 module "observability" {
@@ -80,16 +56,7 @@ variable "cluster_name" {
   default     = "code-server-enterprise"
 }
 
-variable "environment" {
-  description = "Environment (production/staging/development)"
-  type        = string
-  default     = "production"
-  
-  validation {
-    condition     = contains(["production", "staging", "development"], var.environment)
-    error_message = "Environment must be production, staging, or development."
-  }
-}
+# environment variable defined in variables.tf
 
 # ============================================================================
 # OUTPUTS

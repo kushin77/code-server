@@ -2,13 +2,46 @@
 Tests for observability storage system.
 """
 
-import pytest
+import importlib.util
+import sys
+import types
 from datetime import datetime, timedelta
-from apps.shared.observability_storage import (
-    StorageBackend, QueryTimeRange, RetentionPolicy, MetricPoint, TracePoint,
-    StorageQuery, InfluxDBAdapter, TimescaleDBAdapter, MemoryStorageAdapter,
-    StorageFactory, DataCompactor
-)
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+apps_pkg = types.ModuleType("apps")
+apps_pkg.__path__ = [str(ROOT.parent)]
+sys.modules.setdefault("apps", apps_pkg)
+
+shared_pkg = types.ModuleType("apps.shared")
+shared_pkg.__path__ = [str(ROOT)]
+sys.modules["apps.shared"] = shared_pkg
+
+
+def _load_module(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, ROOT / file_name)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+OBSERVABILITY_STORAGE = _load_module("apps.shared.observability_storage", "observability_storage.py")
+
+StorageBackend = OBSERVABILITY_STORAGE.StorageBackend
+QueryTimeRange = OBSERVABILITY_STORAGE.QueryTimeRange
+RetentionPolicy = OBSERVABILITY_STORAGE.RetentionPolicy
+MetricPoint = OBSERVABILITY_STORAGE.MetricPoint
+TracePoint = OBSERVABILITY_STORAGE.TracePoint
+StorageQuery = OBSERVABILITY_STORAGE.StorageQuery
+InfluxDBAdapter = OBSERVABILITY_STORAGE.InfluxDBAdapter
+TimescaleDBAdapter = OBSERVABILITY_STORAGE.TimescaleDBAdapter
+MemoryStorageAdapter = OBSERVABILITY_STORAGE.MemoryStorageAdapter
+StorageFactory = OBSERVABILITY_STORAGE.StorageFactory
+DataCompactor = OBSERVABILITY_STORAGE.DataCompactor
 
 
 class TestRetentionPolicy:

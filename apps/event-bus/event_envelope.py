@@ -12,6 +12,10 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, asdict
 import jsonschema
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 @dataclass
 class EventSource:
     service: str
@@ -147,14 +151,14 @@ class EventValidator:
         try:
             schema = self.schemas.get(event.event_type) or self.schemas.get("event-envelope")
             if not schema:
-                print(f"No schema found for event type: {event.event_type}")
+                logger.info(f"No schema found for event type: {event.event_type}")
                 return False
 
             instance = event.to_dict() if self._uses_event_envelope(schema) else event.payload
             self._build_validator(schema).validate(instance)
             return True
         except jsonschema.ValidationError as e:
-            print(f"Validation error: {e}")
+            logger.info(f"Validation error: {e}")
             return False
     
     def validate_payload(self, event_type: str, payload: Dict[str, Any]) -> bool:
@@ -162,7 +166,7 @@ class EventValidator:
         try:
             schema = self.schemas.get(event_type)
             if not schema:
-                print(f"No payload schema found for event type: {event_type}")
+                logger.info(f"No payload schema found for event type: {event_type}")
                 return False
 
             payload_schema = self._get_payload_schema(event_type)
@@ -170,7 +174,7 @@ class EventValidator:
             self._build_validator(instance_schema).validate(payload)
             return True
         except jsonschema.ValidationError as e:
-            print(f"Payload validation error: {e}")
+            logger.info(f"Payload validation error: {e}")
             return False
 
 if __name__ == "__main__":
@@ -194,12 +198,12 @@ if __name__ == "__main__":
         reputation_score=85
     )
     
-    print("Generated Event:")
-    print(json.dumps(event.to_dict(), indent=2))
+    logger.info("Generated Event:")
+    logger.info(json.dumps(event.to_dict(), indent=2))
     
     # Validate
     validator = EventValidator()
     if validator.validate(event):
-        print("\n✓ Event is valid")
+        logger.info("\n✓ Event is valid")
     else:
-        print("\n✗ Event is invalid")
+        logger.info("\n✗ Event is invalid")

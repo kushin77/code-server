@@ -16,6 +16,10 @@ from datetime import datetime, timezone
 
 from jsonschema import Draft7Validator
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 @dataclass
 class ProvisionerConfig:
     """env.yaml configuration"""
@@ -57,7 +61,7 @@ class EnvProvisioner:
         """Log to file"""
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         log_msg = f"[{timestamp}] [{level}] {msg}"
-        print(log_msg)
+        logger.info(log_msg)
         with open(self.log_file, "a") as f:
             f.write(log_msg + "\n")
     
@@ -207,7 +211,7 @@ if __name__ == "__main__":
     import sys
     
     if len(sys.argv) < 2:
-        print("Usage: provisioner.py <validate|provision|diff> [env_file]")
+        logger.info("Usage: provisioner.py <validate|provision|diff> [env_file]")
         sys.exit(1)
     
     command = sys.argv[1]
@@ -223,13 +227,13 @@ if __name__ == "__main__":
         sys.exit(0 if success else 1)
     elif command == "diff":
         if len(sys.argv) < 4:
-            print("Usage: provisioner.py diff <env1.yaml> <env2.yaml>")
+            logger.info("Usage: provisioner.py diff <env1.yaml> <env2.yaml>")
             sys.exit(1)
         
         other_env = sys.argv[3]
         diff_result = provisioner.diff(other_env)
-        print(json.dumps(diff_result, indent=2))
+        logger.info(json.dumps(diff_result, indent=2))
         sys.exit(0)
     else:
-        print(f"Unknown command: {command}")
+        logger.info(f"Unknown command: {command}")
         sys.exit(1)

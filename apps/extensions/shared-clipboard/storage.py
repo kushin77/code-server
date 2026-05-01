@@ -12,6 +12,10 @@ from pathlib import Path
 import logging
 import hashlib
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -337,15 +341,15 @@ if __name__ == "__main__":
     storage = ClipboardStorage("/tmp/clipboard.db")
     
     # Test
-    print("\n=== Clipboard Storage Tests ===")
+    logger.info("\n=== Clipboard Storage Tests ===")
     
     clip1 = storage.add_entry(
-        content="def hello():\n    print('Hello, world!')",
+        content="def hello():\n    logger.info('Hello, world!')",
         user_id="user-123",
         language="python",
         tags=["function", "example"]
     )
-    print(f"\n1. Added entry: {clip1}")
+    logger.info(f"\n1. Added entry: {clip1}")
     
     clip2 = storage.add_entry(
         content="SELECT * FROM users WHERE active = true",
@@ -353,20 +357,20 @@ if __name__ == "__main__":
         language="sql",
         tags=["query"]
     )
-    print(f"2. Added entry: {clip2}")
+    logger.info(f"2. Added entry: {clip2}")
     
     # Retrieve
     entries = storage.get_entries(limit=10)
-    print(f"\n3. Retrieved {len(entries)} entries")
+    logger.info(f"\n3. Retrieved {len(entries)} entries")
     
     # Share
     storage.share_entry(clip1, ["user-456"])
-    print(f"4. Shared entry {clip1}")
+    logger.info(f"4. Shared entry {clip1}")
     
     # Search
     results = storage.search("hello", limit=10)
-    print(f"5. Search found {len(results)} results")
+    logger.info(f"5. Search found {len(results)} results")
     
     # Audit
     audit = storage.get_audit_log(clip1)
-    print(f"6. Audit trail: {len(audit)} events")
+    logger.info(f"6. Audit trail: {len(audit)} events")

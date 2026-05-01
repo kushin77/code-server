@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 import logging
 import os
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 try:
     import psutil  # For local resource monitoring
 except ModuleNotFoundError:
@@ -262,9 +266,9 @@ if __name__ == "__main__":
         monitor.edge_registry.update_node_health("edge-01", 40)
         
         metrics = await monitor.get_all_metrics()
-        print("\n=== Resource Metrics ===")
-        print(f"Local CPU: {metrics['local']['cpu']['available_percent']:.1f}% free")
-        print(f"CI Queue: {metrics['ci']['queue_depth']} jobs")
-        print(f"Edge Nodes: {metrics['edge']['available_nodes']}/{metrics['edge']['total_nodes']} available")
+        logger.info("\n=== Resource Metrics ===")
+        logger.info(f"Local CPU: {metrics['local']['cpu']['available_percent']:.1f}% free")
+        logger.info(f"CI Queue: {metrics['ci']['queue_depth']} jobs")
+        logger.info(f"Edge Nodes: {metrics['edge']['available_nodes']}/{metrics['edge']['total_nodes']} available")
     
     asyncio.run(test())

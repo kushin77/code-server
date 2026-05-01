@@ -11,6 +11,10 @@ from typing import Dict, Any, List
 from pathlib import Path
 import hashlib
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 class AgentLearningsRecorder:
     """Record and store agent task outcomes for organizational learning"""
     
@@ -53,7 +57,7 @@ class AgentLearningsRecorder:
         # Would also send to Memory Engine API
         # POST /memory/agent-learning with learning_entry
         
-        print(f"[{learning_entry['timestamp']}] Task {task_id}: {'SUCCESS' if success else 'FAILED'}")
+        logger.info(f"[{learning_entry['timestamp']}] Task {task_id}: {'SUCCESS' if success else 'FAILED'}")
         return learning_entry
     
     def _calculate_quality_score(self, success: bool, tokens: int, duration: float) -> float:
@@ -169,12 +173,12 @@ if __name__ == "__main__":
         duration_seconds=240
     )
     
-    print(f"\nRecorded outcome: {outcome}")
+    logger.info(f"\nRecorded outcome: {outcome}")
     
     # Find similar past learnings
     similar = recorder.find_similar_learnings("authentication error")
-    print(f"\nFound {len(similar)} similar past tasks")
+    logger.info(f"\nFound {len(similar)} similar past tasks")
     
     # Generate insights
     insights = recorder.generate_agent_insights()
-    print(f"\nAgent insights: {json.dumps(insights, indent=2)}")
+    logger.info(f"\nAgent insights: {json.dumps(insights, indent=2)}")

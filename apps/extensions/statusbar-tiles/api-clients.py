@@ -12,6 +12,10 @@ import os
 
 from apps._shared.python.config import get_config
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 class APIClientBase:
     """Base class for all API clients with caching support"""
     
@@ -42,7 +46,7 @@ class APIClientBase:
             "status": status,
             "duration_ms": duration_ms
         }
-        print(f"[API] {service} {endpoint}: {status} ({duration_ms}ms)")
+        logger.info(f"[API] {service} {endpoint}: {status} ({duration_ms}ms)")
 
 class GitHubAPIClient(APIClientBase):
     """GitHub API client for fetching PRs and reviews"""
@@ -196,15 +200,15 @@ if __name__ == "__main__":
         presence = TeamPresenceClient()
         
         prs = await github.get_assigned_prs("kushin77")
-        print(f"Assigned PRs: {len(prs)}")
+        logger.info(f"Assigned PRs: {len(prs)}")
         
         status = await ci.get_branch_status()
-        print(f"CI Status: {status['status']}")
+        logger.info(f"CI Status: {status['status']}")
         
         incidents = await pagerduty.get_incident_count()
-        print(f"Active Incidents: {incidents}")
+        logger.info(f"Active Incidents: {incidents}")
         
         online = await presence.get_team_online_count()
-        print(f"Team Online: {online}")
+        logger.info(f"Team Online: {online}")
     
     asyncio.run(test())

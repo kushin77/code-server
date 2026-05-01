@@ -10,6 +10,10 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 import logging
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -194,7 +198,7 @@ class CostTracker:
 if __name__ == "__main__":
     tracker = CostTracker(monthly_ci_budget_usd=500.0)
     
-    print("\n=== Cost Tracking Tests ===")
+    logger.info("\n=== Cost Tracking Tests ===")
     
     # Task 1: Local inference (free)
     cost = tracker.calculate_task_cost(
@@ -203,7 +207,7 @@ if __name__ == "__main__":
         duration_seconds=120,
         gpu_hours_used=0.033
     )
-    print(f"\nLocal task: ${cost.resource_cost_usd:.4f}")
+    logger.info(f"\nLocal task: ${cost.resource_cost_usd:.4f}")
     
     # Task 2: CI test (free tier)
     cost = tracker.calculate_task_cost(
@@ -212,7 +216,7 @@ if __name__ == "__main__":
         duration_seconds=300,
         ci_runner_type="standard"
     )
-    print(f"CI task (free): ${cost.resource_cost_usd:.4f}")
+    logger.info(f"CI task (free): ${cost.resource_cost_usd:.4f}")
     
     # Task 3: CI paid runner
     cost = tracker.calculate_task_cost(
@@ -221,7 +225,7 @@ if __name__ == "__main__":
         duration_seconds=600,
         ci_runner_type="paid"
     )
-    print(f"CI task (paid): ${cost.resource_cost_usd:.4f}")
+    logger.info(f"CI task (paid): ${cost.resource_cost_usd:.4f}")
     
     # Task 4: AI task with tokens
     cost = tracker.calculate_task_cost(
@@ -230,11 +234,11 @@ if __name__ == "__main__":
         duration_seconds=60,
         tokens_used=5000
     )
-    print(f"AI task: ${cost.resource_cost_usd:.4f}")
+    logger.info(f"AI task: ${cost.resource_cost_usd:.4f}")
     
     # Show breakdown
     breakdown = tracker.get_monthly_breakdown()
-    print(f"\nMonthly breakdown:")
-    print(f"  Total: ${breakdown['total_cost']:.2f}")
-    print(f"  Budget: ${breakdown['budget_usd']:.2f}")
-    print(f"  Utilization: {breakdown['budget_utilization_percent']:.1f}%")
+    logger.info(f"\nMonthly breakdown:")
+    logger.info(f"  Total: ${breakdown['total_cost']:.2f}")
+    logger.info(f"  Budget: ${breakdown['budget_usd']:.2f}")
+    logger.info(f"  Utilization: {breakdown['budget_utilization_percent']:.1f}%")

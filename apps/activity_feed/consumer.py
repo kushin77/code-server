@@ -11,6 +11,10 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import logging
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -222,6 +226,6 @@ if __name__ == "__main__":
     activity = consumer.parse_event(raw_event)
     if activity:
         consumer.add_activity(activity)
-        print(f"\nParsed activity: {activity.title}")
-        print(f"Severity: {activity.severity}")
-        print(f"Tags: {', '.join(activity.tags)}")
+        logger.info(f"\nParsed activity: {activity.title}")
+        logger.info(f"Severity: {activity.severity}")
+        logger.info(f"Tags: {', '.join(activity.tags)}")

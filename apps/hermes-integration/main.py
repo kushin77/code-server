@@ -15,6 +15,10 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from enum import Enum
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 # Configuration
 HERMES_REPO_PATH = os.getenv("HERMES_REPO_PATH", "/home/akushnir/hermes-agent")
 VENV_PATH = os.path.join(HERMES_REPO_PATH, ".venv", "bin", "activate")
@@ -146,7 +150,7 @@ class HermesServiceManager:
                 phase_coverage={"completed": total_phases, "total": total_phases}
             )
         except Exception as e:
-            print(f"Error getting metrics: {e}")
+            logger.error(f"Error getting metrics: {e}")
             return PlatformMetrics()
     
     def run_pytest(self, phase_start: int, phase_end: int) -> List[TestExecutionResult]:
@@ -224,7 +228,7 @@ class HermesServiceManager:
             
             return None
         except Exception as e:
-            print(f"Error committing: {e}")
+            logger.error(f"Error committing: {e}")
             return None
     
     def get_phase_info(self, phase_number: int) -> PhaseInfo:
@@ -251,7 +255,7 @@ class HermesServiceManager:
                 test_count=test_count
             )
         except Exception as e:
-            print(f"Error getting phase info: {e}")
+            logger.error(f"Error getting phase info: {e}")
             return PhaseInfo(phase_number=phase_number, title=f"Phase {phase_number}", status=PhaseStatus.NOT_STARTED)
 
 

@@ -7,6 +7,10 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class AuthServerConfig(BaseSettings):
     """Auth Server Configuration (from environment)"""
@@ -140,10 +144,10 @@ def validate_config() -> bool:
         errors.append("At least one OAuth provider must be configured")
     
     if errors:
-        print("Configuration Validation Errors:")
+        logger.info("Configuration Validation Errors:")
         for error in errors:
-            print(f"  ❌ {error}")
+            logger.info(f"  ❌ {error}")
         return False
     
-    print("✅ Configuration validation passed")
+    logger.info("✅ Configuration validation passed")
     return True

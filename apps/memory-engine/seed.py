@@ -16,6 +16,10 @@ from embedder import OllamaEmbedder
 
 from apps._shared.python.config import get_config
 
+from apps._shared.python.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class OrganizationalMemorySeeder:
     """Seed Qdrant vector database with historical data"""
@@ -45,7 +49,7 @@ class OrganizationalMemorySeeder:
         }
         with open(self.seed_log, "a") as f:
             f.write(json.dumps(entry) + "\n")
-        print(f"[{entry['timestamp']}] {action}: {status}")
+        logger.info(f"[{entry['timestamp']}] {action}: {status}")
 
     def _embed_and_store(self, collection: str, title: str, content: str, source_url: str = None, tags: List[str] = None) -> bool:
         """Embed text and store in Qdrant. Returns True on success."""
@@ -132,7 +136,7 @@ class OrganizationalMemorySeeder:
                 if ok:
                     count += 1
             except Exception as e:
-                print(f"Error processing {runbook_file}: {e}")
+                logger.error(f"processing {runbook_file}: {e}")
 
         self._log_entry("runbooks_seed", "completed", {"count": count})
         return count
@@ -206,7 +210,7 @@ class OrganizationalMemorySeeder:
                 if ok:
                     count += 1
             except Exception as e:
-                print(f"Error processing {doc_file}: {e}")
+                logger.error(f"processing {doc_file}: {e}")
 
         self._log_entry("session_docs_seed", "completed", {"count": count})
         return count
@@ -251,11 +255,11 @@ class OrganizationalMemorySeeder:
 
     def run_full_seeding(self) -> Dict[str, Any]:
         """Execute complete seeding pipeline"""
-        print("\n=== Organizational Memory Seeding ===")
+        logger.info("\n=== Organizational Memory Seeding ===")
 
         # Ensure collections exist in Qdrant
         if not self.verify_collections():
-            print("ERROR: Qdrant collections not initialized")
+            logger.info("ERROR: Qdrant collections not initialized")
             return {"status": "failed", "reason": "collections_not_found"}
 
         # Seed data sources
@@ -269,9 +273,9 @@ class OrganizationalMemorySeeder:
         report = self.generate_seeding_report(total=total)
         report["total_documents_seeded"] = total
 
-        print(f"\n=== Seeding Complete ===")
-        print(f"Total documents seeded: {total}")
-        print(f"Report: {report}")
+        logger.info(f"\n=== Seeding Complete ===")
+        logger.info(f"Total documents seeded: {total}")
+        logger.info(f"Report: {report}")
 
         return report
 

@@ -1459,6 +1459,8 @@ services:
     image: ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a
     container_name: code-server-ollama
     user: "11434:11434"  # @security P0 #969 - Run as non-root ollama user
+    profiles:
+      - gpu  # @enhancement #3120 - GPU acceleration for NVIDIA-capable nodes
     volumes:
       - ollama_models:/home/ollama/.ollama
     environment:
@@ -1493,6 +1495,10 @@ services:
         reservations:
           cpus: "2"
           memory: "4G"
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]  # @enhancement #3120 - Request all available NVIDIA GPUs
 
   edge-agent:
     build:

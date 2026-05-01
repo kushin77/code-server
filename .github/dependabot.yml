@@ -1,0 +1,92 @@
+version: 2
+updates:
+  # Docker Compose dependency updates
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    reviewers:
+      - "kushin77"
+    assignees:
+      - "kushin77"
+    labels:
+      - "dependencies"
+      - "enhancement"
+      - "ci/cd"
+    commit-message:
+      prefix: "chore(deps): "
+      prefix-development: "chore(deps-dev): "
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+    allow:
+      - dependency-type: "all"
+    ignore:
+      # Ignore major version updates - manual review needed
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    automerge-type: "pr"
+    automerge-option: "auto"
+
+  # GitHub Actions dependency updates
+  - package-ecosystem: "github-actions"
+    directory: ".github/workflows"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    reviewers:
+      - "kushin77"
+    labels:
+      - "dependencies"
+      - "ci/cd"
+    commit-message:
+      prefix: "ci: "
+      include: "scope"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+
+  # npm dependency updates (for app packages)
+  - package-ecosystem: "npm"
+    directory: "apps"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "03:00"
+    reviewers:
+      - "kushin77"
+    labels:
+      - "dependencies"
+      - "enhancement"
+    allow:
+      - dependency-type: "all"
+    ignore:
+      # Major versions need manual review
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 3
+    rebase-strategy: "auto"
+
+  # Python dependency updates
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "03:00"
+    reviewers:
+      - "kushin77"
+    labels:
+      - "dependencies"
+      - "enhancement"
+    allow:
+      - dependency-type: "all"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 3
+    rebase-strategy: "auto"

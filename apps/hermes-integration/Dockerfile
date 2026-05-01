@@ -1,5 +1,5 @@
 # ── Stage 1: build dependencies ──────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim@sha256:ff71127c215572121f1991bacf17f39ec5fcfd2de1f1c01a595835495bb9adfc AS builder
 
 WORKDIR /build
 
@@ -13,7 +13,7 @@ RUN python -m venv /venv && \
     /venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # ── Stage 2: production image ─────────────────────────────────────────────────
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:ff71127c215572121f1991bacf17f39ec5fcfd2de1f1c01a595835495bb9adfc
 
 # Install runtime-only system deps (curl for healthcheck, git for phase runner)
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,9 +1,10 @@
-FROM python:3.11-alpine
+FROM python:3.11-slim@sha256:ff71127c215572121f1991bacf17f39ec5fcfd2de1f1c01a595835495bb9adfc
 
 WORKDIR /app
 
 # Install curl for healthchecks
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy and install requirements
 COPY requirements.txt .
@@ -13,7 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create non-root user
-RUN addgroup -g 1000 activity && adduser -D -u 1000 -G activity activity
+RUN groupadd -g 1000 activity && useradd -u 1000 -g activity -m -s /sbin/nologin activity \
+    && chown -R activity:activity /app
 
 USER activity
 

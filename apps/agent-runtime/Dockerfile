@@ -9,7 +9,7 @@
 # ============================================================================
 
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim@sha256:ff71127c215572121f1991bacf17f39ec5fcfd2de1f1c01a595835495bb9adfc AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1 \
@@ -40,7 +40,7 @@ RUN pip install --upgrade pip setuptools wheel \
     && pip install --no-deps -e .
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim@sha256:ff71127c215572121f1991bacf17f39ec5fcfd2de1f1c01a595835495bb9adfc AS runtime
 
 ARG VERSION=dev
 LABEL maintainer="code-server Team" \

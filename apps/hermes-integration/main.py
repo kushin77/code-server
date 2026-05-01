@@ -6,16 +6,20 @@
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime
+import asyncio
 import subprocess
 import os
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, APIRouter
 from pydantic import BaseModel, Field
 from enum import Enum
 
 from apps._shared.python.logging import get_logger
+from agent_registry import registry, AgentStatus
+from agent_orchestrator import orchestrator
 
 logger = get_logger(__name__)
 
@@ -23,10 +27,45 @@ logger = get_logger(__name__)
 HERMES_REPO_PATH = os.getenv("HERMES_REPO_PATH", "/home/akushnir/hermes-agent")
 VENV_PATH = os.path.join(HERMES_REPO_PATH, ".venv", "bin", "activate")
 
+# Agent locations: auto-register the 4 known code-server agents on startup
+_KNOWN_AGENTS = [
+    {"agent_type": "code-reviewer",      "host": os.getenv("AGENT_CODE_REVIEWER_HOST",      "code-server-agent-code-reviewer"),      "port": int(os.getenv("AGENT_CODE_REVIEWER_PORT",      "9000"))},
+    {"agent_type": "incident-responder", "host": os.getenv("AGENT_INCIDENT_RESPONDER_HOST", "code-server-agent-incident-responder"), "port": int(os.getenv("AGENT_INCIDENT_RESPONDER_PORT", "9000"))},
+    {"agent_type": "doc-writer",         "host": os.getenv("AGENT_DOC_WRITER_HOST",         "code-server-agent-doc-writer"),         "port": int(os.getenv("AGENT_DOC_WRITER_PORT",         "9000"))},
+    {"agent_type": "test-generator",     "host": os.getenv("AGENT_TEST_GENERATOR_HOST",     "code-server-agent-test-generator"),     "port": int(os.getenv("AGENT_TEST_GENERATOR_PORT",     "9000"))},
+]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Register known agents and start background health sweep on startup."""
+    for agent_cfg in _KNOWN_AGENTS:
+        registry.register(**agent_cfg)
+    logger.info("hermes_integration_startup", extra={"agents_registered": len(_KNOWN_AGENTS)})
+
+    # Background health sweep every 30 s
+    sweep_task = asyncio.create_task(_health_sweep_loop())
+    yield
+    sweep_task.cancel()
+    logger.info("hermes_integration_shutdown")
+
+
+async def _health_sweep_loop() -> None:
+    """Periodically probe all registered agents."""
+    while True:
+        await asyncio.sleep(30)
+        try:
+            registry.mark_stale_agents()
+            await orchestrator.health_sweep()
+        except Exception as exc:
+            logger.warning("health_sweep_error", extra={"error": str(exc)})
+
+
 app = FastAPI(
     title="Hermes Agent Integration API",
     version="1.0",
-    description="Full integration with code-server IDE and Appsmith portal"
+    description="Full integration with code-server IDE and Appsmith portal",
+    lifespan=lifespan,
 )
 
 # ============================================================================
@@ -359,6 +398,147 @@ async def get_git_log(limit: int = 10) -> Dict[str, Any]:
                     commits.append({"hash": parts[0], "message": parts[1]})
     
     return {"commits": commits}
+
+
+# ============================================================================
+# AGENT ORCHESTRATION API  (Hermes Phase 2 — #3124-#3127)
+# ============================================================================
+
+agents_router = APIRouter(prefix="/agents", tags=["agents"])
+
+
+@agents_router.get("")
+async def list_agents() -> Dict[str, Any]:
+    """List all registered agents with their current status."""
+    agents = registry.list_all()
+    return {
+        "agents": [a.to_dict() for a in agents],
+        "counts": registry.count_by_status(),
+        "total": len(agents),
+        "healthy": len(registry.list_healthy()),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@agents_router.post("/register")
+async def register_agent(body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Register a new agent instance.
+
+    Body: {"agent_type": "code-reviewer", "host": "...", "port": 9000, "metadata": {...}}
+    """
+    required = {"agent_type", "host", "port"}
+    missing = required - set(body.keys())
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing required fields: {missing}")
+
+    record = registry.register(
+        agent_type=body["agent_type"],
+        host=body["host"],
+        port=int(body["port"]),
+        agent_id=body.get("agent_id"),
+        metadata=body.get("metadata", {}),
+    )
+    return {"registered": True, "agent": record.to_dict()}
+
+
+@agents_router.delete("/{agent_id}")
+async def deregister_agent(agent_id: str) -> Dict[str, Any]:
+    """Remove an agent from the registry."""
+    removed = registry.deregister(agent_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
+    return {"deregistered": True, "agent_id": agent_id}
+
+
+@agents_router.post("/{agent_id}/heartbeat")
+async def agent_heartbeat(agent_id: str) -> Dict[str, Any]:
+    """Accept a heartbeat from an agent (keeps it HEALTHY in registry)."""
+    found = registry.record_heartbeat(agent_id)
+    if not found:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not registered")
+    return {"agent_id": agent_id, "status": "heartbeat_recorded", "ts": datetime.utcnow().isoformat()}
+
+
+@agents_router.get("/{agent_id}/health")
+async def agent_health(agent_id: str) -> Dict[str, Any]:
+    """Live-probe a specific agent and return its current status."""
+    record = registry.get(agent_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not registered")
+    status = await registry.probe_health(agent_id)
+    ready  = await registry.probe_readiness(agent_id)
+    return {
+        "agent_id":  agent_id,
+        "agent_type": record.agent_type,
+        "status":    status.value,
+        "ready":     ready,
+        "last_seen": record.last_seen_at.isoformat() if record.last_seen_at else None,
+    }
+
+
+@agents_router.post("/dispatch")
+async def dispatch_to_agent(body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Dispatch an execution request to the best available agent.
+
+    Body: {"agent_type": "code-reviewer", "path": "/execute", "payload": {...}}
+    """
+    required = {"agent_type", "path", "payload"}
+    missing = required - set(body.keys())
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing required fields: {missing}")
+
+    result = await orchestrator.dispatch(
+        agent_type=body["agent_type"],
+        path=body["path"],
+        payload=body["payload"],
+        method=body.get("method", "POST"),
+    )
+    if not result.success:
+        raise HTTPException(status_code=502, detail=result.error or "Dispatch failed")
+    return result.to_dict()
+
+
+@agents_router.post("/broadcast")
+async def broadcast_to_agents(body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Fan-out a request to all (or selected) agent types.
+
+    Body: {"path": "/...", "payload": {...}, "agent_types": ["code-reviewer", ...]}
+    """
+    results = await orchestrator.broadcast(
+        path=body.get("path", "/health"),
+        payload=body.get("payload", {}),
+        agent_types=body.get("agent_types"),
+    )
+    return {
+        "dispatched": len(results),
+        "results":    [r.to_dict() for r in results],
+    }
+
+
+@agents_router.get("/audit")
+async def get_dispatch_audit(limit: int = 50) -> Dict[str, Any]:
+    """Return recent orchestrator dispatch audit log."""
+    return {
+        "entries": orchestrator.get_audit_log(limit),
+        "limit": limit,
+    }
+
+
+@agents_router.post("/sweep")
+async def trigger_health_sweep() -> Dict[str, Any]:
+    """Manually trigger a health probe sweep across all registered agents."""
+    statuses = await orchestrator.health_sweep()
+    return {
+        "swept": len(statuses),
+        "results": {aid: s.value for aid, s in statuses.items()},
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+app.include_router(agents_router)
 
 
 if __name__ == "__main__":

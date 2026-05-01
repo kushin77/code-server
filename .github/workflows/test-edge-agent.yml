@@ -4,16 +4,16 @@ on:
   push:
     paths:
       - 'apps/edge-agent/**'
-        - 'apps/edge_agent/**'
+      - 'apps/edge_agent/**'
       - 'scripts/edge-agent/**'
       - 'apps/control-plane/edge_agent_handlers.py'
       - '.github/workflows/test-edge-agent.yml'
     branches:
       - main
   pull_request:
-        - 'apps/edge_agent/**'
     paths:
       - 'apps/edge-agent/**'
+      - 'apps/edge_agent/**'
       - 'scripts/edge-agent/**'
       - 'apps/control-plane/edge_agent_handlers.py'
       - '.github/workflows/test-edge-agent.yml'

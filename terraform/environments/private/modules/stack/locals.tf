@@ -49,6 +49,7 @@ locals {
     multimodal_ai        = "code-server-multimodal-ai:${var.app_image_tag}"
     reputation_engine    = "code-server-reputation-engine:${var.app_image_tag}"
     agent_runtime        = "code-server-agent-runtime:${var.app_image_tag}"
+    hermes_integration   = "code-server-hermes-integration:${var.app_image_tag}"
     activity_feed        = "code-server-activity-feed:${var.app_image_tag}"
     paperclip            = "code-server-paperclip:${var.app_image_tag}"
     execution_scheduler  = "code-server-execution-scheduler:${var.app_image_tag}"

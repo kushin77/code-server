@@ -61,18 +61,10 @@ jobs:
             COVERAGE=$(grep -o '"coverage_percentage": [0-9]*' artifacts/documentation-gap-analysis-report.json | grep -o '[0-9]*')
 
             if [ "$MISSING" -gt 0 ]; then
-              REPORT=$(cat artifacts/documentation-gap-issues.md)
-              github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" -b "## Documentation Gap Analysis
-
-**Coverage**: ${COVERAGE}%
-**Missing Documents**: ${MISSING}
-
-\`\`\`
-${REPORT}
-\`\`\`
-
-Please address documentation gaps before merge."
-            fi
+                REPORT=$(cat artifacts/documentation-gap-issues.md)
+                BODY=$(printf "## Documentation Gap Analysis\n\n**Coverage**: %s%%\n**Missing Documents**: %s\n\n\`\`\`\n%s\n\`\`\`\n\nPlease address documentation gaps before merge." "${COVERAGE}" "${MISSING}" "${REPORT}")
+                github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" -b "${BODY}"
+              fi
           fi
 
   issue-lifecycle:

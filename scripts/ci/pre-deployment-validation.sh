@@ -18,20 +18,18 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 # =============================================================================
 trap 'log_error "Script failed at line $LINENO (exit code: $?)"; exit 1' ERR
 trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
 
 # Counters
 PASS=0
 FAIL=0
 WARN=0
+NC="${RESET:-\\033[0m}"
 
 # Logging functions
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $*"; PASS+=1; }
-log_error() { echo -e "${RED}[✗]${NC} $*"; FAIL+=1; }
-log_warn() { echo -e "${YELLOW}[⚠]${NC} $*"; WARN+=1; }
+log_success() { echo -e "${GREEN}[✓]${NC} $*"; ((PASS++)) || true; }
+log_error() { echo -e "${RED}[✗]${NC} $*"; ((FAIL++)) || true; }
+log_warn() { echo -e "${YELLOW}[⚠]${NC} $*"; ((WARN++)) || true; }
 
 # Set required environment variables for validation
 export OAUTH2_COOKIE_SECRET="${OAUTH2_COOKIE_SECRET:-$(openssl rand -hex 32)}"

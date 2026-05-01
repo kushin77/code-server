@@ -30,6 +30,7 @@ from log import get_logger, log_event
 from health import router as health_router
 from hermes_registration import hermes_client
 from hermes_tracing import setup_tracing, instrument_app
+from apps.shared.github_integration import get_github_integration, GitHubUser, GitHubRepository
 
 # Validate configuration on startup (raises if production secrets missing)
 validate_config()
@@ -365,6 +366,87 @@ async def get_statistics():
         "agents_active": sum(1 for a in agents.values() if a.is_running),
         "agents_total": len(agents),
         "uptime_hours": (datetime.utcnow() - start_time).total_seconds() / 3600
+    }
+
+
+# ============================================================================
+# GITHUB INTEGRATION (WITH DISTRIBUTED TRACING)
+# ============================================================================
+
+@app.get("/github/user/{username}")
+async def get_github_user(username: str):
+    """Get GitHub user information with distributed tracing.
+    
+    All calls are automatically traced to Jaeger for visibility
+    into external service dependencies.
+    """
+    github = get_github_integration()
+    user = await github.get_user(username)
+    
+    if user:
+        return {
+            "status": "success",
+            "user": user.to_dict(),
+            "traces": github.get_traces()
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"User not found: {username}")
+
+
+@app.get("/github/repositories/{username}")
+async def get_user_repositories(username: str):
+    """Get user's repositories with distributed tracing."""
+    github = get_github_integration()
+    repositories = await github.get_user_repositories(username)
+    
+    return {
+        "status": "success",
+        "username": username,
+        "repository_count": len(repositories),
+        "repositories": [repo.to_dict() for repo in repositories],
+        "traces": github.get_traces()
+    }
+
+
+@app.post("/github/pull-request/{owner}/{repo}")
+async def create_pull_request(
+    owner: str,
+    repo: str,
+    title: str = Body(...),
+    body: str = Body(...),
+    head: str = Body(...),
+    base: str = Body("main"),
+):
+    """Create pull request with distributed tracing."""
+    github = get_github_integration()
+    pr = await github.create_pull_request(
+        owner=owner,
+        repo=repo,
+        title=title,
+        body=body,
+        head=head,
+        base=base,
+    )
+    
+    if pr:
+        return {
+            "status": "success",
+            "pull_request": pr.to_dict(),
+            "traces": github.get_traces()
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Failed to create pull request")
+
+
+@app.get("/github/traces")
+async def get_github_traces():
+    """Get all recorded GitHub API traces for observability."""
+    github = get_github_integration()
+    traces = github.get_traces()
+    
+    return {
+        "trace_count": len(traces),
+        "traces": traces
     }
 
 

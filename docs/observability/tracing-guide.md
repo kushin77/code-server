@@ -44,6 +44,27 @@ async def health_check():
 - If OTEL is installed, the module instruments FastAPI automatically and emits
   spans to the configured exporter.
 
+## External Service Tracing
+
+External service calls use `apps/shared/external_tracing.py` to record span metadata
+for GitHub API, GCP, and other third-party integrations. The helper records:
+
+- Service and endpoint identifiers
+- Request and response sizes
+- Status code and error state
+- Latency for the full external call
+
+Use the helper when a service needs to track boundary-crossing work, especially for
+calls that should be visible in logs, alerts, or downstream analysis.
+
+The GitHub integration wrapper in `apps/shared/github_integration.py` uses the helper
+for repository lookups, pull-request actions, and issue comments. The agent-runtime
+service exposes those flows as a reference external-service tracing path.
+
+The GCP integration wrapper in `apps/shared/gcp_integration.py` uses the same helper
+for Cloud Storage, BigQuery, Pub/Sub, and Cloud Functions operations. The control-plane
+service shows how those traces can be surfaced alongside application telemetry.
+
 ## Reference Service
 
 The control-plane service now uses the shared tracing helpers as the Phase 10c

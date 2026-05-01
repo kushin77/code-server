@@ -14,7 +14,9 @@ monitoring path for Issue #1532.
 - `config/prometheus.yml`: scrape jobs for Alertmanager, Promtail, and GPU metrics
 - `monitoring/alerts/alert-rules.yml`: unified alert rules
 - `monitoring/alertmanager.yml`: severity-based routing
-- `docs/observability/tracing-guide.md`: shared tracing setup and propagation
+- `observability/tracing-guide.md`: shared tracing setup and propagation
+- `observability/ops-training-guide.md`: operations training and handoff for observability
+- `observability/ops-training-checklist.md`: quick readiness checklist for on-call operators
 
 ## Run It
 
@@ -74,3 +76,10 @@ increase(DCGM_FI_DEV_ECC_DBE_VOL_TOTAL[15m]) > 0
 - DCGM exporter requires an NVIDIA-enabled host.
 - The current Alertmanager transport endpoints are scaffolded for severity routing and
   should be replaced with deployment-specific relay endpoints or secret-backed providers.
+
+## Training
+
+For operator onboarding, follow the observability training guide and checklist:
+
+- [Observability Operations Training Guide](observability/ops-training-guide.md)
+- [Observability Operations Checklist](observability/ops-training-checklist.md)

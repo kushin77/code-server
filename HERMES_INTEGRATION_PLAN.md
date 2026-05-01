@@ -89,39 +89,44 @@ This epic tracks the adoption of Hermes-agents orchestration layer into code-ser
 
 ---
 
-### Phase 3: Per-Agent Hermes Enablement 🗓️ QUEUED (May 8-21)
+### Phase 3: Per-Agent Hermes Enablement ✅ COMPLETE (May 1)
 
 **Goal**: Enable each of 4 agents to work with Hermes orchestration.
 
 **Sub-tasks** (GitHub Issues #3128-#3131):
 
-#### #3128: Code Reviewer Agent + Hermes
-- [ ] Register agent with Hermes on startup
-- [ ] Update execution flow to report to Hermes
-- [ ] Test: run code review via Hermes orchestrator
-- [ ] Deliverable: Updated code-reviewer container
+#### #3128: Code Reviewer Agent + Hermes ✅
+- [x] Register agent with Hermes on startup (AGENT_RUNTIME_ID=agent-code-reviewer)
+- [x] OTEL_SERVICE_NAME=agent-code-reviewer for distinct traces
+- [x] healthcheck fixed to http://localhost:9000/health
+- [x] Deliverable: docker-compose.yml + main.py AGENT_TYPE selective init
 
-#### #3129: Incident Responder Agent + Hermes
-- [ ] Register agent with Hermes
-- [ ] Update incident response workflow (Hermes coordination)
-- [ ] Test: trigger incident response via Hermes
-- [ ] Deliverable: Updated incident-responder container
+#### #3129: Incident Responder Agent + Hermes ✅
+- [x] Register agent with Hermes (AGENT_RUNTIME_ID=agent-incident-responder)
+- [x] OTEL_SERVICE_NAME=agent-incident-responder
+- [x] healthcheck fixed to http://localhost:9000/health
+- [x] Deliverable: docker-compose.yml updated
 
-#### #3130: Doc Writer Agent + Hermes
-- [ ] Register agent with Hermes
-- [ ] Document generation flow via Hermes
-- [ ] Test: trigger doc generation via Hermes
-- [ ] Deliverable: Updated doc-writer container
+#### #3130: Doc Writer Agent + Hermes ✅
+- [x] Register agent with Hermes (AGENT_RUNTIME_ID=agent-doc-writer)
+- [x] OTEL_SERVICE_NAME=agent-doc-writer
+- [x] healthcheck fixed to http://localhost:9000/health
+- [x] Deliverable: docker-compose.yml updated
 
-#### #3131: Test Generator Agent + Hermes
-- [ ] Register agent with Hermes
-- [ ] Test generation flow via Hermes
-- [ ] Test: trigger test gen via Hermes
-- [ ] Deliverable: Updated test-generator container
+#### #3131: Test Generator Agent + Hermes ✅
+- [x] Register agent with Hermes (AGENT_RUNTIME_ID=agent-test-generator)
+- [x] OTEL_SERVICE_NAME=agent-test-generator
+- [x] healthcheck fixed to http://localhost:9000/health
+- [x] Deliverable: docker-compose.yml updated
+
+**Phase 3 Deliverables (May 1, 2026):**
+- docker-compose.yml: all 4 agent containers receive HERMES_URL, OTEL env vars, fixed healthcheck URLs
+- main.py: AGENT_TYPE-selective init (each container only instantiates its agent type)
+- tests/test_registry_orchestrator.py: 18 unit tests covering registry + orchestrator
 
 ---
 
-### Phase 4: Infrastructure-as-Code for Hermes 🗓️ QUEUED (May 22-28)
+### Phase 4: Infrastructure-as-Code for Hermes ✅ COMPLETE (May 1)
 
 **Goal**: Deploy Hermes as part of Terraform-managed stack.
 

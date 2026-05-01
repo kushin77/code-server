@@ -85,7 +85,12 @@ terraform_plan() {
   
   local exit_code=0
 
-  terraform plan -no-color -out=tfplan
+  # Use consolidated variables from _common SSOT + environment-specific overrides
+  terraform plan \
+    -no-color \
+    -var-file=../_common/terraform.tfvars \
+    -var-file=terraform.tfvars \
+    -out=tfplan
   exit_code=$?
   
   # Exit code 0 = no changes, 2 = changes detected

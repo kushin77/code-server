@@ -13,6 +13,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from apps._shared.python.config import get_config
 from apps._shared.python.logging import get_logger
+import config as _svc_config
 
 logger = get_logger(__name__)
 
@@ -195,8 +196,8 @@ async def readiness():
     """Readiness probe — returns 200 when Qdrant connection is available."""
     from qdrant_client import QdrantClient
     import os
-    qdrant_host = os.getenv("QDRANT_HOST", "qdrant")
-    qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
+    qdrant_host = _svc_config.QDRANT_HOST
+    qdrant_port = _svc_config.QDRANT_PORT
     try:
         client = QdrantClient(host=qdrant_host, port=qdrant_port, timeout=3)
         client.get_collections()
@@ -208,5 +209,4 @@ async def readiness():
 
 if __name__ == "__main__":
     import uvicorn
-    config = get_config()
-    uvicorn.run(app, host="0.0.0.0", port=config.get_int("MEMORY_ENGINE_PORT", 8001))
+    uvicorn.run(app, host=_svc_config.HOST, port=_svc_config.PORT)

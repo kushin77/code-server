@@ -17,6 +17,7 @@ from cost_tracker import CostTracker
 from events import SchedulerEventPublisher
 from persistence import SchedulerDatabase, TaskStatus, ScheduledTask
 from auth import SchedulerAuth
+import config
 
 # SLOG: structured JSON logging (GOV-002 compliant)
 class _JsonFmt(logging.Formatter):
@@ -25,8 +26,10 @@ class _JsonFmt(logging.Formatter):
         return json.dumps({"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()})
 _h = logging.StreamHandler()
 _h.setFormatter(_JsonFmt())
-logging.basicConfig(level=logging.INFO, handlers=[_h], force=True)
+logging.basicConfig(level=config.LOG_LEVEL, handlers=[_h], force=True)
 logger = logging.getLogger(__name__)
+
+config.validate_config()
 
 app = FastAPI(title="Execution Scheduler", version="1.0")
 
@@ -324,4 +327,4 @@ async def publish_scheduler_event(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=config.HOST, port=config.PORT)

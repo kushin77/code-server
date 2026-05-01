@@ -15,7 +15,9 @@ from event_publisher import PaperclipEventPublisher
 from models import ApprovalCreate, ApprovalDecision, HeartbeatCreate, KillswitchRequest
 from opa_integration import OPAPolicyManager
 from reputation_integration import ReputationTierManager
+import config
 
+config.validate_config()
 
 app = FastAPI(title="Paperclip Human Control Plane", version="1.0")
 
@@ -177,4 +179,4 @@ async def killswitch_status():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8010)
+    uvicorn.run(app, host=config.HOST, port=config.PORT)

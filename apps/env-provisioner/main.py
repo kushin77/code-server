@@ -17,11 +17,12 @@ from pydantic import BaseModel
 
 from provisioner import EnvProvisioner
 from apps._shared.python.config import Config
+import config as _svc_config
 
 # SLOG: structured JSON logging (GOV-002 compliant)
 import json as _json_
 _config = Config(validate_required=False)
-log_level = _config.get("LOG_LEVEL", "INFO")
+log_level = _svc_config.LOG_LEVEL
 class _JsonFmt(logging.Formatter):
     def format(self, r):
         d = {"ts": self.formatTime(r, "%Y-%m-%dT%H:%M:%S"), "level": r.levelname, "svc": r.name, "msg": r.getMessage()}
@@ -182,4 +183,4 @@ async def provision_env(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8050)
+    uvicorn.run(app, host=_svc_config.HOST, port=_svc_config.PORT)

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from typing import Dict, Any
 
 from apps._shared.python.config import get_config
+import config as _svc_config
 
 import os
 
@@ -91,12 +92,10 @@ async def metrics():
     }
 
 if __name__ == "__main__":
-    import os
     import uvicorn
-    config = get_config()
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=config.get_int("CONTROL_PLANE_PORT", 8082),
-        log_level="info"
+        host=_svc_config.HOST,
+        port=_svc_config.PORT,
+        log_level=_svc_config.LOG_LEVEL.lower(),
     )

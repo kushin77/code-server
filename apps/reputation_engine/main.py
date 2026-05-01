@@ -17,6 +17,7 @@ from opa_sync import OpaReputationSync
 from score_calculator import ScoreCalculator
 from api import setup_api_routes
 from apps._shared.python.config import get_config
+import config as _svc_config
 
 try:
     from event_processor import ReputationEventProcessor
@@ -324,9 +325,10 @@ async def get_stats():
 if __name__ == "__main__":
     import uvicorn
 
+    _svc_config.validate_config()
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=config.get_int("REPUTATION_ENGINE_PORT", 8000),
-        log_level="info",
+        host=_svc_config.HOST,
+        port=_svc_config.PORT,
+        log_level=_svc_config.LOG_LEVEL.lower(),
     )

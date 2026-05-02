@@ -362,7 +362,7 @@ assert len(engine.metrics_history) > 0
 "
 
 run_test "Phase 38 behavioral analytics still passing" "
-timeout 120 bash ${PROJECT_ROOT}/scripts/ci/phase-38-integration-tests.sh 2>&1 | grep -q 'PASS:'
+timeout 120 bash ${PROJECT_ROOT}/scripts/ci/phase-38-integration-tests.sh > /tmp/p38.log 2>&1 && grep -q 'ALL TESTS PASSED' /tmp/p38.log
 "
 
 # Summary

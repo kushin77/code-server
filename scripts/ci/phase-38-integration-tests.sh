@@ -421,11 +421,11 @@ timeout 30 bash ${PROJECT_ROOT}/scripts/ops/phase-38-behavioral-analytics.sh sum
 echo ""
 echo "GROUP 10: Regression & Cross-Phase Integration"
 run_test "Phase 37 still passing" "
-timeout 60 bash ${PROJECT_ROOT}/scripts/ci/phase-37-integration-tests.sh 2>&1 | grep -q 'PASS:'
+timeout 60 bash ${PROJECT_ROOT}/scripts/ci/phase-37-integration-tests.sh > /tmp/p37.log 2>&1 && grep -q 'All tests passed' /tmp/p37.log
 "
 
 run_test "Phase 36 still passing" "
-timeout 60 bash ${PROJECT_ROOT}/scripts/ci/phase-36-integration-tests.sh 2>&1 | grep -q 'PASS:'
+timeout 60 bash ${PROJECT_ROOT}/scripts/ci/phase-36-integration-tests.sh > /tmp/p36.log 2>&1 && grep -q 'All tests passed' /tmp/p36.log
 "
 
 run_test "Phase 31 compliance gate still operational" "

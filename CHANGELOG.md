@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.25.0] - 2026-05-01 (PHASE 44 — PLATFORM ORCHESTRATION & AUTONOMOUS COORDINATION)
+
+### Added — Phase 44: Platform Orchestration & Autonomous Coordination
+- **apps/security_ai/platform_orchestration.py**: Platform orchestration engine that coordinates service-level actions from multi-phase signals.
+- **Service topology orchestration**: Registers service nodes with tier, dependencies, health, cost, and risk metadata.
+- **Multi-phase signal ingestion**: Ingests and tracks upstream telemetry from phases 40-43 for orchestration context.
+- **Strategy-driven planning**: Supports balanced, reliability-first, cost-first, and security-first orchestration strategies.
+- **Plan validation**: Validates action coverage, target consistency, confidence thresholds, and signal context before execution.
+- **Execution tracking**: Executes orchestration plans in dry-run or active mode with deterministic success metrics.
+- **Phase 31 scoring contribution**: Computes orchestration score in the 0-25 range for compliance gate contribution.
+- **State persistence**: Persists services, signals, plans, and execution runs for continuity and auditability.
+- **Ops orchestrator** (`scripts/ops/phase-44-platform-orchestration.sh`): Modes — plan|execute|summary|report|demo.
+- **Integration tests** (`scripts/ci/phase-44-integration-tests.sh`): 25/25 tests passing.
+
+### Verified
+- All 25 integration tests passing ✅
+- Service registration and signal ingestion ✅
+- Plan generation and validation ✅
+- Dry-run and active execution paths ✅
+- Report/summary generation ✅
+- State persistence and reload behavior ✅
+- Ops orchestrator demo/summary modes ✅
+
 ## [1.24.0] - 2026-05-01 (PHASE 43 — ADVANCED THREAT HUNTING & AUTONOMOUS RESPONSE)
 
 ### Added — Phase 43: Advanced Threat Hunting & Autonomous Response Orchestration

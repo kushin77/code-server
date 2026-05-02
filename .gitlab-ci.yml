@@ -375,12 +375,20 @@ test:phase-security-suites:
       bash scripts/ci/phase-40-integration-tests.sh 2>&1 | tail -8
       echo "── Phase 41 intelligent incident response tests ──"
       bash scripts/ci/phase-41-integration-tests.sh 2>&1 | tail -8
+      echo "── Phase 42 advanced compliance automation tests ──"
+      bash scripts/ci/phase-42-integration-tests.sh 2>&1 | tail -8
+      echo "── Phase 43 advanced threat hunting tests ──"
+      bash scripts/ci/phase-43-integration-tests.sh 2>&1 | tail -8
+      echo "── Phase 44 platform orchestration tests ──"
+      bash scripts/ci/phase-44-integration-tests.sh 2>&1 | tail -8
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - changes:
         - scripts/ops/phase-3*.sh
+        - scripts/ops/phase-4*.sh
         - scripts/ci/phase-3*.sh
+        - scripts/ci/phase-4*.sh
         - apps/security_ai/**
 
 test:validate-terraform-pins:

@@ -1,13 +1,13 @@
 #!/bin/bash
 # @file phase-54-integration-tests.sh
-# @description Integration tests for Phase 54 — Threat Intelligence Correlation Engine
+# @description Integration tests for Phase 54 — Cryptographic Asset Inventory & Key Lifecycle Management
 # @since 2026-05-01
 
 set -o pipefail
 
 log_error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2; }
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
-trap 'rm -f /tmp/p54*.* /tmp/p54_reg53.log 2>/dev/null || true' EXIT
+trap 'rm -f /tmp/p54*.* 2>/dev/null || true' EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -18,594 +18,508 @@ PASS=0; FAIL=0; TOTAL=0
 
 run_test() {
     local name="$1" cmd="$2"
-    ((TOTAL++)) || true
-    if eval "$cmd" > /tmp/p54_last.out 2>&1; then
-        echo "  ✓ $name"; ((PASS++)) || true
+    TOTAL=$((TOTAL + 1))
+    if eval "$cmd" > /dev/null 2>&1; then
+        echo "  ✓ $name"; PASS=$((PASS + 1))
     else
-        echo "  ✗ $name"; ((FAIL++)) || true
-        [[ -s /tmp/p54_last.out ]] && head -5 /tmp/p54_last.out | sed 's/^/    /'
+        echo "  ✗ $name"; FAIL=$((FAIL + 1))
     fi
 }
 
-py() {
-    "$PYTHON_CMD" - <<PYEOF
+run_python_test() {
+    local name="$1"
+    local code="$2"
+    TOTAL=$((TOTAL + 1))
+    if "$PYTHON_CMD" - <<PYEOF > /dev/null 2>&1
 import sys
 sys.path.insert(0, '${PROJECT_ROOT}/apps')
-$1
+$code
 PYEOF
+    then
+        echo "  ✓ $name"; PASS=$((PASS + 1))
+    else
+        echo "  ✗ $name"; FAIL=$((FAIL + 1))
+    fi
 }
 
-echo ""
 echo "============================================================"
-echo "  PHASE 54 — THREAT INTELLIGENCE CORRELATION ENGINE"
+echo "PHASE 54: CRYPTOGRAPHIC ASSET INVENTORY &"
+echo "          KEY LIFECYCLE MANAGEMENT — INTEGRATION TESTS"
 echo "============================================================"
 echo ""
 
-# -----------------------------------------------------------------------
 # GROUP 1: Module imports
-# -----------------------------------------------------------------------
-echo "GROUP 1: Module imports"
+echo "GROUP 1: Module Import & API Surface"
 
-run_test "ThreatIntelligenceCorrelationEngine importable" \
-    "py 'from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine; print(\"ok\")' | grep -q ok"
+run_python_test "Import CryptoAssetInventoryEngine" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine"
 
-run_test "IOCRecord importable" \
-    "py 'from security_ai.threat_intelligence_correlation import IOCRecord; print(\"ok\")' | grep -q ok"
+run_python_test "Import CryptoAsset" \
+"from security_ai.crypto_asset_inventory import CryptoAsset"
 
-run_test "CorrelatedThreat importable" \
-    "py 'from security_ai.threat_intelligence_correlation import CorrelatedThreat; print(\"ok\")' | grep -q ok"
+run_python_test "Import InventoryReport" \
+"from security_ai.crypto_asset_inventory import InventoryReport"
 
-run_test "ThreatFeedSnapshot importable" \
-    "py 'from security_ai.threat_intelligence_correlation import ThreatFeedSnapshot; print(\"ok\")' | grep -q ok"
+run_python_test "Import RotationEvent" \
+"from security_ai.crypto_asset_inventory import RotationEvent"
 
-run_test "FeedSource importable" \
-    "py 'from security_ai.threat_intelligence_correlation import FeedSource; print(\"ok\")' | grep -q ok"
+run_python_test "Import AssetType enum (8 types)" \
+"from security_ai.crypto_asset_inventory import AssetType
+assert len(list(AssetType)) == 8"
 
-run_test "IOCType has 7 values" \
-    "py '
-from security_ai.threat_intelligence_correlation import IOCType
-assert len(list(IOCType)) == 7
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Import AssetStatus enum (6 statuses)" \
+"from security_ai.crypto_asset_inventory import AssetStatus
+assert len(list(AssetStatus)) == 6"
 
-run_test "FeedConfidence has 3 values" \
-    "py '
-from security_ai.threat_intelligence_correlation import FeedConfidence
-assert len(list(FeedConfidence)) == 3
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Import RiskLevel enum (5 levels)" \
+"from security_ai.crypto_asset_inventory import RiskLevel
+assert len(list(RiskLevel)) == 5"
 
-run_test "ThreatCategory has 8 values" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatCategory
-assert len(list(ThreatCategory)) == 8
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Import RotationPolicy enum (6 policies)" \
+"from security_ai.crypto_asset_inventory import RotationPolicy
+assert len(list(RotationPolicy)) == 6"
 
-run_test "CorrelationStrength has 3 values" \
-    "py '
-from security_ai.threat_intelligence_correlation import CorrelationStrength
-assert len(list(CorrelationStrength)) == 3
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Import helper make_asset()" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType
+a = make_asset('test', AssetType.SECRET)
+assert a.name == 'test'"
 
-run_test "make_ioc helper importable" \
-    "py 'from security_ai.threat_intelligence_correlation import make_ioc; print(\"ok\")' | grep -q ok"
-
-run_test "intel_score helper importable" \
-    "py 'from security_ai.threat_intelligence_correlation import intel_score; print(\"ok\")' | grep -q ok"
-
-# -----------------------------------------------------------------------
-# GROUP 2: IOCRecord properties
-# -----------------------------------------------------------------------
 echo ""
-echo "GROUP 2: IOCRecord properties"
 
-run_test "confidence ≥0.80 → HIGH" \
-    "py '
-from security_ai.threat_intelligence_correlation import make_ioc, IOCType, FeedConfidence
-r = make_ioc(IOCType.IP, \"1.2.3.4\", \"feed\", 0.85)
-assert r.feed_confidence == FeedConfidence.HIGH
-print(\"ok\")
-' | grep -q ok"
+# GROUP 2: CryptoAsset status classification
+echo "GROUP 2: CryptoAsset Status Classification"
 
-run_test "confidence 0.65 → MEDIUM" \
-    "py '
-from security_ai.threat_intelligence_correlation import make_ioc, IOCType, FeedConfidence
-r = make_ioc(IOCType.IP, \"1.2.3.4\", \"feed\", 0.65)
-assert r.feed_confidence == FeedConfidence.MEDIUM
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Expired asset (negative days_until_expiry) → EXPIRED status" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, AssetStatus
+a = make_asset('x', AssetType.SECRET, expires_in_days=-1)
+assert a.compute_status() == AssetStatus.EXPIRED"
 
-run_test "confidence 0.30 → LOW" \
-    "py '
-from security_ai.threat_intelligence_correlation import make_ioc, IOCType, FeedConfidence
-r = make_ioc(IOCType.IP, \"1.2.3.4\", \"feed\", 0.30)
-assert r.feed_confidence == FeedConfidence.LOW
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Asset expiring within warning window → EXPIRING status" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, AssetStatus
+a = make_asset('x', AssetType.SECRET, expires_in_days=3, rotation_warning_days=7)
+assert a.compute_status() == AssetStatus.EXPIRING"
 
-run_test "normalized_key lowercases domain" \
-    "py '
-from security_ai.threat_intelligence_correlation import make_ioc, IOCType
-r = make_ioc(IOCType.DOMAIN, \"Evil.Example.COM\", \"feed\")
-assert r.normalized_key == \"domain:evil.example.com\", r.normalized_key
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Asset expiring far future → ACTIVE status" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, AssetStatus
+a = make_asset('x', AssetType.SECRET, expires_in_days=120, rotation_warning_days=7)
+assert a.compute_status() == AssetStatus.ACTIVE"
 
-run_test "normalized_key format: type:value" \
-    "py '
-from security_ai.threat_intelligence_correlation import make_ioc, IOCType
-r = make_ioc(IOCType.IP, \"10.0.0.1\", \"feed\")
-assert r.normalized_key == \"ip:10.0.0.1\"
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Revoked asset stays REVOKED regardless of expiry" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, AssetStatus
+a = make_asset('x', AssetType.SECRET, expires_in_days=120)
+a.revoke()
+assert a.compute_status() == AssetStatus.REVOKED"
 
-# -----------------------------------------------------------------------
-# GROUP 3: Ingestion
-# -----------------------------------------------------------------------
+run_python_test "days_until_expiry() returns correct positive value" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType
+a = make_asset('x', AssetType.SECRET, expires_in_days=10)
+due = a.days_until_expiry()
+assert due is not None and 9 <= due <= 10, due"
+
+run_python_test "days_until_expiry() returns None when no expiry set" \
+"from security_ai.crypto_asset_inventory import CryptoAsset
+a = CryptoAsset(name='x')
+assert a.days_until_expiry() is None"
+
 echo ""
-echo "GROUP 3: IOC ingestion"
 
-run_test "ingest() adds to ioc_store" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\"))
-assert len(e.ioc_store) == 1
-print(\"ok\")
-' | grep -q ok"
+# GROUP 3: Risk level classification
+echo "GROUP 3: Risk Level Classification"
 
-run_test "ingest_batch() returns count" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-e = ThreatIntelligenceCorrelationEngine()
-records = [make_ioc(IOCType.IP, f\"1.2.3.{i}\", \"feed_a\") for i in range(5)]
-n = e.ingest_batch(records)
-assert n == 5
-print(\"ok\")
-' | grep -q ok"
+run_python_test "EXPIRED → CRITICAL risk" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RiskLevel
+a = make_asset('x', AssetType.SECRET, expires_in_days=-1)
+assert a.risk_level() == RiskLevel.CRITICAL"
 
-run_test "duplicate IOC across feeds adds two ioc_store entries" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\"))
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_b\"))
-assert len(e.ioc_store) == 2
-print(\"ok\")
-' | grep -q ok"
+run_python_test "REVOKED → CRITICAL risk" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RiskLevel
+a = make_asset('x', AssetType.SECRET, expires_in_days=30)
+a.revoke()
+assert a.risk_level() == RiskLevel.CRITICAL"
 
-run_test "load_feed() with None loader returns 0" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine, FeedSource
-e = ThreatIntelligenceCorrelationEngine()
-e.register_feed(FeedSource(name=\"f\", base_confidence=0.8))
-assert e.load_feed(\"f\") == 0
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Expiring in 3 days → HIGH risk" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RiskLevel
+a = make_asset('x', AssetType.SECRET, expires_in_days=3, rotation_warning_days=30)
+assert a.risk_level() == RiskLevel.HIGH"
 
-run_test "load_feed() with loader ingests records" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, FeedSource, make_ioc, IOCType
-)
-records = [make_ioc(IOCType.IP, f\"10.0.0.{i}\", \"feed_x\") for i in range(3)]
-e = ThreatIntelligenceCorrelationEngine()
-e.register_feed(FeedSource(name=\"feed_x\", base_confidence=0.9, loader=lambda: records))
-n = e.load_feed(\"feed_x\")
-assert n == 3 and len(e.ioc_store) == 3
-print(\"ok\")
-' | grep -q ok"
+run_python_test "Expiring in 20 days → MEDIUM risk" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RiskLevel
+a = make_asset('x', AssetType.SECRET, expires_in_days=20, rotation_warning_days=30)
+assert a.risk_level() == RiskLevel.MEDIUM"
 
-# -----------------------------------------------------------------------
-# GROUP 4: Correlation strength
-# -----------------------------------------------------------------------
+run_python_test "Active asset far from expiry → LOW risk" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RiskLevel
+a = make_asset('x', AssetType.SECRET, expires_in_days=200, rotation_warning_days=30)
+assert a.risk_level() == RiskLevel.LOW"
+
 echo ""
-echo "GROUP 4: Correlation strength"
 
-run_test "Single feed → CANDIDATE" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType, CorrelationStrength
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\"))
-threats = e.correlate()
-assert threats[0].strength == CorrelationStrength.CANDIDATE, threats[0].strength
-print(\"ok\")
-' | grep -q ok"
+# GROUP 4: Rotation policy & overdue detection
+echo "GROUP 4: Rotation Policy & Overdue Detection"
 
-run_test "Two feeds → PROBABLE" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType, CorrelationStrength
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\"))
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_b\"))
-threats = e.correlate()
-assert threats[0].strength == CorrelationStrength.PROBABLE, threats[0].strength
-print(\"ok\")
-' | grep -q ok"
+run_python_test "is_overdue_for_rotation() False when last rotated recently" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RotationPolicy
+a = make_asset('x', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY,
+               expires_in_days=30, last_rotated_days_ago=5)
+assert not a.is_overdue_for_rotation()"
 
-run_test "Three feeds → CONFIRMED" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType, CorrelationStrength
-)
-e = ThreatIntelligenceCorrelationEngine()
-for f in [\"feed_a\",\"feed_b\",\"feed_c\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f))
-threats = e.correlate()
-assert threats[0].strength == CorrelationStrength.CONFIRMED
-print(\"ok\")
-' | grep -q ok"
+run_python_test "is_overdue_for_rotation() True when overdue" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RotationPolicy
+a = make_asset('x', AssetType.SECRET, rotation_policy=RotationPolicy.WEEKLY,
+               expires_in_days=30, last_rotated_days_ago=10)
+assert a.is_overdue_for_rotation()"
 
-run_test "Distinct IOCs remain separate threats" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\"))
-e.ingest(make_ioc(IOCType.IP, \"5.6.7.8\", \"feed_a\"))
-threats = e.correlate()
-assert len(threats) == 2
-print(\"ok\")
-' | grep -q ok"
+run_python_test "RotationPolicy.NEVER → never overdue" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RotationPolicy
+a = make_asset('x', AssetType.ASYMMETRIC_KEY, rotation_policy=RotationPolicy.NEVER,
+               expires_in_days=None, last_rotated_days_ago=3650)
+assert not a.is_overdue_for_rotation()"
 
-run_test "Threats sorted by priority_score descending" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-# High-priority: confirmed by 3 feeds
-for f in [\"a\",\"b\",\"c\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f, 0.95))
-# Low-priority: single feed
-e.ingest(make_ioc(IOCType.IP, \"9.9.9.9\", \"a\", 0.30))
-threats = e.correlate()
-scores = [t.priority_score for t in threats]
-assert scores == sorted(scores, reverse=True), scores
-print(\"ok\")
-' | grep -q ok"
+run_python_test "rotate() updates last_rotated and expires_at" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, RotationPolicy
+a = make_asset('x', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY,
+               expires_in_days=2)
+a.rotate()
+assert a.last_rotated is not None
+assert a.expires_at is not None
+assert a.days_until_expiry() > 25"
 
-run_test "max_confidence picks highest across feeds" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\", 0.70))
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_b\", 0.95))
-threats = e.correlate()
-assert threats[0].max_confidence == 0.95
-print(\"ok\")
-' | grep -q ok"
+run_python_test "rotate() sets status ACTIVE" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, AssetStatus, RotationPolicy
+a = make_asset('x', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY, expires_in_days=2)
+a.rotate()
+assert a.status == AssetStatus.ACTIVE"
 
-run_test "Tags aggregated across records without duplicates" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"a\", tags=[\"apt29\",\"russia\"]))
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"b\", tags=[\"apt29\",\"c2\"]))
-threats = e.correlate()
-tags = threats[0].tags
-assert len(tags) == len(set(tags)), f\"duplicates in {tags}\"
-assert \"apt29\" in tags and \"russia\" in tags and \"c2\" in tags
-print(\"ok\")
-' | grep -q ok"
+run_python_test "revoke() sets status REVOKED" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType, AssetStatus
+a = make_asset('x', AssetType.SECRET, expires_in_days=100)
+a.revoke()
+assert a.status == AssetStatus.REVOKED"
 
-# -----------------------------------------------------------------------
-# GROUP 5: priority_score and phase54_contribution
-# -----------------------------------------------------------------------
 echo ""
-echo "GROUP 5: priority_score and phase54_contribution"
 
-run_test "priority_score in [0, 25]" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-for f in [\"a\",\"b\",\"c\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f, 0.99))
-for t in e.correlate():
-    assert 0.0 <= t.priority_score <= 25.0, t.priority_score
-print(\"ok\")
-' | grep -q ok"
+# GROUP 5: Engine asset registration
+echo "GROUP 5: Engine — Asset Registration"
 
-run_test "phase54_contribution = 25 - priority_score" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-for f in [\"a\",\"b\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f, 0.80))
-t = e.correlate()[0]
-assert abs((t.phase54_contribution + t.priority_score) - 25.0) < 0.01
-print(\"ok\")
-' | grep -q ok"
+run_python_test "register_asset() stores asset" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.SECRET)
+e.register_asset(a)
+assert e.asset_count() == 1"
 
-run_test "CONFIRMED high-confidence threat has highest priority" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-for f in [\"a\",\"b\",\"c\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f, 0.99))
-e.ingest(make_ioc(IOCType.IP, \"9.9.9.9\", \"a\", 0.30))
-threats = e.correlate()
-assert threats[0].priority_score > threats[-1].priority_score
-print(\"ok\")
-' | grep -q ok"
+run_python_test "get_asset() retrieves by ID" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.SECRET)
+e.register_asset(a)
+assert e.get_asset(a.asset_id) is a"
 
-# -----------------------------------------------------------------------
-# GROUP 6: phase54_score
-# -----------------------------------------------------------------------
-echo ""
-echo "GROUP 6: phase54_score()"
+run_python_test "get_asset() returns None for unknown ID" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine
+e = CryptoAssetInventoryEngine()
+assert e.get_asset('nonexistent') is None"
 
-run_test "No IOCs → score=25.0" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine, intel_score
-e = ThreatIntelligenceCorrelationEngine()
-assert intel_score(e) == 25.0
-print(\"ok\")
-' | grep -q ok"
+run_python_test "register_asset() logs creation event" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('test', AssetType.SECRET))
+assert any(ev.event_type == 'creation' for ev in e.events())"
 
-run_test "Only low-priority threats → score near 25.0" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType, intel_score
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"9.9.9.9\", \"a\", 0.10))
-sc = intel_score(e)
-assert sc >= 20.0, sc
-print(\"ok\")
-' | grep -q ok"
-
-run_test "All confirmed high-confidence → score reduced" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType, intel_score
-)
-e = ThreatIntelligenceCorrelationEngine()
+run_python_test "Multiple assets can be registered" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
 for i in range(5):
-    for f in [\"a\",\"b\",\"c\"]:
-        e.ingest(make_ioc(IOCType.IP, f\"1.2.3.{i}\", f, 0.99))
-sc = intel_score(e)
-assert sc < 25.0, sc
-print(\"ok\")
-' | grep -q ok"
+    e.register_asset(make_asset(f'key-{i}', AssetType.API_TOKEN))
+assert e.asset_count() == 5"
 
-run_test "score is in [0.0, 25.0]" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType, intel_score
-)
-e = ThreatIntelligenceCorrelationEngine()
-for i in range(10):
-    for f in [\"a\",\"b\",\"c\"]:
-        e.ingest(make_ioc(IOCType.IP, f\"10.0.0.{i}\", f, 0.99))
-sc = intel_score(e)
-assert 0.0 <= sc <= 25.0, sc
-print(\"ok\")
-' | grep -q ok"
-
-# -----------------------------------------------------------------------
-# GROUP 7: snapshot()
-# -----------------------------------------------------------------------
 echo ""
-echo "GROUP 7: snapshot()"
 
-run_test "snapshot() returns ThreatFeedSnapshot" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, ThreatFeedSnapshot, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"a\"))
-snap = e.snapshot()
-assert isinstance(snap, ThreatFeedSnapshot)
-print(\"ok\")
-' | grep -q ok"
+# GROUP 6: Engine lifecycle actions
+echo "GROUP 6: Engine — Lifecycle Actions"
 
-run_test "snapshot.total_iocs matches store count" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-for i in range(4):
-    e.ingest(make_ioc(IOCType.IP, f\"1.2.3.{i}\", \"a\"))
-snap = e.snapshot()
-assert snap.total_iocs == 4
-print(\"ok\")
-' | grep -q ok"
+run_python_test "rotate_asset() updates last_rotated on asset" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, RotationPolicy
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY, expires_in_days=2)
+e.register_asset(a)
+ok = e.rotate_asset(a.asset_id)
+assert ok
+assert a.last_rotated is not None"
 
-run_test "snapshot.confirmed_count counts CONFIRMED threats" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-for f in [\"a\",\"b\",\"c\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f))
-snap = e.snapshot()
-assert snap.confirmed_count == 1
-print(\"ok\")
-' | grep -q ok"
+run_python_test "rotate_asset() logs rotation event" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, RotationPolicy
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY, expires_in_days=2)
+e.register_asset(a)
+e.rotate_asset(a.asset_id)
+assert any(ev.event_type == 'rotation' for ev in e.events())"
 
-run_test "snapshot.phase54_score consistent with engine.phase54_score" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"a\"))
-snap = e.snapshot()
-assert snap.phase54_score == e.phase54_score()
-print(\"ok\")
-' | grep -q ok"
+run_python_test "rotate_asset() returns False for unknown ID" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine
+e = CryptoAssetInventoryEngine()
+assert not e.rotate_asset('no-such-id')"
 
-# -----------------------------------------------------------------------
-# GROUP 8: lookup()
-# -----------------------------------------------------------------------
+run_python_test "rotate_asset() returns False for revoked asset" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, RotationPolicy
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY, expires_in_days=30)
+e.register_asset(a)
+e.revoke_asset(a.asset_id)
+assert not e.rotate_asset(a.asset_id)"
+
+run_python_test "revoke_asset() sets REVOKED status" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, AssetStatus
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.API_TOKEN, expires_in_days=100)
+e.register_asset(a)
+ok = e.revoke_asset(a.asset_id)
+assert ok
+assert a.status == AssetStatus.REVOKED"
+
+run_python_test "revoke_asset() logs revocation event" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+a = make_asset('test', AssetType.API_TOKEN, expires_in_days=100)
+e.register_asset(a)
+e.revoke_asset(a.asset_id)
+assert any(ev.event_type == 'revocation' for ev in e.events())"
+
+run_python_test "rotate_overdue_assets() rotates all overdue" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, RotationPolicy
+e = CryptoAssetInventoryEngine()
+for i in range(3):
+    e.register_asset(make_asset(f'k{i}', AssetType.SECRET,
+                                rotation_policy=RotationPolicy.WEEKLY,
+                                expires_in_days=30, last_rotated_days_ago=10))
+count = e.rotate_overdue_assets()
+assert count == 3, count"
+
 echo ""
-echo "GROUP 8: lookup()"
 
-run_test "lookup() returns None for unknown IOC" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-assert e.lookup(IOCType.IP, \"9.9.9.9\") is None
-print(\"ok\")
-' | grep -q ok"
+# GROUP 7: Scan & analysis
+echo "GROUP 7: Scan & Analysis"
 
-run_test "lookup() returns CorrelatedThreat for known IOC" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, CorrelatedThreat, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", \"feed_a\"))
-t = e.lookup(IOCType.IP, \"1.2.3.4\")
-assert isinstance(t, CorrelatedThreat)
-print(\"ok\")
-' | grep -q ok"
+run_python_test "scan() returns dict with required keys" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine
+e = CryptoAssetInventoryEngine()
+s = e.scan()
+for k in ('active','expiring','expired','revoked','pending','rotated','overdue'):
+    assert k in s, k"
 
-run_test "lookup() case-insensitive on domain" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.ingest(make_ioc(IOCType.DOMAIN, \"Evil.Example.COM\", \"feed_a\"))
-t = e.lookup(IOCType.DOMAIN, \"evil.example.com\")
-assert t is not None
-print(\"ok\")
-' | grep -q ok"
+run_python_test "scan() counts expired assets correctly" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('x', AssetType.SECRET, expires_in_days=-5))
+e.register_asset(make_asset('y', AssetType.SECRET, expires_in_days=100))
+s = e.scan()
+assert s['expired'] == 1, s"
 
-# -----------------------------------------------------------------------
-# GROUP 9: summary()
-# -----------------------------------------------------------------------
+run_python_test "expiring_soon() returns assets within window" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('soon', AssetType.TLS_CERT, expires_in_days=5, rotation_warning_days=30))
+e.register_asset(make_asset('far',  AssetType.TLS_CERT, expires_in_days=200, rotation_warning_days=30))
+result = e.expiring_soon(days=30)
+assert len(result) == 1
+assert result[0].name == 'soon'"
+
+run_python_test "expired_assets() returns only expired" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('a', AssetType.SECRET, expires_in_days=-1))
+e.register_asset(make_asset('b', AssetType.SECRET, expires_in_days=50))
+expired = e.expired_assets()
+assert len(expired) == 1
+assert expired[0].name == 'a'"
+
+run_python_test "assets_by_risk() returns dict with risk levels" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('x', AssetType.SECRET, expires_in_days=100, rotation_warning_days=7))
+by_risk = e.assets_by_risk()
+assert isinstance(by_risk, dict)"
+
+run_python_test "overdue_assets() returns only overdue" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, RotationPolicy
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('overdue', AssetType.SECRET,
+                             rotation_policy=RotationPolicy.WEEKLY,
+                             expires_in_days=30, last_rotated_days_ago=15))
+e.register_asset(make_asset('fresh', AssetType.SECRET,
+                             rotation_policy=RotationPolicy.MONTHLY,
+                             expires_in_days=30, last_rotated_days_ago=2))
+ods = e.overdue_assets()
+assert len(ods) == 1
+assert ods[0].name == 'overdue'"
+
 echo ""
-echo "GROUP 9: summary()"
 
-run_test "summary() contains all required keys" \
-    "py '
-from security_ai.threat_intelligence_correlation import ThreatIntelligenceCorrelationEngine
-e = ThreatIntelligenceCorrelationEngine()
+# GROUP 8: Scoring
+echo "GROUP 8: Scoring"
+
+run_python_test "phase54_score() = 25 with no assets" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine
+e = CryptoAssetInventoryEngine()
+assert e.phase54_score() == 25.0"
+
+run_python_test "phase54_score() = 25 with only healthy assets" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+for i in range(5):
+    e.register_asset(make_asset(f'k{i}', AssetType.SSH_KEY,
+                                expires_in_days=200, rotation_warning_days=7))
+assert e.phase54_score() == 25.0"
+
+run_python_test "phase54_score() decreases with expired assets" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('ok',      AssetType.SECRET, expires_in_days=100, rotation_warning_days=7))
+e.register_asset(make_asset('expired', AssetType.SECRET, expires_in_days=-1))
+score = e.phase54_score()
+assert score < 25.0, score"
+
+run_python_test "phase54_score() is in range [0, 25]" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+for i in range(5):
+    e.register_asset(make_asset(f'x{i}', AssetType.SECRET, expires_in_days=-i))
+score = e.phase54_score()
+assert 0.0 <= score <= 25.0, score"
+
+run_python_test "InventoryReport.phase54_score() deducts 4 per CRITICAL" \
+"from security_ai.crypto_asset_inventory import InventoryReport
+r = InventoryReport(total_assets=5, risk_breakdown={'critical': 2, 'low': 3})
+assert r.phase54_score() == 25.0 - 8"
+
+run_python_test "InventoryReport.phase54_score() deducts 2 per HIGH" \
+"from security_ai.crypto_asset_inventory import InventoryReport
+r = InventoryReport(total_assets=5, risk_breakdown={'high': 3, 'low': 2})
+assert r.phase54_score() == 25.0 - 6"
+
+run_python_test "InventoryReport.phase54_score() floors at 0" \
+"from security_ai.crypto_asset_inventory import InventoryReport
+r = InventoryReport(total_assets=20, risk_breakdown={'critical': 10, 'high': 10})
+assert r.phase54_score() == 0.0"
+
+echo ""
+
+# GROUP 9: Summary & reporting
+echo "GROUP 9: Summary & Reporting"
+
+run_python_test "summary() has required keys" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine
+e = CryptoAssetInventoryEngine()
 s = e.summary()
-for k in [\"total_iocs\",\"registered_feeds\",\"unique_threats\",\"confirmed\",
-          \"probable\",\"candidate\",\"high_priority\",\"phase54_score\"]:
-    assert k in s, f\"missing {k}\"
-print(\"ok\")
-' | grep -q ok"
+for k in ('status','total_assets','active','expiring','expired','revoked',
+          'overdue_for_rotation','risk_breakdown','total_events','phase54_score'):
+    assert k in s, k"
 
-run_test "summary confirmed/probable/candidate tally is correct" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, make_ioc, IOCType
-)
-e = ThreatIntelligenceCorrelationEngine()
-# Confirmed: 3 feeds for IP A
-for f in [\"a\",\"b\",\"c\"]:
-    e.ingest(make_ioc(IOCType.IP, \"1.2.3.4\", f))
-# Probable: 2 feeds for IP B
-for f in [\"a\",\"b\"]:
-    e.ingest(make_ioc(IOCType.IP, \"5.6.7.8\", f))
-# Candidate: 1 feed for domain
-e.ingest(make_ioc(IOCType.DOMAIN, \"bad.example.com\", \"a\"))
-s = e.summary()
-assert s[\"confirmed\"] == 1, s
-assert s[\"probable\"] == 1, s
-assert s[\"candidate\"] == 1, s
-print(\"ok\")
-' | grep -q ok"
+run_python_test "summary() status='no_assets' when empty" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine
+e = CryptoAssetInventoryEngine()
+assert e.summary()['status'] == 'no_assets'"
 
-run_test "Feed registration tracked in summary" \
-    "py '
-from security_ai.threat_intelligence_correlation import (
-    ThreatIntelligenceCorrelationEngine, FeedSource
-)
-e = ThreatIntelligenceCorrelationEngine()
-e.register_feed(FeedSource(\"f1\", 0.9))
-e.register_feed(FeedSource(\"f2\", 0.7))
-s = e.summary()
-assert s[\"registered_feeds\"] == 2
-print(\"ok\")
-' | grep -q ok"
+run_python_test "summary() status='ok' when assets exist" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('x', AssetType.SECRET, expires_in_days=30))
+assert e.summary()['status'] == 'ok'"
 
-# -----------------------------------------------------------------------
-# GROUP 10: Ops script integration
-# -----------------------------------------------------------------------
+run_python_test "generate_report() returns InventoryReport instance" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, InventoryReport, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('x', AssetType.SECRET, expires_in_days=30))
+r = e.generate_report()
+assert isinstance(r, InventoryReport)"
+
+run_python_test "generate_report().to_dict() has all required keys" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType
+e = CryptoAssetInventoryEngine()
+e.register_asset(make_asset('x', AssetType.SECRET, expires_in_days=30))
+d = e.generate_report().to_dict()
+for k in ('report_id','generated_at','total_assets','active','expiring','expired',
+          'revoked','risk_breakdown','phase54_score','assets','events'):
+    assert k in d, k"
+
+run_python_test "events() grows with each lifecycle action" \
+"from security_ai.crypto_asset_inventory import CryptoAssetInventoryEngine, make_asset, AssetType, RotationPolicy
+e = CryptoAssetInventoryEngine()
+a = make_asset('x', AssetType.SECRET, rotation_policy=RotationPolicy.MONTHLY, expires_in_days=30)
+e.register_asset(a)  # +1 creation event
+e.rotate_asset(a.asset_id)  # +1 rotation event
+e.revoke_asset(a.asset_id)  # +1 revocation event
+assert len(e.events()) == 3"
+
 echo ""
-echo "GROUP 10: Ops script integration"
 
-OPS="${PROJECT_ROOT}/scripts/ops/phase-54-threat-intelligence-correlation.sh"
-[[ -x "$OPS" ]] || chmod +x "$OPS"
+# GROUP 10: CryptoAsset serialisation
+echo "GROUP 10: CryptoAsset Serialisation"
 
-run_test "Ops script exists" "[[ -f '$OPS' ]]"
+run_python_test "to_dict() has all required fields" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType
+a = make_asset('mykey', AssetType.TLS_CERT, 'ops-team', expires_in_days=90)
+d = a.to_dict()
+for k in ('asset_id','name','asset_type','owner','rotation_policy','status',
+          'live_status','risk_level','days_until_expiry','is_overdue_for_rotation',
+          'created_at','expires_at','last_rotated','tags'):
+    assert k in d, k"
 
-run_test "demo mode exits 0" \
-    "bash '$OPS' demo > /tmp/p54demo.out 2>&1"
+run_python_test "to_dict() asset_type is string value" \
+"from security_ai.crypto_asset_inventory import make_asset, AssetType
+a = make_asset('x', AssetType.TLS_CERT)
+assert isinstance(a.to_dict()['asset_type'], str)"
 
-run_test "demo outputs PHASE 54" \
-    "grep -q 'PHASE 54' /tmp/p54demo.out"
+run_python_test "RotationEvent.to_dict() serialises correctly" \
+"from security_ai.crypto_asset_inventory import RotationEvent
+ev = RotationEvent(asset_id='aid', asset_name='test', event_type='rotation')
+d = ev.to_dict()
+for k in ('event_id','asset_id','asset_name','event_type','triggered_by','occurred_at','notes'):
+    assert k in d, k"
 
-run_test "demo shows Phase 54 Score" \
-    "grep -q 'Phase 54 Score' /tmp/p54demo.out"
-
-run_test "summary mode outputs valid JSON" \
-    "bash '$OPS' summary > /tmp/p54sum.out 2>&1 && python3 -c 'import json; json.load(open(\"/tmp/p54sum.out\"))'"
-
-run_test "summary contains phase54_score" \
-    "python3 -c 'import json; d=json.load(open(\"/tmp/p54sum.out\")); assert \"phase54_score\" in d'"
-
-run_test "lookup mode exits 0" \
-    "bash '$OPS' lookup 10.0.0.1 > /tmp/p54look.out 2>&1"
-
-run_test "lookup outputs valid JSON" \
-    "python3 -c 'import json; json.load(open(\"/tmp/p54look.out\"))'"
-
-# -----------------------------------------------------------------------
-# GROUP 11: Phase 53 regression guard
-# -----------------------------------------------------------------------
 echo ""
-echo "GROUP 11: Phase 53 regression guard"
 
-run_test "Phase 53 integration suite still passes" \
-    "timeout 150 bash '${PROJECT_ROOT}/scripts/ci/phase-53-integration-tests.sh' > /tmp/p54_reg53.log 2>&1"
+# GROUP 11: Ops script
+echo "GROUP 11: Ops Script"
 
-# -----------------------------------------------------------------------
-# Summary
-# -----------------------------------------------------------------------
+run_test "Ops script exists and is executable" \
+    "[[ -x '${PROJECT_ROOT}/scripts/ops/phase-54-crypto-asset-inventory.sh' ]]"
+
+run_test "Ops script demo mode exits 0 and mentions Phase 54" \
+    "timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-54-crypto-asset-inventory.sh' demo 2>&1 | grep -i 'Phase 54'"
+
+run_test "Ops script summary mode outputs valid JSON" \
+    "output=\$(timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-54-crypto-asset-inventory.sh' summary 2>/dev/null); echo \"\$output\" | python3 -c 'import sys,json; json.load(sys.stdin)'"
+
+run_test "Ops script report mode outputs valid JSON" \
+    "output=\$(timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-54-crypto-asset-inventory.sh' report 2>/dev/null); echo \"\$output\" | python3 -c 'import sys,json; json.load(sys.stdin)'"
+
 echo ""
+
+# GROUP 12: Phase 53 regression guard
+echo "GROUP 12: Phase 53 Regression Guard"
+
+if [[ -z "${SKIP_REGRESSION:-}" ]]; then
+    run_test "Phase 53 integration suite still passes" \
+        "SKIP_REGRESSION=1 timeout 120 bash '${PROJECT_ROOT}/scripts/ci/phase-53-integration-tests.sh' 2>&1 | grep -E 'FAIL:\s+0'"
+else
+    echo "  ⏭  Phase 53 regression skipped (SKIP_REGRESSION=1)"
+fi
+
+echo ""
+
 echo "============================================================"
 echo "PHASE 54 TEST RESULTS"
 echo "============================================================"
-echo "PASS:  $PASS"
-echo "FAIL:  $FAIL"
-echo "TOTAL: $TOTAL"
-echo "============================================================"
+printf "PASS:  %d\n" "$PASS"
+printf "FAIL:  %d\n" "$FAIL"
+printf "TOTAL: %d\n" "$TOTAL"
+echo ""
 
-if [[ $FAIL -eq 0 ]]; then
-    echo ""
-    echo "✅  ALL TESTS PASSED — Phase 54 Threat Intelligence Correlation verified"
+if [[ "$FAIL" -eq 0 ]]; then
+    echo "✅  ALL TESTS PASSED — Phase 54 Cryptographic Asset Inventory verified"
     exit 0
 else
-    echo ""
-    echo "❌  SOME TESTS FAILED"
+    echo "❌  SOME TESTS FAILED — Review output above"
     exit 1
 fi

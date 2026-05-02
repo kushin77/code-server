@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-05-01 (PHASE 43 — ADVANCED THREAT HUNTING & AUTONOMOUS RESPONSE)
+
+### Added — Phase 43: Advanced Threat Hunting & Autonomous Response Orchestration
+- **apps/security_ai/advanced_threat_hunting.py** (650+ lines): Orchestrates advanced threat hunting with autonomous response capabilities.
+- **Threat hunting workflows**: Consolidates threat intelligence (Phase 40), incident response (Phase 41), and compliance automation (Phase 42).
+- **Threat indicator management**: Registers and tracks IOCs (IPs, domains, hashes, emails, URLs, files, registry entries, processes).
+- **Hunting strategy support**: Indicator-based, behavior-based, anomaly-based, threat actor, and vulnerability-based hunting.
+- **Hunting playbooks**: Pre-defined and custom playbooks for targeted threat hunting campaigns.
+- **Campaign management**: Start, execute, and complete threat hunting campaigns with tracking.
+- **Finding management**: Log and track hunting findings with severity levels (critical, high, medium, low, info).
+- **Response execution**: Execute automated response actions for detected threats (dry-run supported).
+- **Hunting success scoring**: Calculates threat hunting effectiveness (0-100) with contribution to Phase 31 (0-25 pts).
+- **Multi-phase integration**: Ingests threat data from phases 40 (predictive intelligence), 41 (incident response), 42 (compliance).
+- **Risk identification**: Automatically identifies high-risk findings and recommendations.
+- **Report generation**: Comprehensive threat hunting reports with recommendations and risk assessment.
+- **State persistence**: Persists indicators, campaigns, and findings for audit trail and continuity.
+- **Ops orchestrator** (`scripts/ops/phase-43-threat-hunting.sh`): Modes — hunt|demo|report.
+- **Integration tests** (`scripts/ci/phase-43-integration-tests.sh`): 25/25 core tests PASSING.
+
+### Verified
+- All 25 integration tests passing ✅
+- Threat indicator registration & tracking ✅
+- Hunting playbook creation ✅
+- Campaign management (start/complete) ✅
+- Finding logging & response execution ✅
+- Success rate calculation ✅
+- Phase data integration ✅
+- Risk area identification ✅
+- Report generation ✅
+- State persistence ✅
+- Ops orchestrator demo mode ✅
+
 ## [1.23.0] - 2026-05-01 (PHASE 42 — ADVANCED COMPLIANCE AUTOMATION)
 
 ### Added — Phase 42: Advanced Compliance Automation & Continuous Compliance

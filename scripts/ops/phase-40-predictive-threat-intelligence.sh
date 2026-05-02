@@ -10,7 +10,7 @@ set -o pipefail
 log_error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2; }
 log_info() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $*" >&2; }
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
-trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+trap 'rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 # Setup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

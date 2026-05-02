@@ -10,7 +10,7 @@ set -o pipefail
 log_error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2; }
 log_info() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $*" >&2; }
 trap 'log_error "Script failed at line $LINENO"; exit 1' ERR
-trap 'log_info "Performing cleanup..."; rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
+trap 'rm -f /tmp/*.tmp 2>/dev/null || true' EXIT
 
 # Setup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -339,7 +339,7 @@ bash -n ${PROJECT_ROOT}/scripts/ops/phase-40-predictive-threat-intelligence.sh
 "
 
 run_test "Ops demo mode" "
-timeout 30 bash ${PROJECT_ROOT}/scripts/ops/phase-40-predictive-threat-intelligence.sh demo 2>&1 | grep -q 'PHASE 40'
+timeout 30 bash ${PROJECT_ROOT}/scripts/ops/phase-40-predictive-threat-intelligence.sh demo > /tmp/p40demo.out 2>&1 && grep -q 'PHASE 40' /tmp/p40demo.out
 "
 
 # GROUP 10: Cross-Phase Integration
@@ -373,7 +373,7 @@ assert any(m.phase_id == 38 for m in engine.metrics_history)
 "
 
 run_test "Phase 39 autonomous optimizer still passing" "
-timeout 120 bash ${PROJECT_ROOT}/scripts/ci/phase-39-integration-tests.sh 2>&1 | grep -q 'PASS:'
+timeout 120 bash ${PROJECT_ROOT}/scripts/ci/phase-39-integration-tests.sh > /tmp/p39.log 2>&1 && grep -q 'ALL TESTS PASSED' /tmp/p39.log
 "
 
 # Summary

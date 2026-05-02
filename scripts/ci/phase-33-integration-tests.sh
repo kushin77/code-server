@@ -255,18 +255,18 @@ test_ops_approve_mode() {
 ################################################################################
 
 test_phase30_24_pass() {
-  local out; out="$(bash "${REPO_ROOT}/scripts/ci/phase-30-integration-tests.sh" 2>&1)"
-  echo "${out}" | grep -qE "PASS:\s+24"
+  local out; out="$(SKIP_REGRESSION=1 timeout 120 bash "${REPO_ROOT}/scripts/ci/phase-30-integration-tests.sh" 2>&1)"
+  echo "${out}" | grep -qE "FAIL:\s+0"
 }
 
 test_phase31_22_pass() {
-  local out; out="$(bash "${REPO_ROOT}/scripts/ci/phase-31-integration-tests.sh" 2>&1)"
-  echo "${out}" | grep -qE "PASS:\s+22"
+  local out; out="$(SKIP_REGRESSION=1 timeout 120 bash "${REPO_ROOT}/scripts/ci/phase-31-integration-tests.sh" 2>&1)"
+  echo "${out}" | grep -qE "FAIL:\s+0"
 }
 
 test_phase32_27_pass() {
-  local out; out="$(bash "${REPO_ROOT}/scripts/ci/phase-32-integration-tests.sh" 2>&1)"
-  echo "${out}" | grep -qE "PASS:\s+27"
+  local out; out="$(SKIP_REGRESSION=1 timeout 120 bash "${REPO_ROOT}/scripts/ci/phase-32-integration-tests.sh" 2>&1)"
+  echo "${out}" | grep -qE "FAIL:\s+0"
 }
 
 ################################################################################
@@ -315,9 +315,13 @@ main() {
 
   echo ""
   echo "--- Group 6: Regression ---"
-  _run_test "phase30_24_pass"          "regression" test_phase30_24_pass
-  _run_test "phase31_22_pass"          "regression" test_phase31_22_pass
-  _run_test "phase32_27_pass"          "regression" test_phase32_27_pass
+  if [[ "${SKIP_REGRESSION:-0}" != "1" ]]; then
+    _run_test "phase30_24_pass"          "regression" test_phase30_24_pass
+    _run_test "phase31_22_pass"          "regression" test_phase31_22_pass
+    _run_test "phase32_27_pass"          "regression" test_phase32_27_pass
+  else
+    echo "  [SKIP] Regression tests skipped (called from parent suite)"
+  fi
 
   echo ""
   echo "======================================="

@@ -322,7 +322,7 @@ class IntelligentIncidentResponse:
                 "success_score": 0.0
             }
         
-        resolved = [r for r in self.response_history if r.status == IncidentSeverity.RESOLVED.value]
+        resolved = [r for r in self.response_history if r.status == IncidentStatus.RESOLVED.value]
         escalated = [r for r in self.response_history if r.status == IncidentStatus.ESCALATED.value]
         
         mttds = [r.mttd for r in self.response_history if r.mttd is not None]

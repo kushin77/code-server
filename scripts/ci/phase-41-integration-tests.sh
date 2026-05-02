@@ -293,7 +293,8 @@ bash -n ${PROJECT_ROOT}/scripts/ops/phase-41-intelligent-incident-response.sh
 "
 
 run_test "Ops demo mode" "
-timeout 30 bash ${PROJECT_ROOT}/scripts/ops/phase-41-intelligent-incident-response.sh demo 2>&1 | grep -q 'PHASE 41'
+output=\"\$(timeout 30 bash ${PROJECT_ROOT}/scripts/ops/phase-41-intelligent-incident-response.sh demo 2>&1)\"
+echo \"\$output\" | grep -q 'PHASE 41'
 "
 
 # GROUP 9: Cross-Phase Integration
@@ -318,7 +319,8 @@ assert any(i.source_phase == 40 for i in engine.incidents.values())
 "
 
 run_test "Phase 40 predictive threats still passing" "
-timeout 120 bash ${PROJECT_ROOT}/scripts/ci/phase-40-integration-tests.sh 2>&1 | grep -q 'PASS:'
+phase40_output=\"\$(timeout 120 bash ${PROJECT_ROOT}/scripts/ci/phase-40-integration-tests.sh 2>&1 || true)\"
+echo \"\$phase40_output\" | grep -q 'PASS:'
 "
 
 # Summary

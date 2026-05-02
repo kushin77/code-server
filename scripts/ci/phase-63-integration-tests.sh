@@ -108,8 +108,10 @@ run_python_test "critical finding reduces score" "from security_ai.attack_surfac
 run_python_test "high finding reduces score" "from security_ai.attack_surface_management import AttackSurfaceManagementEngine, make_asset, make_exposure, ExposureSeverity; e=AttackSurfaceManagementEngine(); a=e.register_asset(make_asset('a')); e.add_exposure(make_exposure(a.asset_id,'x',severity=ExposureSeverity.HIGH)); assert e.phase63_score() < 25.0"
 run_python_test "internet-facing active penalty applies" "from security_ai.attack_surface_management import AttackSurfaceManagementEngine, make_asset, make_exposure; e=AttackSurfaceManagementEngine(); a=e.register_asset(make_asset('a', internet_facing=True)); e.add_exposure(make_exposure(a.asset_id,'x')); assert e.phase63_score() <= 20.0"
 run_python_test "score floors at zero under severe risk" "from security_ai.attack_surface_management import AttackSurfaceManagementEngine, make_asset, make_exposure, ExposureSeverity; e=AttackSurfaceManagementEngine();
-for i in range(10):
- a=e.register_asset(make_asset(f'a{i}', internet_facing=True)); e.add_exposure(make_exposure(a.asset_id,'x',severity=ExposureSeverity.CRITICAL))
+for i in range(5):
+ a=e.register_asset(make_asset(f'c{i}', internet_facing=True)); e.add_exposure(make_exposure(a.asset_id,'x',severity=ExposureSeverity.CRITICAL))
+for i in range(5):
+ a=e.register_asset(make_asset(f'h{i}', internet_facing=True)); e.add_exposure(make_exposure(a.asset_id,'y',severity=ExposureSeverity.HIGH))
 assert e.phase63_score()==0.0"
 
 # Group 9: persistence and helpers
@@ -120,7 +122,7 @@ run_python_test "findings() returns list" "from security_ai.attack_surface_manag
 
 # Group 10: ops script
 run_test "Ops script exists and executable" "[[ -x '${PROJECT_ROOT}/scripts/ops/phase-63-attack-surface-management.sh' ]]"
-run_test "Ops demo prints PHASE 63" "timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-63-attack-surface-management.sh' demo 2>&1 | grep -q 'PHASE 63'"
+run_test "Ops demo prints PHASE 63" "out=\$(timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-63-attack-surface-management.sh' demo 2>&1); echo \"\$out\" | grep -q 'PHASE 63'"
 run_test "Ops summary outputs valid JSON" "output=\$(timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-63-attack-surface-management.sh' summary 2>/dev/null); echo \"\$output\" | python3 -c 'import sys,json;json.load(sys.stdin)'"
 run_test "Ops report outputs valid JSON" "output=\$(timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-63-attack-surface-management.sh' report 2>/dev/null); echo \"\$output\" | python3 -c 'import sys,json;json.load(sys.stdin)'"
 run_test "Ops persist writes artifact path" "timeout 30 bash '${PROJECT_ROOT}/scripts/ops/phase-63-attack-surface-management.sh' persist | grep -q 'State persisted to'"

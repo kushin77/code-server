@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-05-01 (PHASE 45 — CONTINUOUS DEPLOYMENT & RELEASE MANAGEMENT)
+
+### Added — Phase 45: Continuous Deployment & Release Management Engine
+- **apps/security_ai/deployment_orchestrator.py** (290 lines): Staged deployment orchestration engine integrating signals from the full Phase 30-44 security intelligence stack.
+- **Multi-stage rollout**: Dev → Staging → Canary → Production pipeline with gate-controlled promotion.
+- **PreflightGate**: 7 standard gates sourced from Phases 30/31/34/35/36/38/40 with threshold-based PASS/WARN/FAIL evaluation.
+- **CanaryMetrics**: Health checks on error_rate, p99_latency, and behavioral anomaly_score.
+- **Rollback logic**: Automatic rollback on gate failure or unhealthy canary with structured reason tracking.
+- **Release health score**: Composite 0-25 score per deployment combining gate scores, canary health, and final status.
+- **Phase signal synthesis**: Derives gate scores from upstream phase telemetry (phase36_score, threat_level, anomaly_pct, etc.).
+- **Ops orchestrator** (`scripts/ops/phase-45-deployment-orchestrator.sh`): Modes — demo | summary | deploy.
+- **Integration tests** (`scripts/ci/phase-45-integration-tests.sh`): **42/42 tests PASSING**.
+
+### Verified
+- Phase 40 pipe/ERR trap issues fixed: 29/29 tests now pass
+- Full suite Phases 30-45: **391/391 tests PASSING**
+
 ## [1.25.0] - 2026-05-01 (PHASE 44 — PLATFORM ORCHESTRATION & AUTONOMOUS COORDINATION)
 
 ### Added — Phase 44: Platform Orchestration & Autonomous Coordination

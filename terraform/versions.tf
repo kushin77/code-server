@@ -5,23 +5,23 @@ terraform {
   required_providers {
     docker = {
       source  = "kreuzwerker/docker"
-      version = "= 3.0.2"
+      version = "~> 3.0"
     }
     aws = {
       source  = "hashicorp/aws"
-      version = "= 5.26.0"
+      version = "~> 5.70"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "= 2.23.0"
+      version = "~> 2.33"
     }
     null = {
       source  = "hashicorp/null"
-      version = "= 3.2.1"
+      version = "~> 3.2"
     }
     local = {
       source  = "hashicorp/local"
-      version = "= 2.4.0"
+      version = "~> 2.5"
     }
   }
 }
@@ -35,10 +35,10 @@ provider "aws" {
   region = var.aws_region
   default_tags {
     tags = {
-      Environment  = var.environment
-      Project      = "code-server-enterprise"
-      Governance   = "GOV-002"
-      ManagedBy    = "Terraform"
+      Environment = var.environment
+      Project     = "code-server-enterprise"
+      Governance  = "GOV-002"
+      ManagedBy   = "Terraform"
     }
   }
 }

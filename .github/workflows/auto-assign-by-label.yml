@@ -21,6 +21,12 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Skip pull request events
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Auto-assign is issue-driven; skipping pull request event."
+          exit 0
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:

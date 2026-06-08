@@ -9,83 +9,84 @@
 # Can reference users, teams, or organizations
 
 # Root-level configuration files (infrastructure/build configuration)
-Dockerfile @kushin77
-docker-compose*.yml @kushin77
-Caddyfile @kushin77
-.env.schema.json @kushin77
-pnpm-workspace.yaml @kushin77
+Dockerfile @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+docker-compose*.yml @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+Caddyfile @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+.env.schema.json @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+pnpm-workspace.yaml @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Terraform and infrastructure-as-code
-terraform/ @kushin77
-*.tf @kushin77
-variables.tf @kushin77
-main.tf @kushin77
+terraform/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+*.tf @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+variables.tf @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+main.tf @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Kubernetes configuration
-k8s/ @kushin77
-kubernetes/ @kushin77
+k8s/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+kubernetes/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # CI/CD workflow definitions
-.github/workflows/ @kushin77
-.github/CODEOWNERS @kushin77
-.gitignore @kushin77
+.github/workflows/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+.github/CODEOWNERS @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+.gitignore @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Documentation (governance, architecture, runbooks)
-docs/ @kushin77
-docs/governance/ @kushin77
-docs/architecture/ @kushin77
-docs/runbooks/ @kushin77
-*.md @kushin77
+docs/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+docs/governance/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+docs/architecture/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+docs/runbooks/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+*.md @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Configuration and schemas
-config/ @kushin77
-schemas/ @kushin77
-.env.schema.json @kushin77
+config/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+schemas/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+.env.schema.json @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Core platform services
-apps/backend/ @kushin77
-apps/api/ @kushin77
-apps/control-plane/ @kushin77
-apps/paperclip-control-plane/ @kushin77
+apps/backend/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/api/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/control-plane/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/paperclip-control-plane/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Runtime services
-apps/agent-runtime/ @kushin77
-apps/execution-scheduler/ @kushin77
-apps/env-provisioner/ @kushin77
+apps/agent-runtime/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/execution-scheduler/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/env-provisioner/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # AI/ML services
-apps/multimodal-ai/ @kushin77
-apps/memory-engine/ @kushin77
-apps/knowledge-graph/ @kushin77
+apps/multimodal-ai/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/memory-engine/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/knowledge-graph/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Frontend and IDE extensions
-apps/frontend/ @kushin77
-apps/ide-extension/ @kushin77
-apps/extensions/ @kushin77
+apps/frontend/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/ide-extension/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+apps/extensions/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Repository governance
-.github/ @kushin77
-.gitignore @kushin77
-pnpm-workspace.yaml @kushin77
-package.json @kushin77
-pnpm-lock.yaml @kushin77
+.github/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+.gitignore @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+pnpm-workspace.yaml @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+package.json @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+pnpm-lock.yaml @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Shared packages (all changes require review)
-packages/shared/ @kushin77
-sdk/ @kushin77
-lib/ @kushin77
+packages/shared/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+sdk/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+lib/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Observability, monitoring, and logging
-dashboards/ @kushin77
-grafana/ @kushin77
-monitoring/ @kushin77
-opa/ @kushin77
+dashboards/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+grafana/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+monitoring/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+opa/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Operations and deployment
-scripts/ @kushin77
-operations/ @kushin77
-playbooks/ @kushin77
-migrations/ @kushin77
+scripts/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+operations/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+playbooks/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+migrations/ @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
 
 # Default - apply to any file not explicitly covered above
-* @kushin77
+* @kushin77 @JoshuaKushnir @BestGaaS220 @PureBlissAK
+

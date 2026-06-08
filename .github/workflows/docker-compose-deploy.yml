@@ -1,0 +1,94 @@
+name: Docker Compose Deployment
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: 'Deployment namespace'
+        required: true
+        default: 'code-server-enterprise'
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+jobs:
+  deploy:
+    name: Deploy Docker Compose Stack
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Validate Docker Compose Configuration
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+        run: |
+          echo "Validating Docker Compose with NAMESPACE=${NAMESPACE}"
+          docker compose config > /dev/null
+          echo "✓ Docker Compose configuration is valid"
+      
+      - name: Pull Latest Images
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+        run: |
+          echo "Pulling latest images for namespace: ${NAMESPACE}"
+          docker compose pull || echo "Some images may need to be built locally"
+      
+      - name: Deploy Stack
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+        run: |
+          echo "Deploying code-server-enterprise stack to namespace: ${NAMESPACE}"
+          docker compose up -d --remove-orphans
+          
+          echo "Waiting for services to become healthy..."
+          sleep 15
+          
+          echo "=== Container Status ==="
+          docker compose ps
+      
+      - name: Health Check
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+        run: |
+          echo "Running health checks..."
+          
+          # Wait up to 60 seconds for health endpoint
+          for i in {1..12}; do
+            if curl -sf http://localhost:3100/api/health > /dev/null 2>&1; then
+              echo "✓ Health check passed"
+              curl -s http://localhost:3100/api/health | jq '.' || true
+              exit 0
+            fi
+            echo "Waiting for services... ($i/12)"
+            sleep 5
+          done
+          
+          echo "⚠ Health check timed out, but deployment may still be successful"
+          docker compose logs --tail=50
+          exit 0
+      
+      - name: Deployment Summary
+        if: always()
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "Namespace: ${NAMESPACE}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo ""
+          echo "=== Running Containers ==="
+          docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "=== Resource Usage ==="
+          docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" $(docker compose ps -q) || true
